@@ -35,10 +35,10 @@ const App = (() => {
   const container = document.getElementById('screen-container');
 
   const state = {
-    aliasInput: '',
-    usuarioInput: '',
+    aliasInput: localStorage.getItem('coletor_ultimo_alias') || '',
+    usuarioInput: localStorage.getItem('coletor_ultimo_usuario') || '',
     senhaInput: '',
-    empresaInput: '',
+    empresaInput: localStorage.getItem('coletor_ultima_empresa') || localStorage.getItem('datasul_company_id') || '001',
     estabelecInput: '',
     simularOffline: false,
     session: {
@@ -353,6 +353,10 @@ const App = (() => {
   // Segue modern-web-guidance: autofill-sign-in-form
   // =========================================================================
   function renderTelaLogin() {
+    if (!state.aliasInput) state.aliasInput = localStorage.getItem('coletor_ultimo_alias') || '';
+    if (!state.usuarioInput) state.usuarioInput = localStorage.getItem('coletor_ultimo_usuario') || '';
+    if (!state.empresaInput) state.empresaInput = localStorage.getItem('coletor_ultima_empresa') || localStorage.getItem('datasul_company_id') || '001';
+
     const empresasCache = [...new Set((state.estabelecimentosGlobais || []).map(e => DB.normalizarEmpresa(e.codEmpresa)))].sort();
 
     container.innerHTML = `
@@ -368,7 +372,7 @@ const App = (() => {
         <div class="form-group">
           <label class="form-label" for="login-alias">ALIAS do Ambiente PASOE *</label>
           <div style="display: flex; gap: 6px;">
-            <input type="text" id="login-alias" name="alias" class="form-input" placeholder="ex: demo ou teste" value="${escapeHtml(state.aliasInput)}" list="alias-options-list" required spellcheck="false" autocapitalize="none" enterkeyhint="next" onchange="App.resolverAliasLogin()">
+            <input type="text" id="login-alias" name="alias" class="form-input" placeholder="ex: demo ou teste" value="${escapeHtml(state.aliasInput)}" list="alias-options-list" required spellcheck="false" autocapitalize="none" enterkeyhint="next" onchange="localStorage.setItem('coletor_ultimo_alias', this.value.trim().toLowerCase()); App.resolverAliasLogin()">
             <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 12px;" onclick="App.resolverAliasLogin()" title="Consultar ALIAS">🔍</button>
           </div>
           <datalist id="alias-options-list">
@@ -384,7 +388,7 @@ const App = (() => {
 
         <div class="form-group">
           <label class="form-label" for="login-usuario">Usuário TOTVS *</label>
-          <input type="text" id="login-usuario" name="username" class="form-input" placeholder="Seu login no Datasul" value="${escapeHtml(state.usuarioInput)}" autocomplete="username" spellcheck="false" autocorrect="off" autocapitalize="none" enterkeyhint="next" required>
+          <input type="text" id="login-usuario" name="username" class="form-input" placeholder="Seu login no Datasul" value="${escapeHtml(state.usuarioInput)}" autocomplete="username" spellcheck="false" autocorrect="off" autocapitalize="none" enterkeyhint="next" onchange="localStorage.setItem('coletor_ultimo_usuario', this.value.trim());" required>
         </div>
 
         <div class="form-group">
@@ -419,6 +423,20 @@ const App = (() => {
     if (state.aliasInput) {
       resolverAliasLogin();
     }
+
+    setTimeout(() => {
+      const aliasEl = document.getElementById('login-alias');
+      const usuarioEl = document.getElementById('login-usuario');
+      const senhaEl = document.getElementById('login-senha');
+      if (aliasEl && !aliasEl.value) {
+        aliasEl.focus();
+      } else if (usuarioEl && !usuarioEl.value) {
+        usuarioEl.focus();
+      } else if (senhaEl) {
+        senhaEl.focus();
+        senhaEl.select();
+      }
+    }, 150);
   }
 
   function alternarVisibilidadeSenha() {
@@ -500,6 +518,8 @@ const App = (() => {
     const el = document.getElementById('login-empresa');
     if (el) {
       state.empresaInput = DB.normalizarEmpresa(el.value);
+      localStorage.setItem('coletor_ultima_empresa', state.empresaInput);
+      localStorage.setItem('datasul_company_id', state.empresaInput);
     }
   }
 
@@ -514,6 +534,13 @@ const App = (() => {
     const usuario = (usuarioEl?.value || '').trim();
     const senha = (senhaEl?.value || '');
     const codEmpresa = DB.normalizarEmpresa(empresaEl?.value || state.empresaInput || '001');
+
+    if (alias) localStorage.setItem('coletor_ultimo_alias', alias);
+    if (usuario) localStorage.setItem('coletor_ultimo_usuario', usuario);
+    if (codEmpresa) {
+      localStorage.setItem('coletor_ultima_empresa', codEmpresa);
+      localStorage.setItem('datasul_company_id', codEmpresa);
+    }
 
     if (!alias || !usuario || !senha) {
       mostrarAviso('Informe ALIAS, Usuário TOTVS e Senha TOTVS.', 'warning');
@@ -759,6 +786,9 @@ const App = (() => {
       paramUsuario: null
     };
     state.senhaInput = '';
+    state.aliasInput = localStorage.getItem('coletor_ultimo_alias') || state.aliasInput;
+    state.usuarioInput = localStorage.getItem('coletor_ultimo_usuario') || state.usuarioInput;
+    state.empresaInput = localStorage.getItem('coletor_ultima_empresa') || localStorage.getItem('datasul_company_id') || state.empresaInput;
     atualizarBarraStatus();
     navegar('login');
   }
