@@ -274,16 +274,63 @@ const App = (() => {
     document.getElementById('global-loading-overlay')?.classList.remove('active');
   }
 
+  function temPermissaoInventario() {
+    const p = state.session?.paramUsuario;
+    if (!p) return true;
+    const permEst = p.permEstoque !== false;
+    return Boolean(permEst && (p.permEstoqReqInv === true || p.permEstoqReqInv === 'true' || p.permEstoqReqInv === 1));
+  }
+
+  function temPermissaoTransferencia() {
+    const p = state.session?.paramUsuario;
+    if (!p) return true;
+    const permEst = p.permEstoque !== false;
+    return Boolean(permEst && (p.permEstoqReqMov === true || p.permEstoqReqMov === 'true' || p.permEstoqReqMov === 1));
+  }
+
+  function bloquearAcesso(modulo, campo) {
+    alert(`🔒 Acesso Bloqueado\n\nO usuário '${state.session.codUsuario || 'operador'}' não possui permissão para acessar ${modulo}.\n\nRequer no TOTVS (FMSC0101): ${campo} = SIM`);
+  }
+
   function navegar(tela, params = {}) {
+    if (tela.startsWith('inventario') && !temPermissaoInventario()) {
+      bloquearAcesso('Inventário Físico', 'permEstoqReqInv');
+      if (state.telaAtual !== 'menu') navegar('menu');
+      return;
+    }
+
+    if (tela.startsWith('transferencia') && !temPermissaoTransferencia()) {
+      bloquearAcesso('Transferência de Material', 'permEstoqReqMov');
+      if (state.telaAtual !== 'menu') navegar('menu');
+      return;
+    }
+
     state.telaAtual = tela;
 
     const footer = document.getElementById('app-footer');
     if (footer) {
       footer.style.display = tela === 'login' ? 'none' : 'flex';
+      const podeInv = temPermissaoInventario();
+      const podeTransf = temPermissaoTransferencia();
+
       document.querySelectorAll('.nav-tab-btn').forEach(btn => {
-        const isInv = btn.dataset.tab === 'inventarios_ativos' && tela.startsWith('inventario');
-        const isTransf = btn.dataset.tab === 'transferencias' && tela.startsWith('transferencia');
-        btn.classList.toggle('active', btn.dataset.tab === tela || isInv || isTransf);
+        const isInv = btn.dataset.tab === 'inventarios_ativos';
+        const isTransf = btn.dataset.tab === 'transferencias';
+
+        if (isInv) {
+          btn.style.opacity = podeInv ? '' : '0.35';
+          btn.style.cursor = podeInv ? '' : 'not-allowed';
+          btn.title = podeInv ? '' : 'Sem permissão (permEstoqReqInv)';
+        }
+        if (isTransf) {
+          btn.style.opacity = podeTransf ? '' : '0.35';
+          btn.style.cursor = podeTransf ? '' : 'not-allowed';
+          btn.title = podeTransf ? '' : 'Sem permissão (permEstoqReqMov)';
+        }
+
+        const isInvActive = isInv && tela.startsWith('inventario');
+        const isTransfActive = isTransf && tela.startsWith('transferencia');
+        btn.classList.toggle('active', btn.dataset.tab === tela || isInvActive || isTransfActive);
       });
     }
 
@@ -644,8 +691,13 @@ const App = (() => {
           throw new Error('Senha incorreta para acesso offline.');
         }
 
-        if (paramLocal && (!paramLocal.permEstoque || !paramLocal.permEstoqReqInv)) {
-          throw new Error(`Usuário '${usuario}' não possui permissão de Inventário (FMSC0101) na empresa ${codEmpresa}.`);
+        if (paramLocal) {
+          const temEstoque = paramLocal.permEstoque !== false;
+          const temInv = temEstoque && Boolean(paramLocal.permEstoqReqInv);
+          const temMov = temEstoque && Boolean(paramLocal.permEstoqReqMov);
+          if (!temInv && !temMov) {
+            throw new Error(`Usuário '${usuario}' sem permissão de Inventário (permEstoqReqInv) nem de Transferência (permEstoqReqMov) no FMSC0101.`);
+          }
         }
 
         const ests = (await DB.getAll('estabelec')).filter(e => DB.matchEmpresa(e.codEmpresa, codEmpresa));
@@ -753,8 +805,11 @@ const App = (() => {
         if (Number(paramUsuario.situacao) === 0) {
           throw new Error(`Usuário '${usuarioReal}' não habilitado no FMSC0101 para a empresa ${codEmpresa}.`);
         }
-        if (!paramUsuario.permEstoque || !paramUsuario.permEstoqReqInv) {
-          throw new Error(`Usuário '${usuarioReal}' não possui permissão de Estoque/Inventário (FMSC0101) na empresa ${codEmpresa}.`);
+        const temEstoque = paramUsuario.permEstoque !== false;
+        const temInv = temEstoque && Boolean(paramUsuario.permEstoqReqInv);
+        const temMov = temEstoque && Boolean(paramUsuario.permEstoqReqMov);
+        if (!temInv && !temMov) {
+          throw new Error(`Usuário '${usuarioReal}' não possui permissão de Inventário (permEstoqReqInv) nem de Transferência (permEstoqReqMov) no FMSC0101 para a empresa ${codEmpresa}.`);
         }
       }
 
@@ -854,34 +909,59 @@ const App = (() => {
     const transfList = await DB.listarTransferencias(codEmpresa, state.session.codUsuario);
     const transfPendEntrada = transfList.filter(t => t.status === 'PENDENTE_ENTRADA').length;
 
+    const podeInv = temPermissaoInventario();
+    const podeTransf = temPermissaoTransferencia();
+
     container.innerHTML = `
-      <div class="home-active-banner">
+      <div class="home-active-banner" style="${podeInv ? '' : 'opacity: 0.7;'}">
         <div class="home-banner-left">
-          <div class="home-banner-icon">📦</div>
+          <div class="home-banner-icon">${podeInv ? '📦' : '🔒'}</div>
           <div>
             <div class="home-banner-title">Inventário Físico (CE0712)</div>
-            <div class="home-banner-sub">${fichasFilial.length > 0 ? `${fichasFilial.length} ficha(s) no aparelho • ${pendentes} pendente(s)` : 'Consultar inventários do ERP TOTVS (Online/Offline)'}</div>
+            <div class="home-banner-sub">${podeInv ? (fichasFilial.length > 0 ? `${fichasFilial.length} ficha(s) no aparelho • ${pendentes} pendente(s)` : 'Consultar inventários do ERP TOTVS (Online/Offline)') : '<span style="color:#ef4444; font-weight:700;">Bloqueado no TOTVS (FMSC0101: permEstoqReqInv = NÃO)</span>'}</div>
           </div>
         </div>
-        <button class="home-banner-btn" onclick="App.navegar('inventarios_ativos')">
-          Iniciar ➔
-        </button>
+        ${podeInv ? `
+          <button class="home-banner-btn" onclick="App.navegar('inventarios_ativos')">
+            Iniciar ➔
+          </button>
+        ` : `
+          <button class="home-banner-btn" style="opacity: 0.55; background: #64748b; cursor: not-allowed;" onclick="App.bloquearAcesso('Inventário Físico', 'permEstoqReqInv')">
+            Bloqueado 🔒
+          </button>
+        `}
       </div>
 
       <div class="home-section-title">Operações Disponíveis</div>
 
       <div class="home-service-grid">
-        <button type="button" class="home-service-card is-active" onclick="App.navegar('inventarios_ativos')">
-          <div class="home-card-icon-wrap icon-wrap-orange">📋</div>
-          <div class="home-card-title" style="color: #0284c7;">Contagem Física</div>
-          <div class="home-card-desc">Apuração 1ª/2ª/3ª rodada e ficha avulsa 100% offline</div>
-        </button>
+        ${podeInv ? `
+          <button type="button" class="home-service-card is-active" onclick="App.navegar('inventarios_ativos')">
+            <div class="home-card-icon-wrap icon-wrap-orange">📋</div>
+            <div class="home-card-title" style="color: #0284c7;">Contagem Física</div>
+            <div class="home-card-desc">Apuração 1ª/2ª/3ª rodada e ficha avulsa 100% offline</div>
+          </button>
+        ` : `
+          <button type="button" class="home-service-card" style="opacity: 0.55; cursor: not-allowed; border-color: #cbd5e1; background: #f8fafc;" onclick="App.bloquearAcesso('Contagem Física de Inventário', 'permEstoqReqInv')">
+            <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#94a3b8;">🔒</div>
+            <div class="home-card-title" style="color: #64748b;">Contagem Física</div>
+            <div class="home-card-desc" style="color: #ef4444; font-weight: 700;">Bloqueado: permEstoqReqInv = NÃO</div>
+          </button>
+        `}
 
-        <button type="button" class="home-service-card" onclick="App.navegar('transferencias')">
-          <div class="home-card-icon-wrap icon-wrap-purple" style="background:#e0e7ff; color:#4338ca;">🔄</div>
-          <div class="home-card-title" style="color: #4338ca;">Transf. Material</div>
-          <div class="home-card-desc">${transfPendEntrada > 0 ? `<strong style="color:#d97706;">${transfPendEntrada} pendente(s) de entrada</strong>` : 'Movimentação CE0206 (Saída e Entrada)'}</div>
-        </button>
+        ${podeTransf ? `
+          <button type="button" class="home-service-card" onclick="App.navegar('transferencias')">
+            <div class="home-card-icon-wrap icon-wrap-purple" style="background:#e0e7ff; color:#4338ca;">🔄</div>
+            <div class="home-card-title" style="color: #4338ca;">Transf. Material</div>
+            <div class="home-card-desc">${transfPendEntrada > 0 ? `<strong style="color:#d97706;">${transfPendEntrada} pendente(s) de entrada</strong>` : 'Movimentação CE0206 (Saída e Entrada)'}</div>
+          </button>
+        ` : `
+          <button type="button" class="home-service-card" style="opacity: 0.55; cursor: not-allowed; border-color: #cbd5e1; background: #f8fafc;" onclick="App.bloquearAcesso('Transferência de Material', 'permEstoqReqMov')">
+            <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#94a3b8;">🔒</div>
+            <div class="home-card-title" style="color: #64748b;">Transf. Material</div>
+            <div class="home-card-desc" style="color: #ef4444; font-weight: 700;">Bloqueado: permEstoqReqMov = NÃO</div>
+          </button>
+        `}
 
         <button type="button" class="home-service-card" onclick="App.abrirModalCargaInicial('Atualizar Dados Offline')">
           <div class="home-card-icon-wrap icon-wrap-blue">📥</div>
@@ -5069,7 +5149,10 @@ const App = (() => {
     copiarContingenciaAreaTransferencia,
     baixarArquivoContingencia,
     setModoVisualizacao,
-    alternarTelaCheia
+    alternarTelaCheia,
+    temPermissaoInventario,
+    temPermissaoTransferencia,
+    bloquearAcesso
   };
 })();
 
