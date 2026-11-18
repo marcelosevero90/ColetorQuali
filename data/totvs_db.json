@@ -293,14 +293,6 @@
       "permContgUsFc": true,
       "indTipoInv": 1,
       "nrContagAtiva": 2
-    },
-    {
-      "codEmpresa": "001",
-      "dtSaldo": "2026-11-17",
-      "indSitInv": 1,
-      "permContgUsFc": true,
-      "indTipoInv": 1,
-      "nrContagAtiva": 2
     }
   ],
   "agrup_invent": [
@@ -331,6 +323,12 @@
       "codEmpresa": "001",
       "codDepos": "ALM",
       "nome": "ALMOXARIFADO CENTRAL",
+      "consSaldo": true
+    },
+    {
+      "codEmpresa": "001",
+      "codDepos": "AL1",
+      "nome": "Almoxarifado 1",
       "consSaldo": true
     },
     {
@@ -672,6 +670,21 @@
       "un": "PC",
       "codBarras": "7897000006007",
       "requerValorFicha": true,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "01010115",
+      "descItem": "Porta Latas Simples 348 x 91 x 115mm 01010115",
+      "tipoConEst": 1,
+      "locUnica": false,
+      "depositoPad": "AL1",
+      "nomeDeposito": "Almoxarifado 1",
+      "codLocaliz": "BRANCO",
+      "descricaoLocaliz": "BRANCO",
+      "un": "Un",
+      "codBarras": "7890101011500",
+      "requerValorFicha": false,
       "dataAtualiz": "2026-11-16T08:00:00Z"
     },
     {
@@ -1348,16 +1361,6 @@
       "codBarras": "7890529990015",
       "requerValorFicha": true,
       "dataAtualiz": "2026-11-15T08:00:00Z"
-    },
-    {
-      "codEmpresa": "001",
-      "itCodigo": "01010047",
-      "descItem": "Kit Pont Prince (10) Unidades",
-      "un": "UN",
-      "codFamilia": "DIVERSOS",
-      "tipoItem": "Fabricado",
-      "comprFabric": 1,
-      "situacao": 1
     }
   ],
   "lote": [
@@ -1477,6 +1480,16 @@
       "codRefer": "SAF26",
       "nomeDepos": "DEPOSITO GERAL FAZENDA",
       "nomeLocaliz": "GALPAO 4 CORREDOR 2 NIVEL 2"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "itCodigo": "01010115",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "LOTE-NOVO-01",
+      "codRefer": "",
+      "dtValiLote": "2028-12-31"
     }
   ],
   "saldo_estoq": [
@@ -1561,6 +1574,22 @@
       "qtDisponivelCalc": 120
     },
     {
+      "codEmpresa": "001",
+      "itCodigo": "01010115",
+      "codEstab": "101",
+      "codDep": "AL1",
+      "codLocal": "BRANCO",
+      "lote": "",
+      "codRefer": "",
+      "descItem": "Porta Latas Simples 348 x 91 x 115mm 01010115",
+      "qtAlocada": 0,
+      "qtidadeAtu": 20,
+      "qtAlocPed": 0,
+      "qtAlocProd": 0,
+      "dtValiLote": "",
+      "qtDisponivelCalc": 50
+    },
+    {
       "codEmpresa": "002",
       "itCodigo": "052900017",
       "codEstab": "2100",
@@ -1575,6 +1604,28 @@
       "qtAlocProd": 0,
       "dtValiLote": "2028-12-31",
       "qtDisponivelCalc": 350
+    },
+    {
+      "codEmpresa": "001",
+      "codEstab": "101",
+      "codDep": "AST",
+      "codLocal": "",
+      "itCodigo": "01010115",
+      "lote": "",
+      "codRefer": "",
+      "qtidadeAtu": 20,
+      "dtValiLote": ""
+    },
+    {
+      "codEmpresa": "001",
+      "codEstab": "101",
+      "codDep": "AST",
+      "codLocal": "",
+      "itCodigo": "01010115",
+      "lote": "LOTE-NOVO-01",
+      "codRefer": "",
+      "qtidadeAtu": 10,
+      "dtValiLote": "2028-12-31"
     }
   ],
   "inventario": [
@@ -1591,12 +1642,12 @@
       "qtidadeAtu": 120,
       "valApurado": [
         null,
-        50,
+        null,
         null
       ],
       "codConfteContag": [
         "",
-        "matheus.st",
+        "",
         ""
       ],
       "situacao": 4,
@@ -2057,613 +2108,9 @@
         0,
         0
       ]
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 9,
-      "dtSaldo": "2026-11-16",
-      "codEstabel": "101",
-      "codDepos": "ALM",
-      "codLocaliz": "A-01-01",
-      "lote": "LT-NOVO-AVULSO",
-      "codRefer": "",
-      "itCodigo": "11000015",
-      "qtidadeAtu": 0,
-      "valApurado": [
-        null,
-        15,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "matheus.st",
-        ""
-      ],
-      "situacao": 4,
-      "cdnAgrup": 0,
-      "dtValiLote": "2028-12-31",
-      "valorMat": [
-        0,
-        0,
-        0
-      ],
-      "valorMob": [
-        0,
-        0,
-        0
-      ],
-      "valorGgf": [
-        0,
-        0,
-        0
-      ],
-      "avulsa": true
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 10,
-      "dtSaldo": "2026-11-16",
-      "codEstabel": "101",
-      "codDepos": "ALM",
-      "codLocaliz": "A-01-02",
-      "lote": "LT-AVULSO-SYNC",
-      "codRefer": "",
-      "itCodigo": "11000015",
-      "qtidadeAtu": 0,
-      "valApurado": [
-        null,
-        25,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "matheus.st",
-        ""
-      ],
-      "situacao": 4,
-      "cdnAgrup": 0,
-      "dtValiLote": "2028-12-31",
-      "valorMat": [
-        0,
-        0,
-        0
-      ],
-      "valorMob": [
-        0,
-        0,
-        0
-      ],
-      "valorGgf": [
-        0,
-        0,
-        0
-      ],
-      "avulsa": true
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 1,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010047",
-      "valApurado": [
-        10,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "operador.totvs",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 10,
-      "situacao": 4,
-      "descItem": "Kit Pont Prince (10) Unidades",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 2,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010116",
-      "valApurado": [
-        null,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 5,
-      "situacao": 2,
-      "descItem": "Item 01010116",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 3,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010125",
-      "valApurado": [
-        null,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 2,
-      "situacao": 2,
-      "descItem": "Item 01010125",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 4,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010126",
-      "valApurado": [
-        null,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 8,
-      "situacao": 2,
-      "descItem": "Item 01010126",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 5,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010167",
-      "valApurado": [
-        null,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 12,
-      "situacao": 2,
-      "descItem": "Item 01010167",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 6,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010217",
-      "valApurado": [
-        null,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 1,
-      "situacao": 2,
-      "descItem": "Item 01010217",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 7,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010219",
-      "valApurado": [
-        null,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 4,
-      "situacao": 2,
-      "descItem": "Item 01010219",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 8,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010227",
-      "valApurado": [
-        null,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 15,
-      "situacao": 2,
-      "descItem": "Item 01010227",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 9,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010240",
-      "valApurado": [
-        null,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 7,
-      "situacao": 2,
-      "descItem": "Item 01010240",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 10,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010247",
-      "valApurado": [
-        null,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 3,
-      "situacao": 2,
-      "descItem": "Item 01010247",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 11,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "",
-      "codRefer": "",
-      "itCodigo": "01010250",
-      "valApurado": [
-        null,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "",
-        "",
-        ""
-      ],
-      "qtidadeAtu": 9,
-      "situacao": 2,
-      "descItem": "Item 01010250",
-      "cdnAgrup": 0,
-      "un": "UN"
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 12,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "TESTE",
-      "lote": "LOTE-TEST-01",
-      "codRefer": "",
-      "itCodigo": "01010047",
-      "qtidadeAtu": 0,
-      "valApurado": [
-        42.5,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "matheus.st",
-        "",
-        ""
-      ],
-      "situacao": 4,
-      "cdnAgrup": 0,
-      "dtValiLote": "",
-      "valorMat": [
-        0,
-        0,
-        0
-      ],
-      "valorMob": [
-        0,
-        0,
-        0
-      ],
-      "valorGgf": [
-        0,
-        0,
-        0
-      ],
-      "avulsa": true
-    },
-    {
-      "codEmpresa": "001",
-      "nrFicha": 13,
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "codLocaliz": "TESTE",
-      "lote": "LOTE-TEST-01",
-      "codRefer": "",
-      "itCodigo": "01010047",
-      "qtidadeAtu": 0,
-      "valApurado": [
-        42.5,
-        null,
-        null
-      ],
-      "codConfteContag": [
-        "matheus.st",
-        "",
-        ""
-      ],
-      "situacao": 4,
-      "cdnAgrup": 0,
-      "dtValiLote": "",
-      "valorMat": [
-        0,
-        0,
-        0
-      ],
-      "valorMob": [
-        0,
-        0,
-        0
-      ],
-      "valorGgf": [
-        0,
-        0,
-        0
-      ],
-      "avulsa": true
     }
   ],
   "historico_contagens": [
-    {
-      "idHist": 9,
-      "codEmpresa": "001",
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "nrFicha": 13,
-      "itCodigo": "01010047",
-      "descItem": "Kit Pont Prince (10) Unidades",
-      "lote": "LOTE-TEST-01",
-      "codLocaliz": "TESTE",
-      "codRefer": "",
-      "nrContagem": 1,
-      "qtApurada": 42.5,
-      "qtContabil": 0,
-      "divergencia": 42.5,
-      "codUsuario": "matheus.st",
-      "codMobile": "WEB-COLETOR",
-      "dtLeitura": "2026-11-18 00:17:27",
-      "statusEnvio": "Sincronizado",
-      "origem": "Ficha em Branco (Avulsa)"
-    },
-    {
-      "idHist": 8,
-      "codEmpresa": "001",
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "nrFicha": 1,
-      "itCodigo": "01010047",
-      "descItem": "Kit Pont Prince (10) Unidades",
-      "lote": "",
-      "codLocaliz": "",
-      "codRefer": "",
-      "nrContagem": 1,
-      "qtApurada": 10,
-      "qtContabil": 10,
-      "divergencia": 0,
-      "codUsuario": "operador.totvs",
-      "codMobile": "WEB-COLETOR",
-      "dtLeitura": "2026-11-17 23:51:59",
-      "statusEnvio": "Sincronizado",
-      "origem": "Coletor Mobile"
-    },
-    {
-      "idHist": 7,
-      "codEmpresa": "001",
-      "dtSaldo": "2026-11-17",
-      "codEstabel": "101",
-      "codDepos": "AST",
-      "nrFicha": 12,
-      "itCodigo": "01010047",
-      "descItem": "Kit Pont Prince (10) Unidades",
-      "lote": "LOTE-TEST-01",
-      "codLocaliz": "TESTE",
-      "codRefer": "",
-      "nrContagem": 1,
-      "qtApurada": 42.5,
-      "qtContabil": 0,
-      "divergencia": 42.5,
-      "codUsuario": "matheus.st",
-      "codMobile": "WEB-COLETOR",
-      "dtLeitura": "2026-11-17 23:51:33",
-      "statusEnvio": "Sincronizado",
-      "origem": "Ficha em Branco (Avulsa)"
-    },
-    {
-      "idHist": 6,
-      "codEmpresa": "001",
-      "dtSaldo": "2026-11-16",
-      "codEstabel": "101",
-      "codDepos": "ALM",
-      "nrFicha": 1,
-      "itCodigo": "11000015",
-      "descItem": "CARBONATO DE CALCIO (PA)",
-      "lote": "LT-2026-01",
-      "codLocaliz": "A-01-01",
-      "codRefer": "",
-      "nrContagem": 2,
-      "qtApurada": 50,
-      "qtContabil": 120,
-      "divergencia": -70,
-      "codUsuario": "matheus.st",
-      "codMobile": "WEB-COLETOR",
-      "dtLeitura": "2026-11-17 18:04:04",
-      "statusEnvio": "Sincronizado",
-      "origem": "Coletor Mobile"
-    },
-    {
-      "idHist": 5,
-      "codEmpresa": "001",
-      "dtSaldo": "2026-11-16",
-      "codEstabel": "101",
-      "codDepos": "ALM",
-      "nrFicha": 10,
-      "itCodigo": "11000015",
-      "descItem": "CARBONATO DE CALCIO (PA)",
-      "lote": "LT-AVULSO-SYNC",
-      "codLocaliz": "A-01-02",
-      "codRefer": "",
-      "nrContagem": 2,
-      "qtApurada": 25,
-      "qtContabil": 0,
-      "divergencia": 25,
-      "codUsuario": "matheus.st",
-      "codMobile": "WEB-COLETOR",
-      "dtLeitura": "2026-11-17 18:04:04",
-      "statusEnvio": "Sincronizado",
-      "origem": "Ficha em Branco (Avulsa)"
-    },
-    {
-      "idHist": 4,
-      "codEmpresa": "001",
-      "dtSaldo": "2026-11-16",
-      "codEstabel": "101",
-      "codDepos": "ALM",
-      "nrFicha": 9,
-      "itCodigo": "11000015",
-      "descItem": "CARBONATO DE CALCIO (PA)",
-      "lote": "LT-NOVO-AVULSO",
-      "codLocaliz": "A-01-01",
-      "codRefer": "",
-      "nrContagem": 2,
-      "qtApurada": 15,
-      "qtContabil": 0,
-      "divergencia": 15,
-      "codUsuario": "matheus.st",
-      "codMobile": "WEB-COLETOR",
-      "dtLeitura": "2026-11-17 18:04:04",
-      "statusEnvio": "Sincronizado",
-      "origem": "Ficha em Branco (Avulsa)"
-    },
-    {
-      "idHist": 3,
-      "codEmpresa": "001",
-      "dtSaldo": "2026-11-16",
-      "codEstabel": "101",
-      "codDepos": "ALM",
-      "nrFicha": 1,
-      "itCodigo": "11000015",
-      "descItem": "CARBONATO DE CALCIO (PA)",
-      "lote": "LT-2026-01",
-      "codLocaliz": "A-01-01",
-      "codRefer": "",
-      "nrContagem": 2,
-      "qtApurada": 42,
-      "qtContabil": 120,
-      "divergencia": -78,
-      "codUsuario": "matheus.st",
-      "codMobile": "WEB-COLETOR",
-      "dtLeitura": "2026-11-17 18:04:04",
-      "statusEnvio": "Sincronizado",
-      "origem": "Coletor Mobile"
-    },
     {
       "idHist": 1,
       "codEmpresa": "001",

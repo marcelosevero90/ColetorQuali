@@ -278,7 +278,8 @@ const App = (() => {
       footer.style.display = tela === 'login' ? 'none' : 'flex';
       document.querySelectorAll('.nav-tab-btn').forEach(btn => {
         const isInv = btn.dataset.tab === 'inventarios_ativos' && tela.startsWith('inventario');
-        btn.classList.toggle('active', btn.dataset.tab === tela || isInv);
+        const isTransf = btn.dataset.tab === 'transferencias' && tela.startsWith('transferencia');
+        btn.classList.toggle('active', btn.dataset.tab === tela || isInv || isTransf);
       });
     }
 
@@ -293,6 +294,10 @@ const App = (() => {
       case 'inventario_fichas': renderTelaInventarioFichas(); break;
       case 'inventario_conferencia': renderTelaInventarioConferencia(params.ficha); break;
       case 'inventario_avulsa': renderTelaInventarioAvulsa(); break;
+      case 'transferencias': renderTelaTransferencias(params); break;
+      case 'transferencia_saida': renderTelaTransferenciaSaida(params ? params.transf : null); break;
+      case 'transferencia_entrada': renderTelaTransferenciaEntrada(params ? params.transf : null); break;
+      case 'transferencia_consulta': renderTelaTransferenciaConsulta(params ? params.transf : null); break;
       case 'historico_contagens': renderTelaHistoricoContagens(); break;
       case 'sincronizacao': renderTelaSincronizacao(); break;
       default: renderTelaMenu();
@@ -806,6 +811,8 @@ const App = (() => {
     const fichasFilial = fichasEmp.filter(f => f.codEstabel === filial);
     const pendentes = fichasFilial.filter(f => f.qtApurada === null || f.qtApurada === undefined).length;
     const qtdSync = await DB.getQtdPendenciasSync(codEmpresa);
+    const transfList = await DB.listarTransferencias(codEmpresa, state.session.codUsuario);
+    const transfPendEntrada = transfList.filter(t => t.status === 'PENDENTE_ENTRADA').length;
 
     container.innerHTML = `
       <div class="home-active-banner">
@@ -828,6 +835,12 @@ const App = (() => {
           <div class="home-card-icon-wrap icon-wrap-orange">📋</div>
           <div class="home-card-title" style="color: #0284c7;">Contagem Física</div>
           <div class="home-card-desc">Apuração 1ª/2ª/3ª rodada e ficha avulsa 100% offline</div>
+        </button>
+
+        <button type="button" class="home-service-card" onclick="App.navegar('transferencias')">
+          <div class="home-card-icon-wrap icon-wrap-purple" style="background:#e0e7ff; color:#4338ca;">🔄</div>
+          <div class="home-card-title" style="color: #4338ca;">Transf. Material</div>
+          <div class="home-card-desc">${transfPendEntrada > 0 ? `<strong style="color:#d97706;">${transfPendEntrada} pendente(s) de entrada</strong>` : 'Movimentação CE0206 (Saída e Entrada)'}</div>
         </button>
 
         <button type="button" class="home-service-card" onclick="App.abrirModalCargaInicial('Atualizar Dados Offline')">
@@ -2743,11 +2756,16 @@ const App = (() => {
   // =========================================================================
   // MODAIS DE PESQUISA RÁPIDA NO BANCO LOCAL (ITEM, LOCALIZ, LOTE, REFERÊNCIA)
   // =========================================================================
-  async function abrirPesquisaItemInterna() {
+  async function abrirPesquisaItemInterna(origem = 'avulsa') {
     const modal = document.getElementById('modal-pesquisa-interna');
     if (!modal) return;
     const codEmpresa = state.session.codEmpresa || '001';
-    const termo = document.getElementById('avulsa-item')?.value.trim() || '';
+    let termo = '';
+    if (origem === 'transf_saida') {
+      termo = document.getElementById('transf-sai-item')?.value.trim() || '';
+    } else {
+      termo = document.getElementById('avulsa-item')?.value.trim() || '';
+    }
 
     document.getElementById('mpi-title').textContent = `🔍 Pesquisar Item (Emp ${codEmpresa})`;
     document.getElementById('mpi-subtitle').textContent = 'Busca rápida offline por código, EAN ou descrição:';
@@ -2777,28 +2795,39 @@ const App = (() => {
       }
     }
 
-    state.pesquisaInterna = { tipo: 'ITEM', dados: itens, filtrados: itens };
+    state.pesquisaInterna = { tipo: 'ITEM', origem, dados: itens, filtrados: itens };
     renderListaPesquisaInterna();
     setTimeout(() => document.getElementById('mpi-input-busca')?.focus(), 80);
   }
 
-  async function abrirPesquisaLocalizInterna() {
+  async function abrirPesquisaLocalizInterna(origem = 'avulsa', codDeposParam = '') {
     const modal = document.getElementById('modal-pesquisa-interna');
     if (!modal) return;
     const codEmpresa = state.session.codEmpresa || '001';
     const codEstabel = state.session.codEstabel || '';
-    const codDepos = state.depositoSelecionado?.codDepos || '';
-    const termo = document.getElementById('avulsa-localiz')?.value.trim() || '';
+    let codDepos = codDeposParam;
+    let termo = '';
 
-    document.getElementById('mpi-title').textContent = `📍 Pesquisar Localização (${codDepos})`;
-    document.getElementById('mpi-subtitle').textContent = `Localizações do depósito ${codDepos}:`;
+    if (origem === 'transf_saida') {
+      codDepos = codDepos || document.getElementById('transf-sai-depos')?.value.trim() || '';
+      termo = document.getElementById('transf-sai-localiz')?.value.trim() || '';
+    } else if (origem === 'transf_entrada') {
+      codDepos = codDepos || document.getElementById('transf-ent-depos')?.value.trim() || '';
+      termo = document.getElementById('transf-ent-localiz')?.value.trim() || '';
+    } else {
+      codDepos = codDepos || state.depositoSelecionado?.codDepos || '';
+      termo = document.getElementById('avulsa-localiz')?.value.trim() || '';
+    }
+
+    document.getElementById('mpi-title').textContent = `📍 Pesquisar Localização (${codDepos || 'Geral'})`;
+    document.getElementById('mpi-subtitle').textContent = codDepos ? `Localizações do depósito ${codDepos}:` : 'Localizações cadastradas:';
     document.getElementById('mpi-input-busca').value = termo;
     modal.style.display = 'flex';
 
     let locs = await DB.buscarLocalizacoesLocal(codEmpresa, codEstabel, codDepos, termo);
 
     // Se estiver vazio localmente e conectado, tenta consultar fcGetLocalizacao e gravar no IndexedDB
-    if (locs.length === 0 && isOnline()) {
+    if (locs.length === 0 && isOnline() && codDepos) {
       try {
         const payloadLoc = { codEstabel: codEstabel || '', codDepos: codDepos || '' };
         const res = await pasoeFetch('/fcGetLocalizacao', {
@@ -2818,22 +2847,36 @@ const App = (() => {
       }
     }
 
-    state.pesquisaInterna = { tipo: 'LOCALIZ', dados: locs, filtrados: locs };
+    state.pesquisaInterna = { tipo: 'LOCALIZ', origem, dados: locs, filtrados: locs };
     renderListaPesquisaInterna();
     setTimeout(() => document.getElementById('mpi-input-busca')?.focus(), 80);
   }
 
-  async function abrirPesquisaLoteInterna() {
+  async function abrirPesquisaLoteInterna(origem = 'avulsa', itCodigoParam = '', codDeposParam = '') {
     const modal = document.getElementById('modal-pesquisa-interna');
     if (!modal) return;
     const codEmpresa = state.session.codEmpresa || '001';
     const codEstabel = state.session.codEstabel || '';
-    const codDepos = state.depositoSelecionado?.codDepos || '';
-    const itCodigo = document.getElementById('avulsa-item')?.value.trim() || '';
-    const termo = document.getElementById('avulsa-lote')?.value.trim() || '';
+    let itCodigo = itCodigoParam;
+    let codDepos = codDeposParam;
+    let termo = '';
+
+    if (origem === 'transf_saida') {
+      itCodigo = itCodigo || document.getElementById('transf-sai-item')?.value.trim() || '';
+      codDepos = codDepos || document.getElementById('transf-sai-depos')?.value.trim() || '';
+      termo = document.getElementById('transf-sai-lote')?.value.trim() || '';
+    } else if (origem === 'transf_entrada') {
+      itCodigo = itCodigo || '';
+      codDepos = codDepos || document.getElementById('transf-ent-depos')?.value.trim() || '';
+      termo = document.getElementById('transf-ent-lote')?.value.trim() || '';
+    } else {
+      itCodigo = itCodigo || document.getElementById('avulsa-item')?.value.trim() || '';
+      codDepos = codDepos || state.depositoSelecionado?.codDepos || '';
+      termo = document.getElementById('avulsa-lote')?.value.trim() || '';
+    }
 
     document.getElementById('mpi-title').textContent = '🏷️ Pesquisar Lote / Validade';
-    document.getElementById('mpi-subtitle').textContent = itCodigo ? `Lotes do item ${itCodigo}:` : `Lotes no depósito ${codDepos}:`;
+    document.getElementById('mpi-subtitle').textContent = itCodigo ? `Lotes do item ${itCodigo}:` : (codDepos ? `Lotes no depósito ${codDepos}:` : 'Lotes cadastrados:');
     document.getElementById('mpi-input-busca').value = termo;
     modal.style.display = 'flex';
 
@@ -2860,16 +2903,23 @@ const App = (() => {
       }
     }
 
-    state.pesquisaInterna = { tipo: 'LOTE', dados: lotes, filtrados: lotes };
+    state.pesquisaInterna = { tipo: 'LOTE', origem, dados: lotes, filtrados: lotes };
     renderListaPesquisaInterna();
     setTimeout(() => document.getElementById('mpi-input-busca')?.focus(), 80);
   }
 
-  async function abrirPesquisaReferenciaInterna() {
+  async function abrirPesquisaReferenciaInterna(origem = 'avulsa') {
     const modal = document.getElementById('modal-pesquisa-interna');
     if (!modal) return;
     const codEmpresa = state.session.codEmpresa || '001';
-    const termo = document.getElementById('avulsa-refer')?.value.trim() || '';
+    let termo = '';
+    if (origem === 'transf_saida') {
+      termo = document.getElementById('transf-sai-refer')?.value.trim() || '';
+    } else if (origem === 'transf_entrada') {
+      termo = document.getElementById('transf-ent-refer')?.value.trim() || '';
+    } else {
+      termo = document.getElementById('avulsa-refer')?.value.trim() || '';
+    }
 
     document.getElementById('mpi-title').textContent = `🔖 Pesquisar Referência (Emp ${codEmpresa})`;
     document.getElementById('mpi-subtitle').textContent = 'Referências cadastradas no banco local:';
@@ -2877,7 +2927,7 @@ const App = (() => {
     modal.style.display = 'flex';
 
     const refs = await DB.buscarReferenciasLocal(codEmpresa, termo);
-    state.pesquisaInterna = { tipo: 'REFER', dados: refs, filtrados: refs };
+    state.pesquisaInterna = { tipo: 'REFER', origem, dados: refs, filtrados: refs };
     renderListaPesquisaInterna();
     setTimeout(() => document.getElementById('mpi-input-busca')?.focus(), 80);
   }
@@ -3013,37 +3063,991 @@ const App = (() => {
     const reg = state.pesquisaInterna.filtrados[idx];
     if (!reg) return;
     const tipo = state.pesquisaInterna.tipo;
+    const origem = state.pesquisaInterna.origem || 'avulsa';
 
-    if (tipo === 'ITEM') {
-      const inp = document.getElementById('avulsa-item');
-      if (inp) {
-        inp.value = reg.itCodigo;
-        lookupItemAvulsa(reg.itCodigo);
+    if (origem === 'transf_saida') {
+      if (tipo === 'ITEM') {
+        const inp = document.getElementById('transf-sai-item');
+        if (inp) {
+          inp.value = reg.itCodigo;
+          onItemSaidaAlterado(reg.itCodigo);
+        }
+      } else if (tipo === 'LOCALIZ') {
+        const inp = document.getElementById('transf-sai-localiz');
+        if (inp) inp.value = reg.codLocaliz || '';
+      } else if (tipo === 'LOTE') {
+        const inp = document.getElementById('transf-sai-lote');
+        if (inp) {
+          inp.value = reg.lote;
+          const inpDt = document.getElementById('transf-sai-dt-valid');
+          if (inpDt && reg.dtValiLote) inpDt.value = formatarParaInputDate(reg.dtValiLote);
+        }
+      } else if (tipo === 'REFER') {
+        const inp = document.getElementById('transf-sai-refer');
+        if (inp) inp.value = reg.codRefer || '';
       }
-    } else if (tipo === 'LOCALIZ') {
-      const inp = document.getElementById('avulsa-localiz');
-      if (inp) inp.value = reg.codLocaliz || '';
-    } else if (tipo === 'LOTE') {
-      const inpL = document.getElementById('avulsa-lote');
-      if (inpL) inpL.value = reg.lote;
-      if (reg.dtValiLote) {
-        const inpDt = document.getElementById('avulsa-dt-valid');
-        if (inpDt) inpDt.value = formatarParaInputDate(reg.dtValiLote);
+    } else if (origem === 'transf_entrada') {
+      if (tipo === 'LOCALIZ') {
+        const inp = document.getElementById('transf-ent-localiz');
+        if (inp) inp.value = reg.codLocaliz || '';
+      } else if (tipo === 'LOTE') {
+        const inp = document.getElementById('transf-ent-lote');
+        if (inp) {
+          inp.value = reg.lote;
+          onLoteEntradaAlterado(reg.lote);
+        }
+      } else if (tipo === 'REFER') {
+        const inp = document.getElementById('transf-ent-refer');
+        if (inp) inp.value = reg.codRefer || '';
       }
-      if (reg.codLocaliz) {
-        const inpLoc = document.getElementById('avulsa-localiz');
-        if (inpLoc && !inpLoc.value) inpLoc.value = reg.codLocaliz;
+    } else {
+      // Padrão Ficha Avulsa
+      if (tipo === 'ITEM') {
+        const inp = document.getElementById('avulsa-item');
+        if (inp) {
+          inp.value = reg.itCodigo;
+          lookupItemAvulsa(reg.itCodigo);
+        }
+      } else if (tipo === 'LOCALIZ') {
+        const inp = document.getElementById('avulsa-localiz');
+        if (inp) inp.value = reg.codLocaliz || '';
+      } else if (tipo === 'LOTE') {
+        const inpL = document.getElementById('avulsa-lote');
+        if (inpL) inpL.value = reg.lote;
+        if (reg.dtValiLote) {
+          const inpDt = document.getElementById('avulsa-dt-valid');
+          if (inpDt) inpDt.value = formatarParaInputDate(reg.dtValiLote);
+        }
+        if (reg.codLocaliz) {
+          const inpLoc = document.getElementById('avulsa-localiz');
+          if (inpLoc && !inpLoc.value) inpLoc.value = reg.codLocaliz;
+        }
+        if (reg.codRefer) {
+          const inpRef = document.getElementById('avulsa-refer');
+          if (inpRef && !inpRef.value) inpRef.value = reg.codRefer;
+        }
+      } else if (tipo === 'REFER') {
+        const inp = document.getElementById('avulsa-refer');
+        if (inp) inp.value = reg.codRefer;
       }
-      if (reg.codRefer) {
-        const inpRef = document.getElementById('avulsa-refer');
-        if (inpRef && !inpRef.value) inpRef.value = reg.codRefer;
-      }
-    } else if (tipo === 'REFER') {
-      const inp = document.getElementById('avulsa-refer');
-      if (inp) inp.value = reg.codRefer;
     }
 
     fecharModalPesquisaInterna();
+  }
+
+  // =========================================================================
+  // MÓDULO: TRANSFERÊNCIA DE MATERIAL (CE0206 / fcSetTransfMaterial.p)
+  // Fluxo em 2 Etapas: Saída -> Pendente Entrada -> Entrada -> Efetivação
+  // =========================================================================
+
+  let stateTransferencias = {
+    filtroStatus: 'todas',
+    termoBusca: '',
+    lista: [],
+    transferenciaAtiva: null
+  };
+
+  async function renderTelaTransferencias(params) {
+    const codEmpresa = state.session.codEmpresa || '001';
+    const codUsuario = state.session.codUsuario || '';
+    if (params && params.filtro) {
+      stateTransferencias.filtroStatus = params.filtro;
+    }
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+        <button class="btn-topbar-action" onclick="App.navegar('menu')">‹ Início</button>
+        <h3 style="font-size: 14.5px; font-weight: 800; margin: 0; color: #0f172a;">Transferências (CE0206)</h3>
+        <button class="btn btn-primary" onclick="App.navegar('transferencia_saida')" style="width: auto; padding: 5px 10px; font-size: 11.5px; border-radius: 6px;">
+          + Nova Saída
+        </button>
+      </div>
+
+      <div style="background: #f1f5f9; padding: 4px; border-radius: 8px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 8px;">
+        <button type="button" class="tab-btn-mini ${stateTransferencias.filtroStatus === 'todas' ? 'active' : ''}" onclick="App.filtrarStatusTransferencia('todas')" id="tab-transf-todas">Todas</button>
+        <button type="button" class="tab-btn-mini ${stateTransferencias.filtroStatus === 'pendente_entrada' ? 'active' : ''}" onclick="App.filtrarStatusTransferencia('pendente_entrada')" id="tab-transf-pendente_entrada">Pend. Ent.</button>
+        <button type="button" class="tab-btn-mini ${stateTransferencias.filtroStatus === 'pronto_envio' ? 'active' : ''}" onclick="App.filtrarStatusTransferencia('pronto_envio')" id="tab-transf-pronto_envio">Pend. Totvs</button>
+        <button type="button" class="tab-btn-mini ${stateTransferencias.filtroStatus === 'efetivado' ? 'active' : ''}" onclick="App.filtrarStatusTransferencia('efetivado')" id="tab-transf-efetivado">Efetivadas</button>
+      </div>
+
+      <div style="position: relative; margin-bottom: 10px;">
+        <input type="text" id="transf-input-busca" class="form-input" style="padding-right: 30px; font-size: 12.5px;" placeholder="Buscar item, depósito ou doc..." oninput="App.onBuscarTransferencias(this.value)" value="${escapeHtml(stateTransferencias.termoBusca)}">
+        <button type="button" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; font-size: 13px; cursor: pointer;" onclick="document.getElementById('transf-input-busca').value=''; App.onBuscarTransferencias('');">✕</button>
+      </div>
+
+      <div id="transf-lista-container" style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="text-align: center; padding: 24px 10px; color: #94a3b8; font-size: 13px;">
+          Carregando movimentações...
+        </div>
+      </div>
+    `;
+
+    await carregarListaTransferencias();
+  }
+
+  async function carregarListaTransferencias() {
+    const codEmpresa = state.session.codEmpresa || '001';
+    const codUsuario = state.session.codUsuario || '';
+    stateTransferencias.lista = await DB.listarTransferencias(codEmpresa, codUsuario);
+    renderizarCardsTransferencias();
+  }
+
+  function filtrarStatusTransferencia(status) {
+    stateTransferencias.filtroStatus = status;
+    document.querySelectorAll('.tab-btn-mini').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`tab-transf-${status}`);
+    if (btn) btn.classList.add('active');
+    renderizarCardsTransferencias();
+  }
+
+  function onBuscarTransferencias(termo) {
+    stateTransferencias.termoBusca = termo || '';
+    renderizarCardsTransferencias();
+  }
+
+  function renderizarCardsTransferencias() {
+    const elLista = document.getElementById('transf-lista-container');
+    if (!elLista) return;
+
+    const termo = (stateTransferencias.termoBusca || '').trim().toLowerCase();
+    const filtro = stateTransferencias.filtroStatus;
+
+    let filtradas = stateTransferencias.lista.filter(t => {
+      if (filtro === 'pendente_entrada' && t.status !== 'PENDENTE_ENTRADA') return false;
+      if (filtro === 'pronto_envio' && t.status !== 'PRONTO_ENVIO' && t.status !== 'ERRO') return false;
+      if (filtro === 'efetivado' && t.status !== 'EFETIVADO') return false;
+
+      if (termo) {
+        const itemStr = `${t.itCodigo || ''} ${t.descItem || ''}`.toLowerCase();
+        const depStr = `${t.codDeposSai || ''} ${t.codDeposEnt || ''}`.toLowerCase();
+        const docStr = `${t.nroDocto || ''} ${t.serie || ''}`.toLowerCase();
+        if (!itemStr.includes(termo) && !depStr.includes(termo) && !docStr.includes(termo)) return false;
+      }
+      return true;
+    });
+
+    if (filtradas.length === 0) {
+      elLista.innerHTML = `
+        <div style="text-align: center; padding: 35px 20px; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1;">
+          <div style="font-size: 32px; margin-bottom: 8px;">🔄</div>
+          <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">Nenhuma transferência encontrada</div>
+          <p style="font-size: 11.5px; color: #64748b; margin-bottom: 14px;">
+            ${filtro === 'todas' ? 'Você ainda não registrou saídas de material neste aparelho.' : 'Nenhuma transferência com o status selecionado.'}
+          </p>
+          <button class="btn btn-primary" onclick="App.navegar('transferencia_saida')" style="width: auto; padding: 6px 14px; margin: 0 auto; font-size: 12px;">
+            + Criar Nova Saída
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    elLista.innerHTML = filtradas.map(t => {
+      let badgeHtml = '';
+      if (t.status === 'PENDENTE_ENTRADA') {
+        badgeHtml = `<span class="badge" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-weight:700;">⏳ Pendente Entrada</span>`;
+      } else if (t.status === 'PRONTO_ENVIO') {
+        badgeHtml = `<span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd; font-weight:700;">📤 Pronto p/ Totvs</span>`;
+      } else if (t.status === 'EFETIVADO') {
+        badgeHtml = `<span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;">✓ Efetivado Totvs</span>`;
+      } else if (t.status === 'ERRO') {
+        badgeHtml = `<span class="badge" style="background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; font-weight:700;">⚠️ Erro Totvs</span>`;
+      }
+
+      const ehEfetivado = t.status === 'EFETIVADO';
+
+      return `
+        <div class="card" style="border-left: 4px solid ${ehEfetivado ? '#10b981' : (t.status === 'ERRO' ? '#ef4444' : (t.status === 'PENDENTE_ENTRADA' ? '#f59e0b' : '#3b82f6'))}; padding: 12px; margin-bottom: 2px;">
+          <!-- Cabeçalho do Card -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="font-size: 11px; font-weight: 700; color: #64748b;">
+              #${escapeHtml(t.id_uuid.slice(-6).toUpperCase())} • ${formatarDataBr(t.dtTransf || t.criadoEm)}
+            </div>
+            <div>${badgeHtml}</div>
+          </div>
+
+          <!-- Item e Quantidade -->
+          <div style="margin-bottom: 8px;">
+            <div style="font-size: 13.5px; font-weight: 800; color: #0f172a; line-height: 1.25;">
+              ${escapeHtml(t.itCodigo)} <span style="font-weight: 400; color: #334155;">- ${escapeHtml(t.descItem || '')}</span>
+            </div>
+            <div style="display: flex; align-items: baseline; gap: 6px; margin-top: 3px;">
+              <span style="font-size: 11px; color: #64748b;">Quantidade:</span>
+              <strong style="font-size: 14px; color: #0284c7;">${Number(t.quantidade || 0).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 4 })}</strong>
+              <span style="font-size: 11px; color: #64748b; font-weight: 600;">${escapeHtml(t.un || 'UN')}</span>
+              ${t.nroDocto ? `<span style="margin-left: auto; font-size: 10.5px; color: #64748b;">Doc: <strong>${escapeHtml(t.nroDocto)}${t.serie ? '/' + escapeHtml(t.serie) : ''}</strong></span>` : ''}
+            </div>
+          </div>
+
+          <!-- Fluxo Saída -> Entrada -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 8px; font-size: 11.5px;">
+            <!-- Linha Saída -->
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+              <span style="width: 14px; text-align: center; font-size: 11px;">🔴</span>
+              <strong style="color: #991b1b; min-width: 44px;">Saída:</strong>
+              <span>Dep <strong>${escapeHtml(t.codDeposSai)}</strong></span>
+              ${t.codLocalizSai ? `<span>• Loc <strong>${escapeHtml(t.codLocalizSai)}</strong></span>` : ''}
+              ${t.loteSai ? `<span>• Lote <strong>${escapeHtml(t.loteSai)}</strong></span>` : ''}
+              ${t.dtValiLote ? `<span style="color:#64748b;">(${formatarDataBr(t.dtValiLote)})</span>` : ''}
+              ${t.codReferSai ? `<span>• Ref <strong>${escapeHtml(t.codReferSai)}</strong></span>` : ''}
+            </div>
+
+            <!-- Linha Entrada -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="width: 14px; text-align: center; font-size: 11px;">🟢</span>
+              <strong style="color: #166534; min-width: 44px;">Entrada:</strong>
+              ${t.codDeposEnt ? `
+                <span>Dep <strong>${escapeHtml(t.codDeposEnt)}</strong></span>
+                ${t.codLocalizEnt ? `<span>• Loc <strong>${escapeHtml(t.codLocalizEnt)}</strong></span>` : ''}
+                ${t.loteEnt ? `<span>• Lote <strong>${escapeHtml(t.loteEnt)}</strong></span>` : ''}
+                ${t.dtValiLoteEnt ? `<span style="color:#64748b;">(${formatarDataBr(t.dtValiLoteEnt)})</span>` : ''}
+                ${t.codReferEnt ? `<span>• Ref <strong>${escapeHtml(t.codReferEnt)}</strong></span>` : ''}
+              ` : `
+                <span style="color: #d97706; font-style: italic; font-weight: 600;">Aguardando confirmação de entrada...</span>
+              `}
+            </div>
+          </div>
+
+          <!-- Mensagem de Erro do TOTVS se houver -->
+          ${t.status === 'ERRO' && (t.detalheErro || t.mensagemRetorno) ? `
+            <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 7px 9px; font-size: 11.5px; color: #991b1b; margin-bottom: 8px;">
+              <strong>⚠️ Erro Retornado pelo Datasul (ceapi001k):</strong><br>
+              ${escapeHtml(t.detalheErro || t.mensagemRetorno)}
+            </div>
+          ` : ''}
+
+          ${ehEfetivado && t.mensagemRetorno ? `
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 5px 8px; font-size: 11px; color: #166534; margin-bottom: 8px;">
+              ✓ ${escapeHtml(t.mensagemRetorno)}
+            </div>
+          ` : ''}
+
+          <!-- Botões de Ação -->
+          <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; margin-top: 4px;">
+            ${ehEfetivado ? `
+              <!-- Apenas Consulta quando já efetivado no TOTVS -->
+              <button class="btn btn-secondary" onclick="App.consultarTransferencia('${escapeHtml(t.id_uuid)}')" style="width: auto; padding: 5px 12px; font-size: 11.5px;">
+                👁️ Consultar
+              </button>
+            ` : `
+              <!-- Ações para movimentos não efetivados -->
+              ${t.status === 'PENDENTE_ENTRADA' ? `
+                <button class="btn btn-primary" onclick="App.abrirEntradaTransferencia('${escapeHtml(t.id_uuid)}')" style="width: auto; padding: 6px 12px; font-size: 11.5px; font-weight: 700;">
+                  📥 Dar Entrada ➔
+                </button>
+                <button class="btn btn-secondary" onclick="App.abrirEdicaoSaida('${escapeHtml(t.id_uuid)}')" style="width: auto; padding: 6px 10px; font-size: 11.5px;">
+                  ✏️ Editar
+                </button>
+                <button class="btn btn-danger-outline" onclick="App.excluirTransferencia('${escapeHtml(t.id_uuid)}')" style="width: auto; padding: 6px 8px; font-size: 11.5px;" title="Excluir">
+                  🗑️
+                </button>
+              ` : `
+                <button class="btn btn-primary" onclick="App.transmitirTransferencia('${escapeHtml(t.id_uuid)}')" style="width: auto; padding: 6px 12px; font-size: 11.5px; font-weight: 700; background: #0284c7;">
+                  ⚡ Transmitir ao Totvs
+                </button>
+                <button class="btn btn-secondary" onclick="App.abrirEntradaTransferencia('${escapeHtml(t.id_uuid)}')" style="width: auto; padding: 6px 10px; font-size: 11.5px;">
+                  ✏️ Entrada
+                </button>
+                <button class="btn btn-secondary" onclick="App.abrirEdicaoSaida('${escapeHtml(t.id_uuid)}')" style="width: auto; padding: 6px 8px; font-size: 11.5px;">
+                  ✏️ Saída
+                </button>
+                <button class="btn btn-danger-outline" onclick="App.excluirTransferencia('${escapeHtml(t.id_uuid)}')" style="width: auto; padding: 6px 8px; font-size: 11.5px;" title="Excluir">
+                  🗑️
+                </button>
+              `}
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function abrirEdicaoSaida(id_uuid) {
+    const transf = await DB.obterTransferencia(id_uuid);
+    if (!transf) {
+      alert('Movimento de transferência não encontrado.');
+      return;
+    }
+    if (transf.status === 'EFETIVADO') {
+      alert('Esta transferência já foi efetivada no Totvs e não pode mais ser alterada.');
+      return;
+    }
+    renderTelaTransferenciaSaida(transf);
+  }
+
+  async function abrirEntradaTransferencia(id_uuid) {
+    const transf = await DB.obterTransferencia(id_uuid);
+    if (!transf) {
+      alert('Movimento de transferência não encontrado.');
+      return;
+    }
+    if (transf.status === 'EFETIVADO') {
+      alert('Esta transferência já foi efetivada no Totvs.');
+      return;
+    }
+    renderTelaTransferenciaEntrada(transf);
+  }
+
+  async function renderTelaTransferenciaSaida(transfEdicao = null) {
+    const codEmpresa = state.session.codEmpresa || '001';
+    const codEstabel = state.session.codEstabel || '101';
+    stateTransferencias.transferenciaAtiva = transfEdicao || null;
+
+    const depositos = await DB.getAllByEmpresa('deposito', codEmpresa);
+    const hojeIso = new Date().toISOString().slice(0, 10);
+
+    const isEdit = Boolean(transfEdicao && transfEdicao.id_uuid);
+    const itCodigoVal = transfEdicao ? transfEdicao.itCodigo : '';
+    const descItemVal = transfEdicao ? (transfEdicao.descItem || '') : '';
+    const unVal = transfEdicao ? (transfEdicao.un || 'UN') : 'UN';
+    const depSaiVal = transfEdicao ? transfEdicao.codDeposSai : (depositos[0]?.codDepos || '');
+    const locSaiVal = transfEdicao ? (transfEdicao.codLocalizSai || '') : '';
+    const loteSaiVal = transfEdicao ? (transfEdicao.loteSai || '') : '';
+    const dtValiSaiVal = transfEdicao ? (transfEdicao.dtValiLote || '') : '';
+    const refSaiVal = transfEdicao ? (transfEdicao.codReferSai || '') : '';
+    const qtdVal = transfEdicao ? (transfEdicao.quantidade || '') : '';
+    const nroDoctoVal = transfEdicao ? (transfEdicao.nroDocto || '') : '';
+    const serieVal = transfEdicao ? (transfEdicao.serie || '') : '';
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <button class="btn-topbar-action" onclick="App.navegar('transferencias')">‹ Voltar</button>
+        <h3 style="font-size: 15px; font-weight: 800; margin: 0; color: #0f172a;">
+          ${isEdit ? 'Editar Saída de Material' : 'Nova Saída (CE0206)'}
+        </h3>
+        <span style="width: 48px;"></span>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px; border-top: 3px solid #b91c1c;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <div style="font-size: 12px; font-weight: 700; color: #991b1b; display: flex; align-items: center; gap: 4px;">
+            <span>🔴</span> 1ª Etapa: Saída do Material
+          </div>
+          <span style="font-size: 11px; color: #64748b;">Filial: <strong>${escapeHtml(codEstabel)}</strong></span>
+        </div>
+
+        <form id="form-transf-saida" onsubmit="event.preventDefault(); App.salvarSaidaTransferencia(false);">
+          <!-- Campo Item -->
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label class="form-label" for="transf-sai-item">Item (Código / EAN) *</label>
+            <div style="display: flex; gap: 5px;">
+              <input type="text" id="transf-sai-item" class="form-input" style="font-weight: 700;" placeholder="Código do item..." value="${escapeHtml(itCodigoVal)}" required onblur="App.onItemSaidaAlterado(this.value)">
+              <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 10px;" onclick="App.abrirPesquisaItemInterna('transf_saida')" title="Buscar Item">🔍</button>
+              <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 10px;" onclick="App.abrirScannerCamera('TRANSF_SAIDA_ITEM')" title="Ler Código de Barras">📷</button>
+            </div>
+            <div id="transf-sai-desc-item" style="font-size: 11.5px; font-weight: 700; color: #0284c7; margin-top: 3px;">
+              ${descItemVal ? `${escapeHtml(descItemVal)} (${escapeHtml(unVal)})` : '-'}
+            </div>
+          </div>
+
+          <!-- Depósito de Saída -->
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label class="form-label" for="transf-sai-depos">Depósito Saída *</label>
+            <select id="transf-sai-depos" class="form-input" required onchange="App.onDepositoSaidaAlterado(this.value)">
+              ${depositos.length === 0 ? '<option value="">Nenhum depósito cadastrado</option>' : ''}
+              ${depositos.map(d => `<option value="${escapeHtml(d.codDepos)}" ${d.codDepos === depSaiVal ? 'selected' : ''}>${escapeHtml(d.codDepos)} - ${escapeHtml(d.nome || d.codDepos)}</option>`).join('')}
+            </select>
+          </div>
+
+          <!-- Localização e Quantidade -->
+          <div style="display: grid; grid-template-columns: 1.1fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" for="transf-sai-localiz">Localização Saída</label>
+              <div style="display: flex; gap: 4px;">
+                <input type="text" id="transf-sai-localiz" class="form-input" placeholder="ex: BRANCO" value="${escapeHtml(locSaiVal)}">
+                <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLocalizInterna('transf_saida')" title="Buscar Localização">🔍</button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" for="transf-sai-qtd">Quantidade *</label>
+              <input type="number" id="transf-sai-qtd" class="form-input" style="font-size: 14px; font-weight: 800; color: #0284c7;" step="0.0001" min="0.0001" placeholder="0,00" value="${qtdVal}" required>
+            </div>
+          </div>
+
+          <!-- Bloco Condicional Lote Saída -->
+          <div id="transf-sai-bloco-lote" style="display: block; background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 8px; margin-bottom: 10px;">
+            <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 8px;">
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" for="transf-sai-lote">Lote Saída <span id="transf-sai-lote-req">*</span></label>
+                <div style="display: flex; gap: 4px;">
+                  <input type="text" id="transf-sai-lote" class="form-input" placeholder="Lote..." value="${escapeHtml(loteSaiVal)}" onblur="App.onLoteSaidaAlterado(this.value)">
+                  <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLoteInterna('transf_saida')" title="Buscar Lote com Saldo">🔍</button>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" for="transf-sai-dt-valid">Validade Saída</label>
+                <input type="date" id="transf-sai-dt-valid" class="form-input" value="${formatarParaInputDate(dtValiSaiVal)}">
+              </div>
+            </div>
+            <div id="transf-sai-lote-info" style="font-size: 10.5px; color: #b45309; margin-top: 4px;">
+              Informe o lote de origem com saldo para a baixa.
+            </div>
+          </div>
+
+          <!-- Bloco Referência Saída e Documento / Série -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr 0.8fr; gap: 6px; margin-bottom: 12px;">
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" for="transf-sai-refer">Referência</label>
+              <div style="display: flex; gap: 3px;">
+                <input type="text" id="transf-sai-refer" class="form-input" placeholder="Ref..." value="${escapeHtml(refSaiVal)}">
+                <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 6px;" onclick="App.abrirPesquisaReferenciaInterna('transf_saida')" title="Buscar Referência">🔍</button>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" for="transf-sai-doc">Docto (Opç)</label>
+              <input type="text" id="transf-sai-doc" class="form-input" placeholder="ex: 1234" value="${escapeHtml(nroDoctoVal)}">
+            </div>
+
+            <div class="form-group" style="margin: 0;">
+              <label class="form-label" for="transf-sai-serie">Série</label>
+              <input type="text" id="transf-sai-serie" class="form-input" placeholder="ex: 1" value="${escapeHtml(serieVal)}">
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button type="button" class="btn btn-primary" onclick="App.salvarSaidaTransferencia(true)" style="background: #166534; font-weight: 700;">
+              💾 Salvar Saída e Informar Entrada ➔
+            </button>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn btn-secondary" onclick="App.salvarSaidaTransferencia(false)">
+                💾 Salvar Saída (Fica Pendente)
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="App.navegar('transferencias')" style="width: auto; padding: 0 14px;">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    `;
+
+    if (itCodigoVal) {
+      await onItemSaidaAlterado(itCodigoVal);
+    }
+  }
+
+  async function onItemSaidaAlterado(itCodigo) {
+    const cod = (itCodigo || '').trim();
+    const codEmpresa = state.session.codEmpresa || '001';
+    const elDesc = document.getElementById('transf-sai-desc-item');
+    if (!cod) {
+      if (elDesc) elDesc.textContent = '-';
+      return;
+    }
+
+    const item = await DB.obterItemExato(codEmpresa, cod);
+    const blocoLote = document.getElementById('transf-sai-bloco-lote');
+    const loteReq = document.getElementById('transf-sai-lote-req');
+
+    if (item) {
+      if (elDesc) elDesc.textContent = `${item.descItem || cod} (${item.un || 'UN'})`;
+      const ehLote = item.tipoContrEstoque === 2 || Boolean(item.indLote);
+      if (blocoLote) blocoLote.style.display = ehLote ? 'block' : 'none';
+      if (loteReq) loteReq.style.display = ehLote ? 'inline' : 'none';
+      stateTransferencias.itemSaidaSelecionado = item;
+    } else {
+      if (elDesc) elDesc.textContent = `${cod} (Não localizado no catálogo offline)`;
+      if (blocoLote) blocoLote.style.display = 'block';
+      stateTransferencias.itemSaidaSelecionado = null;
+    }
+  }
+
+  async function onDepositoSaidaAlterado(codDepos) {
+    // Pode atualizar sugestão de localizações se desejado
+  }
+
+  async function onLoteSaidaAlterado(lote) {
+    const l = (lote || '').trim();
+    if (!l) return;
+    const codEmpresa = state.session.codEmpresa || '001';
+    const itCodigo = document.getElementById('transf-sai-item')?.value.trim() || '';
+    if (!itCodigo) return;
+
+    const info = await DB.obterDataValidadeLote(codEmpresa, itCodigo, l);
+    if (info && info.dtValiLote) {
+      const inpDt = document.getElementById('transf-sai-dt-valid');
+      if (inpDt && !inpDt.value) {
+        inpDt.value = formatarParaInputDate(info.dtValiLote);
+      }
+    }
+  }
+
+  async function salvarSaidaTransferencia(irParaEntrada = false) {
+    const codEmpresa = state.session.codEmpresa || '001';
+    const codEstabel = state.session.codEstabel || '101';
+    const codUsuario = state.session.codUsuario || '';
+
+    const itCodigo = document.getElementById('transf-sai-item')?.value.trim() || '';
+    const codDeposSai = document.getElementById('transf-sai-depos')?.value.trim() || '';
+    const codLocalizSai = document.getElementById('transf-sai-localiz')?.value.trim() || '';
+    const loteSai = document.getElementById('transf-sai-lote')?.value.trim() || '';
+    const dtValiSai = document.getElementById('transf-sai-dt-valid')?.value.trim() || '';
+    const codReferSai = document.getElementById('transf-sai-refer')?.value.trim() || '';
+    const quantidade = parseFloat(document.getElementById('transf-sai-qtd')?.value || '0');
+    const nroDocto = document.getElementById('transf-sai-doc')?.value.trim() || '';
+    const serie = document.getElementById('transf-sai-serie')?.value.trim() || '';
+
+    if (!itCodigo) {
+      alert('Informe o código do item.');
+      document.getElementById('transf-sai-item')?.focus();
+      return;
+    }
+
+    if (!codDeposSai) {
+      alert('Informe o depósito de saída.');
+      document.getElementById('transf-sai-depos')?.focus();
+      return;
+    }
+
+    if (!quantidade || quantidade <= 0 || isNaN(quantidade)) {
+      alert('Informe uma quantidade válida maior que zero.');
+      document.getElementById('transf-sai-qtd')?.focus();
+      return;
+    }
+
+    // Validar lote se o item exigir
+    const item = stateTransferencias.itemSaidaSelecionado || await DB.obterItemExato(codEmpresa, itCodigo);
+    const ehLote = item ? (item.tipoContrEstoque === 2 || Boolean(item.indLote)) : false;
+    if (ehLote && !loteSai) {
+      alert('Este item possui controle de lote. Informe o Lote de Saída.');
+      document.getElementById('transf-sai-lote')?.focus();
+      return;
+    }
+
+    const editando = stateTransferencias.transferenciaAtiva;
+    const transf = {
+      ...(editando || {}),
+      id_uuid: editando?.id_uuid || ('tr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9)),
+      codEmpresa,
+      codEstabel,
+      codUsuario,
+      dtTransf: editando?.dtTransf || new Date().toISOString().slice(0, 10),
+      itCodigo,
+      descItem: item?.descItem || editando?.descItem || itCodigo,
+      un: item?.un || editando?.un || 'UN',
+      quantidade,
+      codDeposSai,
+      codLocalizSai,
+      loteSai,
+      dtValiLote: dtValiSai,
+      codReferSai,
+      nroDocto,
+      serie,
+      status: editando?.status === 'ERRO' ? 'PRONTO_ENVIO' : (editando?.status || 'PENDENTE_ENTRADA'),
+      pendenteSync: editando?.pendenteSync || false,
+      criadoEm: editando?.criadoEm || new Date().toISOString(),
+      atualizadoEm: new Date().toISOString()
+    };
+
+    const salvo = await DB.salvarTransferencia(transf);
+
+    if (irParaEntrada) {
+      renderTelaTransferenciaEntrada(salvo);
+    } else {
+      alert('Saída salva com sucesso! O registro está pendente de entrada.');
+      App.navegar('transferencias', { filtro: 'pendente_entrada' });
+    }
+  }
+
+  async function renderTelaTransferenciaEntrada(transf) {
+    if (!transf) {
+      alert('Nenhuma transferência selecionada.');
+      App.navegar('transferencias');
+      return;
+    }
+
+    const codEmpresa = state.session.codEmpresa || '001';
+    stateTransferencias.transferenciaAtiva = transf;
+
+    const depositos = await DB.getAllByEmpresa('deposito', codEmpresa);
+    let depEntPadrao = transf.codDeposEnt || '';
+    if (!depEntPadrao) {
+      const outro = depositos.find(d => d.codDepos !== transf.codDeposSai);
+      depEntPadrao = outro ? outro.codDepos : (depositos[0]?.codDepos || '');
+    }
+
+    const locEntPadrao = transf.codLocalizEnt || '';
+    const loteEntPadrao = transf.loteEnt || transf.loteSai || '';
+    const dtValiEntPadrao = transf.dtValiLoteEnt || transf.dtValiLote || '';
+    const refEntPadrao = transf.codReferEnt || transf.codReferSai || '';
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <button class="btn-topbar-action" onclick="App.navegar('transferencias')">‹ Voltar</button>
+        <h3 style="font-size: 15px; font-weight: 800; margin: 0; color: #0f172a;">Entrada de Material</h3>
+        <span style="width: 48px;"></span>
+      </div>
+
+      <!-- Card Resumo da Saída Já Gravada -->
+      <div class="card" style="margin-bottom: 12px; background: #fff5f5; border: 1px solid #fed7d7; border-left: 4px solid #dc2626; padding: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <div style="font-size: 11px; font-weight: 700; color: #991b1b;">
+            🔴 Saída Registrada #${escapeHtml(transf.id_uuid.slice(-6).toUpperCase())}
+          </div>
+          <span style="font-size: 11px; color: #64748b;">${formatarDataBr(transf.dtTransf)}</span>
+        </div>
+        <div style="font-size: 13.5px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">
+          ${escapeHtml(transf.itCodigo)} <span style="font-weight: 400; color: #475569;">- ${escapeHtml(transf.descItem || '')}</span>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: #334155;">
+          <span>Qtd: <strong style="color: #0284c7;">${transf.quantidade}</strong> ${escapeHtml(transf.un || 'UN')}</span>
+          <span>• Dep Origem: <strong>${escapeHtml(transf.codDeposSai)}</strong></span>
+          ${transf.codLocalizSai ? `<span>• Loc: <strong>${escapeHtml(transf.codLocalizSai)}</strong></span>` : ''}
+          ${transf.loteSai ? `<span>• Lote: <strong>${escapeHtml(transf.loteSai)}</strong></span>` : ''}
+          ${transf.dtValiLote ? `<span style="color:#64748b;">(${formatarDataBr(transf.dtValiLote)})</span>` : ''}
+        </div>
+      </div>
+
+      <!-- Formulário da 2ª Etapa: Entrada -->
+      <div class="card" style="margin-bottom: 12px; border-top: 3px solid #166534;">
+        <div style="font-size: 12px; font-weight: 700; color: #166534; margin-bottom: 10px; display: flex; align-items: center; gap: 4px;">
+          <span>🟢</span> 2ª Etapa: Informar Dados de Entrada
+        </div>
+
+        <form id="form-transf-entrada" onsubmit="event.preventDefault(); App.salvarEntradaTransferencia(true);">
+          <!-- Depósito de Entrada -->
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label class="form-label" for="transf-ent-depos">Depósito Destino / Entrada *</label>
+            <select id="transf-ent-depos" class="form-input" required>
+              ${depositos.map(d => `<option value="${escapeHtml(d.codDepos)}" ${d.codDepos === depEntPadrao ? 'selected' : ''}>${escapeHtml(d.codDepos)} - ${escapeHtml(d.nome || d.codDepos)}</option>`).join('')}
+            </select>
+          </div>
+
+          <!-- Localização de Entrada -->
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label class="form-label" for="transf-ent-localiz">Localização Entrada</label>
+            <div style="display: flex; gap: 4px;">
+              <input type="text" id="transf-ent-localiz" class="form-input" placeholder="ex: BRANCO" value="${escapeHtml(locEntPadrao)}">
+              <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLocalizInterna('transf_entrada')" title="Buscar Localização">🔍</button>
+            </div>
+          </div>
+
+          <!-- Bloco Lote Entrada e Data de Validade com Regra Crítica -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+            <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px;">
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" for="transf-ent-lote">Lote Entrada</label>
+                <div style="display: flex; gap: 4px;">
+                  <input type="text" id="transf-ent-lote" class="form-input" placeholder="Lote destino..." value="${escapeHtml(loteEntPadrao)}" oninput="App.onLoteEntradaAlterado(this.value)">
+                  <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLoteInterna('transf_entrada', '${escapeHtml(transf.itCodigo)}')" title="Buscar Lotes Existentes">🔍</button>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" for="transf-ent-dt-valid">Validade Entrada <span id="transf-ent-dt-valid-req" style="display:none; color:#dc2626;">*</span></label>
+                <input type="date" id="transf-ent-dt-valid" class="form-input" value="${formatarParaInputDate(dtValiEntPadrao)}">
+              </div>
+            </div>
+
+            <!-- Tip Informativo Dinâmico do Lote de Entrada -->
+            <div id="transf-ent-lote-tip" class="field-tip tip-info" style="margin-top: 6px;">
+              Digite o lote para verificar se já existe no estoque ou se é um lote novo.
+            </div>
+          </div>
+
+          <!-- Referência de Entrada -->
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label" for="transf-ent-refer">Referência Entrada</label>
+            <div style="display: flex; gap: 4px;">
+              <input type="text" id="transf-ent-refer" class="form-input" placeholder="Referência (opcional)..." value="${escapeHtml(refEntPadrao)}">
+              <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaReferenciaInterna('transf_entrada')" title="Buscar Referência">🔍</button>
+            </div>
+          </div>
+
+          <!-- Botões de Finalização -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button type="button" class="btn btn-primary" onclick="App.salvarEntradaTransferencia(true)" style="background: #0284c7; font-weight: 700; padding: 10px;">
+              ⚡ Confirmar Entrada & Transmitir ao Totvs
+            </button>
+            <div style="display: flex; gap: 6px;">
+              <button type="button" class="btn btn-secondary" onclick="App.salvarEntradaTransferencia(false)">
+                💾 Salvar Offline (Enviar Depois)
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="App.navegar('transferencias')" style="width: auto; padding: 0 14px;">
+                Voltar
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    `;
+
+    if (loteEntPadrao) {
+      await onLoteEntradaAlterado(loteEntPadrao);
+    }
+  }
+
+  async function onLoteEntradaAlterado(lote) {
+    const l = (lote || '').trim();
+    const transf = stateTransferencias.transferenciaAtiva;
+    const inpDt = document.getElementById('transf-ent-dt-valid');
+    const tip = document.getElementById('transf-ent-lote-tip');
+    const reqBadge = document.getElementById('transf-ent-dt-valid-req');
+    if (!inpDt || !tip) return;
+
+    if (!l) {
+      inpDt.readOnly = false;
+      inpDt.required = false;
+      if (reqBadge) reqBadge.style.display = 'none';
+      tip.className = 'field-tip tip-info';
+      tip.innerHTML = 'Sem lote informado (para itens sem controle de lote).';
+      return;
+    }
+
+    const codEmpresa = state.session.codEmpresa || '001';
+    const itCodigo = transf ? transf.itCodigo : '';
+    const info = await DB.obterDataValidadeLote(codEmpresa, itCodigo, l);
+
+    if (info && info.existe) {
+      // Lote JÁ EXISTE no Totvs/Estoque
+      if (info.dtValiLote) {
+        inpDt.value = formatarParaInputDate(info.dtValiLote);
+      }
+      inpDt.readOnly = false;
+      inpDt.required = false;
+      if (reqBadge) reqBadge.style.display = 'none';
+      tip.className = 'field-tip tip-success';
+      tip.innerHTML = `✓ Lote <strong>${escapeHtml(l)}</strong> já cadastrado no Totvs/Estoque. ${info.dtValiLote ? 'Validade carregada automaticamente.' : 'Validade opcional.'}`;
+    } else {
+      // LOTE NOVO! REGRA CRÍTICA: OBRIGAR INFORMAR A DATA DE VALIDADE
+      inpDt.readOnly = false;
+      inpDt.required = true;
+      if (reqBadge) reqBadge.style.display = 'inline';
+      tip.className = 'field-tip tip-warning';
+      tip.innerHTML = `⚠️ <strong>Lote novo!</strong> Este lote não consta no estoque. <strong>É obrigatório informar a data de validade.</strong>`;
+    }
+  }
+
+  async function salvarEntradaTransferencia(transmitirTotvs = true) {
+    const transf = stateTransferencias.transferenciaAtiva;
+    if (!transf) {
+      alert('Nenhuma transferência ativa.');
+      return;
+    }
+
+    const codDeposEnt = document.getElementById('transf-ent-depos')?.value.trim() || '';
+    const codLocalizEnt = document.getElementById('transf-ent-localiz')?.value.trim() || '';
+    const loteEnt = document.getElementById('transf-ent-lote')?.value.trim() || '';
+    const dtValiEnt = document.getElementById('transf-ent-dt-valid')?.value.trim() || '';
+    const codReferEnt = document.getElementById('transf-ent-refer')?.value.trim() || '';
+
+    if (!codDeposEnt) {
+      alert('Informe o depósito de entrada.');
+      document.getElementById('transf-ent-depos')?.focus();
+      return;
+    }
+
+    // Validação de lote novo
+    const codEmpresa = state.session.codEmpresa || '001';
+    const infoLote = await DB.obterDataValidadeLote(codEmpresa, transf.itCodigo, loteEnt);
+    if (loteEnt && (!infoLote || !infoLote.existe) && !dtValiEnt) {
+      alert('Para lote novo, é obrigatório informar a data de validade!');
+      document.getElementById('transf-ent-dt-valid')?.focus();
+      return;
+    }
+
+    // Atualiza o objeto da transferência
+    transf.codDeposEnt = codDeposEnt;
+    transf.codLocalizEnt = codLocalizEnt;
+    transf.loteEnt = loteEnt;
+    transf.dtValiLoteEnt = dtValiEnt;
+    transf.codReferEnt = codReferEnt;
+    transf.status = 'PRONTO_ENVIO';
+    transf.pendenteSync = true;
+    transf.atualizadoEm = new Date().toISOString();
+
+    await DB.salvarTransferencia(transf);
+
+    if (transmitirTotvs) {
+      await transmitirTransferencia(transf.id_uuid);
+    } else {
+      alert('Entrada salva localmente com sucesso! Registro pronto para transmissão ao Totvs.');
+      App.navegar('transferencias', { filtro: 'pronto_envio' });
+    }
+  }
+
+  async function transmitirTransferencia(id_uuid) {
+    const transf = await DB.obterTransferencia(id_uuid);
+    if (!transf) {
+      alert('Movimento não encontrado no aparelho.');
+      return;
+    }
+
+    if (!transf.codDeposEnt) {
+      alert('É necessário preencher os dados de entrada antes de transmitir ao Totvs.');
+      renderTelaTransferenciaEntrada(transf);
+      return;
+    }
+
+    if (!isOnline()) {
+      alert('Dispositivo sem conexão com o TOTVS no momento. O movimento continuará salvo como "Pronto p/ Totvs" e será sincronizado quando houver rede.');
+      App.navegar('transferencias', { filtro: 'pronto_envio' });
+      return;
+    }
+
+    mostrarLoading('Transmitindo ao TOTVS Datasul...', 'Executando fcSetTransfMaterial.p / ceapi001k...');
+
+    try {
+      const payloadItem = {
+        itCodigo: transf.itCodigo,
+        codEstabel: transf.codEstabel || state.session.codEstabel || '101',
+        codUsuario: state.session.codUsuario || transf.codUsuario,
+        dtTransf: transf.dtTransf || new Date().toISOString().slice(0, 10),
+        nroDocto: transf.nroDocto || '',
+        serie: transf.serie || '',
+        quantidade: Number(transf.quantidade),
+        codDeposSai: transf.codDeposSai,
+        codLocalizSai: transf.codLocalizSai || '',
+        loteSai: transf.loteSai || '',
+        dtValiLote: transf.dtValiLote || '',
+        codReferSai: transf.codReferSai || '',
+        codDeposEnt: transf.codDeposEnt,
+        codLocalizEnt: transf.codLocalizEnt || '',
+        loteEnt: transf.loteEnt || '',
+        dtValiLoteEnt: transf.dtValiLoteEnt || '',
+        codReferEnt: transf.codReferEnt || ''
+      };
+
+      const res = await pasoeFetch('/fcSetTransfMaterial', {
+        method: 'PUT',
+        body: JSON.stringify({ payload: [payloadItem] })
+      });
+
+      ocultarLoading();
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const dados = await res.json();
+
+      if (dados.type === 'OK') {
+        transf.status = 'EFETIVADO';
+        transf.pendenteSync = false;
+        transf.mensagemRetorno = dados.message || 'Transferência efetuada com sucesso no Datasul!';
+        transf.detalheErro = '';
+        transf.efetivadoEm = new Date().toISOString();
+        transf.atualizadoEm = new Date().toISOString();
+        await DB.salvarTransferencia(transf);
+
+        alert(`✓ Sucesso!\n\n${transf.mensagemRetorno}`);
+        App.navegar('transferencias', { filtro: 'efetivado' });
+      } else {
+        // Erro retornado pela ceapi001k no Progress
+        const msgErro = dados.detailedMessage || dados.message || 'Erro não especificado pelo Datasul.';
+        transf.status = 'ERRO';
+        transf.pendenteSync = true;
+        transf.mensagemRetorno = dados.message || 'Erro retornado pelo Datasul';
+        transf.detalheErro = msgErro;
+        transf.atualizadoEm = new Date().toISOString();
+        await DB.salvarTransferencia(transf);
+
+        alert(`❌ Erro no Datasul (ceapi001k):\n\n${msgErro}\n\nVocê pode editar os dados da saída ou da entrada para tentar novamente.`);
+        App.navegar('transferencias', { filtro: 'pronto_envio' });
+      }
+    } catch (e) {
+      ocultarLoading();
+      transf.status = 'ERRO';
+      transf.pendenteSync = true;
+      transf.mensagemRetorno = 'Falha de comunicação';
+      transf.detalheErro = e.message || 'Falha ao conectar com o serviço PASOE/TOTVS.';
+      transf.atualizadoEm = new Date().toISOString();
+      await DB.salvarTransferencia(transf);
+
+      alert(`⚠️ Falha de Comunicação:\n${transf.detalheErro}\n\nO movimento continuará salvo para envio posterior.`);
+      App.navegar('transferencias', { filtro: 'pronto_envio' });
+    }
+  }
+
+  async function excluirTransferencia(id_uuid) {
+    const transf = await DB.obterTransferencia(id_uuid);
+    if (!transf) {
+      alert('Movimento não encontrado.');
+      return;
+    }
+
+    // Regra explícita: movimentos efetivados no Totvs não podem ser excluídos
+    if (transf.status === 'EFETIVADO') {
+      alert('Não é permitido excluir uma transferência já efetivada no Totvs Datasul.');
+      return;
+    }
+
+    const conf = confirm(`Deseja realmente excluir a transferência do item ${transf.itCodigo} (${transf.quantidade} ${transf.un || 'UN'})?`);
+    if (!conf) return;
+
+    const res = await DB.excluirTransferencia(id_uuid);
+    if (res.success) {
+      alert('Movimento excluído com sucesso.');
+      await carregarListaTransferencias();
+    } else {
+      alert(res.mensagem || 'Erro ao excluir.');
+    }
+  }
+
+  async function consultarTransferencia(id_uuid) {
+    const transf = await DB.obterTransferencia(id_uuid);
+    if (!transf) {
+      alert('Transferência não encontrada.');
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <button class="btn-topbar-action" onclick="App.navegar('transferencias')">‹ Voltar</button>
+        <h3 style="font-size: 15px; font-weight: 800; margin: 0; color: #0f172a;">Consulta de Transferência</h3>
+        <span style="width: 48px;"></span>
+      </div>
+
+      <div class="card" style="margin-bottom: 12px; border-left: 4px solid #10b981;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700;">✓ Efetivado Totvs</span>
+          <span style="font-size: 11px; color: #64748b;">${formatarDataBr(transf.dtTransf)}</span>
+        </div>
+
+        <div style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 2px;">
+          ${escapeHtml(transf.itCodigo)} - ${escapeHtml(transf.descItem || '')}
+        </div>
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
+          Quantidade: <strong style="color: #0284c7; font-size: 14px;">${transf.quantidade}</strong> ${escapeHtml(transf.un || 'UN')}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+          <!-- Saída -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 11.5px;">
+            <div style="color: #991b1b; font-weight: 800; margin-bottom: 4px;">🔴 Saída (Origem)</div>
+            <div>Depósito: <strong>${escapeHtml(transf.codDeposSai)}</strong></div>
+            <div>Localiz: <strong>${escapeHtml(transf.codLocalizSai || '-')}</strong></div>
+            <div>Lote: <strong>${escapeHtml(transf.loteSai || '-')}</strong></div>
+            <div>Validade: <strong>${transf.dtValiLote ? formatarDataBr(transf.dtValiLote) : '-'}</strong></div>
+            <div>Ref: <strong>${escapeHtml(transf.codReferSai || '-')}</strong></div>
+          </div>
+
+          <!-- Entrada -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 11.5px;">
+            <div style="color: #166534; font-weight: 800; margin-bottom: 4px;">🟢 Entrada (Destino)</div>
+            <div>Depósito: <strong>${escapeHtml(transf.codDeposEnt)}</strong></div>
+            <div>Localiz: <strong>${escapeHtml(transf.codLocalizEnt || '-')}</strong></div>
+            <div>Lote: <strong>${escapeHtml(transf.loteEnt || '-')}</strong></div>
+            <div>Validade: <strong>${transf.dtValiLoteEnt ? formatarDataBr(transf.dtValiLoteEnt) : '-'}</strong></div>
+            <div>Ref: <strong>${escapeHtml(transf.codReferEnt || '-')}</strong></div>
+          </div>
+        </div>
+
+        <div style="background: #f1f5f9; border-radius: 6px; padding: 8px; font-size: 11px; color: #475569; margin-bottom: 12px;">
+          <div>Usuário: <strong>${escapeHtml(transf.codUsuario)}</strong> • Filial: <strong>${escapeHtml(transf.codEstabel)}</strong></div>
+          ${transf.nroDocto ? `<div>Docto/Série: <strong>${escapeHtml(transf.nroDocto)} / ${escapeHtml(transf.serie || '')}</strong></div>` : ''}
+          ${transf.efetivadoEm ? `<div>Efetivado em: <strong>${new Date(transf.efetivadoEm).toLocaleString('pt-BR')}</strong></div>` : ''}
+          ${transf.mensagemRetorno ? `<div style="color:#15803d; margin-top:3px;">Retorno ERP: <em>${escapeHtml(transf.mensagemRetorno)}</em></div>` : ''}
+        </div>
+
+        <button class="btn btn-secondary" onclick="App.navegar('transferencias')" style="width: 100%;">
+          Voltar para Lista
+        </button>
+      </div>
+    `;
   }
 
   // =========================================================================
@@ -3537,6 +4541,9 @@ const App = (() => {
     } else if (state.telaAtual === 'inventario_avulsa') {
       contextoScanner = 'AVULSA_ITEM';
       processarLeituraGeral(codigo, origem);
+    } else if (state.telaAtual === 'transferencia_saida') {
+      contextoScanner = 'TRANSF_SAIDA_ITEM';
+      processarLeituraGeral(codigo, origem);
     }
   }
 
@@ -3561,6 +4568,12 @@ const App = (() => {
       if (inp) {
         inp.value = codigo;
         lookupItemAvulsa(codigo);
+      }
+    } else if (contextoScanner === 'TRANSF_SAIDA_ITEM') {
+      const inp = document.getElementById('transf-sai-item');
+      if (inp) {
+        inp.value = codigo.trim();
+        onItemSaidaAlterado(codigo.trim());
       }
     }
   }
@@ -3831,6 +4844,23 @@ const App = (() => {
     fecharModalPesquisaInterna,
     onFiltrarPesquisaInterna,
     selecionarResultadoPesquisa,
+    renderTelaTransferencias,
+    carregarListaTransferencias,
+    filtrarStatusTransferencia,
+    onBuscarTransferencias,
+    abrirEdicaoSaida,
+    abrirEntradaTransferencia,
+    renderTelaTransferenciaSaida,
+    onItemSaidaAlterado,
+    onDepositoSaidaAlterado,
+    onLoteSaidaAlterado,
+    salvarSaidaTransferencia,
+    renderTelaTransferenciaEntrada,
+    onLoteEntradaAlterado,
+    salvarEntradaTransferencia,
+    transmitirTransferencia,
+    excluirTransferencia,
+    consultarTransferencia,
     renderTelaHistoricoContagens,
     filtrarHistoricoLocal,
     renderTelaSincronizacao,

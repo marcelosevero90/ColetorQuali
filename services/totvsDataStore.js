@@ -317,6 +317,7 @@ class TotvsDataStore {
       // deposito (fcGetDeposito.p - WHERE deposito.cons-saldo = YES)
       deposito: [
         { codEmpresa: '001', codDepos: 'ALM', nome: 'ALMOXARIFADO CENTRAL', consSaldo: true },
+        { codEmpresa: '001', codDepos: 'AL1', nome: 'Almoxarifado 1', consSaldo: true },
         { codEmpresa: '001', codDepos: 'EXP', nome: 'EXPEDICAO PRODUTOS', consSaldo: true },
         { codEmpresa: '001', codDepos: 'PRO', nome: 'DEPOSITO PRODUCAO', consSaldo: true },
         { codEmpresa: '001', codDepos: 'QUA', nome: 'QUARENTENA / QUALIDADE', consSaldo: true },
@@ -379,6 +380,7 @@ class TotvsDataStore {
         { codEmpresa: '001', itCodigo: '11500028', codEstab: '101', codDep: 'ALM', codLocal: 'B-02-01', lote: '211000049', codRefer: '', descItem: 'ACETATO DE ISOPROPILA GRAU FARMA', qtAlocada: 0, qtidadeAtu: 4500.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '2027-07-20', qtDisponivelCalc: 4500.0 },
         { codEmpresa: '001', itCodigo: '11000028', codEstab: '101', codDep: 'EXP', codLocal: 'DOCA-01', lote: '231000114', codRefer: '', descItem: 'CLORETO DE SODIO CRISTAL', qtAlocada: 0, qtidadeAtu: 25.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '2029-03-17', qtDisponivelCalc: 25.0 },
         { codEmpresa: '001', itCodigo: 'PI0010', codEstab: '101', codDep: 'ALM', codLocal: 'A-01-01', lote: '', codRefer: 'PAD', descItem: 'TUBO ACO CARBONO SCH 40 1/2 6000MM', qtAlocada: 0, qtidadeAtu: 120.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '', qtDisponivelCalc: 120.0 },
+        { codEmpresa: '001', itCodigo: '01010115', codEstab: '101', codDep: 'AL1', codLocal: 'BRANCO', lote: '', codRefer: '', descItem: 'Porta Latas Simples 348 x 91 x 115mm 01010115', qtAlocada: 0, qtidadeAtu: 50.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '', qtDisponivelCalc: 50.0 },
         { codEmpresa: '002', itCodigo: '052900017', codEstab: '2100', codDep: '102', codLocal: '4-2-2', lote: 'LT-AGRO-90', codRefer: 'SAF26', descItem: 'ANTIFERRUGEM INDUSTRIAL PROTETIVO', qtAlocada: 0, qtidadeAtu: 350.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '2028-12-31', qtDisponivelCalc: 350.0 }
       ],
 
@@ -524,6 +526,7 @@ class TotvsDataStore {
       { itCodigo: 'PI0041', descItem: 'CURVA 90 RAIO LONGO SCH 40 1/2', tipoConEst: 1, locUnica: true, depositoPad: 'ALM', nomeDeposito: 'ALMOXARIFADO CENTRAL', codLocaliz: 'A-01-02', descricaoLocaliz: 'RUA A - PRATELEIRA 01 - NIVEL 02', un: 'PC', codBarras: '7897000000418', requerValorFicha: false },
       { itCodigo: 'PI0440', descItem: 'ELETRODO SOLDA INOX 316L 2.5MM', tipoConEst: 1, locUnica: true, depositoPad: 'PRO', nomeDeposito: 'DEPOSITO PRODUCAO', codLocaliz: 'LIN-01', descricaoLocaliz: 'LINHA DE MONTAGEM 01', un: 'KG', codBarras: '7897000004409', requerValorFicha: false },
       { itCodigo: 'PI0600', descItem: 'REGULADOR PRESSAO ALTA VAZAO 50KG/H', tipoConEst: 3, locUnica: true, depositoPad: 'ALM', nomeDeposito: 'ALMOXARIFADO CENTRAL', codLocaliz: 'B-02-01', descricaoLocaliz: 'RUA B - PRATELEIRA 02 - NIVEL 01', un: 'PC', codBarras: '7897000006007', requerValorFicha: true },
+      { itCodigo: '01010115', descItem: 'Porta Latas Simples 348 x 91 x 115mm 01010115', tipoConEst: 1, locUnica: false, depositoPad: 'AL1', nomeDeposito: 'Almoxarifado 1', codLocaliz: 'BRANCO', descricaoLocaliz: 'BRANCO', un: 'Un', codBarras: '7890101011500', requerValorFicha: false },
       { itCodigo: 'D352-221/1', descItem: 'Roupeiro Lumiere 6Pts 6Gav Cinamomo/Off White Vol 1/5', tipoConEst: 3, locUnica: false, depositoPad: 'AST', nomeDeposito: 'ASSISTENCIA TECNICA', codLocaliz: '', descricaoLocaliz: 'BRANCO', un: 'UN', codBarras: '7890000352221', requerValorFicha: false }
     ].map(it => ({ codEmpresa: '001', ...it, dataAtualiz: '2026-11-16T08:00:00Z' }));
 

@@ -6,7 +6,7 @@
 
 const DB = (() => {
   const DB_NAME = 'ColetorDatasul_Offline_v1';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
   let dbInstance = null;
 
   function normalizarEmpresa(ep) {
@@ -139,11 +139,36 @@ const DB = (() => {
           stHist.createIndex('nrFicha', 'nrFicha', { unique: false });
           stHist.createIndex('itCodigo', 'itCodigo', { unique: false });
         }
+
+        // 14. transferencia_material (fcSetTransfMaterial.p / CE0206 - Offline First)
+        if (!db.objectStoreNames.contains('transferencia_material')) {
+          const stTransf = db.createObjectStore('transferencia_material', { keyPath: 'id_uuid' });
+          stTransf.createIndex('codEmpresa', 'codEmpresa', { unique: false });
+          stTransf.createIndex('codUsuario', 'codUsuario', { unique: false });
+          stTransf.createIndex('empresa_usuario', ['codEmpresa', 'codUsuario'], { unique: false });
+          stTransf.createIndex('status', 'status', { unique: false });
+          stTransf.createIndex('pendenteSync', 'pendenteSync', { unique: false });
+          stTransf.createIndex('dtTransf', 'dtTransf', { unique: false });
+          stTransf.createIndex('criadoEm', 'criadoEm', { unique: false });
+        }
       };
 
       request.onsuccess = (event) => {
         dbInstance = event.target.result;
+        dbInstance.onversionchange = () => {
+          console.warn('Nova versão do IndexedDB detectada, fechando conexão antiga.');
+          dbInstance.close();
+          dbInstance = null;
+        };
         resolve(dbInstance);
+      };
+
+      request.onblocked = (event) => {
+        console.warn('Abertura do IndexedDB bloqueada por outra aba/conexão aberta. Fechando instâncias antigas...');
+        if (dbInstance) {
+          dbInstance.close();
+          dbInstance = null;
+        }
       };
 
       request.onerror = (event) => {
@@ -208,6 +233,17 @@ const DB = (() => {
       item.codLocaliz = String(item.codLocaliz ?? item.cod_localiz ?? '').trim();
       item.lote = String(item.lote ?? '').trim();
       item.codRefer = String(item.codRefer ?? item.cod_refer ?? '').trim();
+    } else if (storeName === 'transferencia_material') {
+      if (!item.id_uuid) {
+        item.id_uuid = 'tr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+      }
+      item.codUsuario = String(item.codUsuario ?? '').trim();
+      item.codEstabel = String(item.codEstabel ?? '').trim();
+      item.itCodigo = String(item.itCodigo ?? '').trim();
+      item.status = item.status || 'PENDENTE_ENTRADA';
+      item.dtTransf = normalizarDataIso(item.dtTransf || new Date().toISOString().slice(0, 10));
+      item.criadoEm = item.criadoEm || new Date().toISOString();
+      item.atualizadoEm = new Date().toISOString();
     }
 
     return item;
@@ -894,6 +930,79 @@ const DB = (() => {
     });
   }
 
+  async function salvarTransferencia(transf) {
+    const dados = prepararRegistro('transferencia_material', transf, transf.codEmpresa);
+    await put('transferencia_material', dados);
+    return dados;
+  }
+
+  async function obterTransferencia(id_uuid) {
+    return await get('transferencia_material', id_uuid);
+  }
+
+  async function excluirTransferencia(id_uuid) {
+    const atual = await get('transferencia_material', id_uuid);
+    if (!atual) return { success: false, mensagem: 'Transferência não encontrada.' };
+    if (atual.status === 'EFETIVADO') {
+      return { success: false, mensagem: 'Não é permitido excluir transferências já efetivadas no Datasul.' };
+    }
+    await remove('transferencia_material', id_uuid);
+    return { success: true };
+  }
+
+  async function listarTransferencias(codEmpresa, codUsuario) {
+    const emp = normalizarEmpresa(codEmpresa);
+    const todas = await getAllByEmpresa('transferencia_material', emp);
+    const usrNormalizado = String(codUsuario || '').trim().toLowerCase();
+
+    // Filtrar pelo usuário logado no app (requisito explícito)
+    const filtradas = usrNormalizado
+      ? todas.filter(t => String(t.codUsuario || '').trim().toLowerCase() === usrNormalizado)
+      : todas;
+
+    // Ordenar: mais recentes primeiro
+    return filtradas.sort((a, b) => {
+      const da = new Date(a.criadoEm || 0).getTime();
+      const db = new Date(b.criadoEm || 0).getTime();
+      return db - da;
+    });
+  }
+
+  async function obterDataValidadeLote(codEmpresa, itCodigo, lote) {
+    const emp = normalizarEmpresa(codEmpresa);
+    const itUp = String(itCodigo || '').trim().toUpperCase();
+    const loteNorm = String(lote || '').trim().toUpperCase();
+    if (!itUp || !loteNorm) return { existe: false, dtValiLote: '' };
+
+    // 1. Procurar na store 'lote'
+    const lotes = await getAllByEmpresa('lote', emp);
+    const loteEnc = lotes.find(l =>
+      String(l.itCodigo || '').trim().toUpperCase() === itUp &&
+      String(l.lote || '').trim().toUpperCase() === loteNorm
+    );
+    if (loteEnc) {
+      return {
+        existe: true,
+        dtValiLote: loteEnc.dtValiLote ? normalizarDataIso(loteEnc.dtValiLote) : ''
+      };
+    }
+
+    // 2. Procurar em 'saldo_estoq'
+    const saldos = await getAllByEmpresa('saldo_estoq', emp);
+    const saldoEnc = saldos.find(s =>
+      String(s.itCodigo || '').trim().toUpperCase() === itUp &&
+      String(s.lote || '').trim().toUpperCase() === loteNorm
+    );
+    if (saldoEnc) {
+      return {
+        existe: true,
+        dtValiLote: saldoEnc.dtValiLote ? normalizarDataIso(saldoEnc.dtValiLote) : ''
+      };
+    }
+
+    return { existe: false, dtValiLote: '' };
+  }
+
   return {
     normalizarEmpresa,
     normalizarDataIso,
@@ -922,6 +1031,11 @@ const DB = (() => {
     getHistoricoLocal,
     integrarFilaOffline,
     putConfig,
-    getConfig
+    getConfig,
+    salvarTransferencia,
+    obterTransferencia,
+    excluirTransferencia,
+    listarTransferencias,
+    obterDataValidadeLote
   };
 })();

@@ -1404,6 +1404,186 @@ router.post('/erp/ce0701/gerarFichas', (req, res) => {
   });
 });
 
+// =============================================================================
+// 15. TRANSFERÊNCIA DE MATERIAL: fcSetTransfMaterial.p / qdcSetTransfMaterial.p (PUT/POST)
+// Executa rotina Progress cep/ceapi001k.r (esp-docto = 33 / TRA)
+// =============================================================================
+router.all(['/fcSetTransfMaterial', '/qdcSetTransfMaterial'], exigirBasicAuth, (req, res) => {
+  const p = extrairPayload(req);
+  const companyId = extrairCompanyId(req);
+
+  let movimentos = [];
+  if (Array.isArray(p)) {
+    movimentos = p;
+  } else if (p && Array.isArray(p.payload)) {
+    movimentos = p.payload;
+  } else if (p && p.payload && typeof p.payload === 'object') {
+    movimentos = [p.payload];
+  } else if (p && typeof p === 'object' && p.itCodigo) {
+    movimentos = [p];
+  }
+
+  if (movimentos.length === 0) {
+    return res.json({
+      type: 'ERROR',
+      code: '17006',
+      message: 'Parâmetro Não é Array ou Payload vazio',
+      detailedMessage: 'Informe os dados da transferência no campo payload.'
+    });
+  }
+
+  const erros = [];
+  let processados = 0;
+
+  for (const mov of movimentos) {
+    const itCodigo = String(mov.itCodigo || '').trim();
+    const codEstabel = String(mov.codEstabel || '').trim();
+    const quantidade = Number(mov.quantidade || 0);
+    const codDeposSai = String(mov.codDeposSai || '').trim();
+    const codLocalizSai = String(mov.codLocalizSai || '').trim();
+    const loteSai = String(mov.loteSai || '').trim();
+    const codReferSai = String(mov.codReferSai || '').trim();
+    const codDeposEnt = String(mov.codDeposEnt || '').trim();
+    const codLocalizEnt = String(mov.codLocalizEnt || '').trim();
+    const loteEnt = String(mov.loteEnt || '').trim();
+    const dtValiLoteEnt = normalizarDataIso(mov.dtValiLoteEnt || mov.dtValiLote || '');
+    const codReferEnt = String(mov.codReferEnt || '').trim();
+
+    if (!itCodigo) {
+      erros.push('Código do item não informado');
+      continue;
+    }
+
+    if (quantidade <= 0) {
+      erros.push(`Quantidade inválida para o item ${itCodigo}: deve ser maior que zero`);
+      continue;
+    }
+
+    if (!codDeposSai) {
+      erros.push(`Depósito de saída não informado para o item ${itCodigo}`);
+      continue;
+    }
+
+    if (!codDeposEnt) {
+      erros.push(`Depósito de entrada não informado para o item ${itCodigo}`);
+      continue;
+    }
+
+    // Validar item na empresa
+    const item = (db.data.item || []).find(i =>
+      db.matchEmpresa(i.codEmpresa, companyId) &&
+      i.itCodigo.toUpperCase() === itCodigo.toUpperCase()
+    );
+
+    if (!item) {
+      // Mensagem oficial de erro do fcSetTransfMaterial.p (RowErrors.ErrorNumber = 17006)
+      erros.push(`Item ${itCodigo} não encontrado`);
+      continue;
+    }
+
+    // Validar controle de lote
+    const ehLote = item.tipoContrEstoque === 2 || Boolean(item.indLote);
+    if (ehLote) {
+      if (!loteSai) {
+        erros.push(`Item ${itCodigo} possui controle de lote: Lote de saída é obrigatório.`);
+        continue;
+      }
+      if (!loteEnt) {
+        erros.push(`Item ${itCodigo} possui controle de lote: Lote de entrada é obrigatório.`);
+        continue;
+      }
+    }
+
+    // Atualizar saldo no mock simulator
+    // 1. Saída: debita saldo_estoq
+    let saldoSai = (db.data.saldo_estoq || []).find(s =>
+      db.matchEmpresa(s.codEmpresa, companyId) &&
+      (!codEstabel || s.codEstab === codEstabel) &&
+      s.codDep === codDeposSai &&
+      s.itCodigo.toUpperCase() === itCodigo.toUpperCase() &&
+      (!loteSai || (s.lote || '').toUpperCase() === loteSai.toUpperCase()) &&
+      (!codLocalizSai || (s.codLocal || '').toUpperCase() === codLocalizSai.toUpperCase()) &&
+      (!codReferSai || (s.codRefer || '').toUpperCase() === codReferSai.toUpperCase())
+    );
+
+    if (saldoSai) {
+      saldoSai.qtidadeAtu = Math.max(0, Number(saldoSai.qtidadeAtu || 0) - quantidade);
+    }
+
+    // 2. Entrada: credita saldo_estoq
+    let saldoEnt = (db.data.saldo_estoq || []).find(s =>
+      db.matchEmpresa(s.codEmpresa, companyId) &&
+      (!codEstabel || s.codEstab === codEstabel) &&
+      s.codDep === codDeposEnt &&
+      s.itCodigo.toUpperCase() === itCodigo.toUpperCase() &&
+      (!loteEnt || (s.lote || '').toUpperCase() === loteEnt.toUpperCase()) &&
+      (!codLocalizEnt || (s.codLocal || '').toUpperCase() === codLocalizEnt.toUpperCase()) &&
+      (!codReferEnt || (s.codRefer || '').toUpperCase() === codReferEnt.toUpperCase())
+    );
+
+    if (saldoEnt) {
+      saldoEnt.qtidadeAtu = Number(saldoEnt.qtidadeAtu || 0) + quantidade;
+      if (dtValiLoteEnt) saldoEnt.dtValiLote = dtValiLoteEnt;
+    } else {
+      db.data.saldo_estoq = db.data.saldo_estoq || [];
+      db.data.saldo_estoq.push({
+        codEmpresa: companyId,
+        codEstab: codEstabel || '101',
+        codDep: codDeposEnt,
+        codLocal: codLocalizEnt,
+        itCodigo: item.itCodigo,
+        lote: loteEnt,
+        codRefer: codReferEnt,
+        qtidadeAtu: quantidade,
+        dtValiLote: dtValiLoteEnt || ''
+      });
+    }
+
+    // Se lote informado, garante cadastro em lote
+    if (loteEnt) {
+      db.data.lote = db.data.lote || [];
+      const loteExiste = db.data.lote.find(l =>
+        db.matchEmpresa(l.codEmpresa, companyId) &&
+        l.itCodigo.toUpperCase() === itCodigo.toUpperCase() &&
+        l.lote.toUpperCase() === loteEnt.toUpperCase()
+      );
+      if (!loteExiste) {
+        db.data.lote.push({
+          codEmpresa: companyId,
+          codEstabel: codEstabel || '101',
+          itCodigo: item.itCodigo,
+          codDepos: codDeposEnt,
+          codLocaliz: codLocalizEnt,
+          lote: loteEnt,
+          codRefer: codReferEnt,
+          dtValiLote: dtValiLoteEnt || ''
+        });
+      }
+    }
+
+    processados++;
+  }
+
+  db.saveToDisk();
+
+  if (erros.length > 0) {
+    const msgErro = erros.join(' - ');
+    return res.json({
+      type: 'ERROR',
+      code: '17006',
+      message: msgErro,
+      detailedMessage: msgErro
+    });
+  }
+
+  return res.json({
+    type: 'OK',
+    code: '0',
+    message: 'Transferência efetuada com sucesso no Datasul!',
+    detailedMessage: 'Processo realizado com sucesso!'
+  });
+});
+
 // Reset da base para testes
 router.post('/resetBase', (req, res) => {
   db.resetDefault();
