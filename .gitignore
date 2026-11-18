@@ -5,3 +5,13 @@ node_modules/
 *.log
 .env
 .env.local
+
+# Progress OpenEdge Temporary Files
+lbi*
+rcd*
+srt*
+dbi*
+collect/app/lbi*
+collect/app/rcd*
+collect/app/srt*
+collect/app/dbi*
