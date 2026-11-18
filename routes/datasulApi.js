@@ -1472,7 +1472,8 @@ router.all(['/fcSetTransfMaterial', '/qdcSetTransfMaterial'], exigirBasicAuth, (
     // Validar item na empresa
     const item = (db.data.item || []).find(i =>
       db.matchEmpresa(i.codEmpresa, companyId) &&
-      i.itCodigo.toUpperCase() === itCodigo.toUpperCase()
+      (String(i.itCodigo).trim().toUpperCase() === String(itCodigo).trim().toUpperCase() ||
+       (i.codBarras && String(i.codBarras).trim() === String(itCodigo).trim()))
     );
 
     if (!item) {

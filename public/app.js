@@ -4073,8 +4073,10 @@ const App = (() => {
     mostrarLoading('Transmitindo ao TOTVS Datasul...', 'Executando fcSetTransfMaterial.p / ceapi001k...');
 
     try {
+      const codEmpresaReq = transf.codEmpresa || state.session.codEmpresa || '001';
       const payloadItem = {
-        itCodigo: transf.itCodigo,
+        codEmpresa: codEmpresaReq,
+        itCodigo: (transf.itCodigo || '').trim(),
         codEstabel: transf.codEstabel || state.session.codEstabel || '101',
         codUsuario: state.session.codUsuario || transf.codUsuario,
         dtTransf: transf.dtTransf || new Date().toISOString().slice(0, 10),

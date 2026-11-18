@@ -689,6 +689,21 @@
     },
     {
       "codEmpresa": "001",
+      "itCodigo": "01010125",
+      "descItem": "Kit Pistão a Gás 50N Cinza",
+      "tipoConEst": 1,
+      "locUnica": false,
+      "depositoPad": "AL1",
+      "nomeDeposito": "Almoxarifado 1",
+      "codLocaliz": "BRANCO",
+      "descricaoLocaliz": "BRANCO",
+      "un": "Un",
+      "codBarras": "7890101012507",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
       "itCodigo": "01010047",
       "descItem": "Kit Pont Prince (10) Unidades",
       "tipoConEst": 1,
@@ -1495,16 +1510,6 @@
       "codRefer": "SAF26",
       "nomeDepos": "DEPOSITO GERAL FAZENDA",
       "nomeLocaliz": "GALPAO 4 CORREDOR 2 NIVEL 2"
-    },
-    {
-      "codEmpresa": "001",
-      "codEstabel": "101",
-      "itCodigo": "01010115",
-      "codDepos": "AST",
-      "codLocaliz": "",
-      "lote": "LOTE-NOVO-01",
-      "codRefer": "",
-      "dtValiLote": "2028-12-31"
     }
   ],
   "saldo_estoq": [
@@ -1598,11 +1603,27 @@
       "codRefer": "",
       "descItem": "Porta Latas Simples 348 x 91 x 115mm 01010115",
       "qtAlocada": 0,
-      "qtidadeAtu": 20,
+      "qtidadeAtu": 50,
       "qtAlocPed": 0,
       "qtAlocProd": 0,
       "dtValiLote": "",
       "qtDisponivelCalc": 50
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "01010125",
+      "codEstab": "101",
+      "codDep": "AL1",
+      "codLocal": "BRANCO",
+      "lote": "",
+      "codRefer": "",
+      "descItem": "Kit Pistão a Gás 50N Cinza",
+      "qtAlocada": 0,
+      "qtidadeAtu": 6370,
+      "qtAlocPed": 0,
+      "qtAlocProd": 0,
+      "dtValiLote": "",
+      "qtDisponivelCalc": 6371
     },
     {
       "codEmpresa": "002",
@@ -1624,23 +1645,12 @@
       "codEmpresa": "001",
       "codEstab": "101",
       "codDep": "AST",
-      "codLocal": "",
-      "itCodigo": "01010115",
+      "codLocal": "BRANCO",
+      "itCodigo": "01010125",
       "lote": "",
       "codRefer": "",
-      "qtidadeAtu": 20,
+      "qtidadeAtu": 1,
       "dtValiLote": ""
-    },
-    {
-      "codEmpresa": "001",
-      "codEstab": "101",
-      "codDep": "AST",
-      "codLocal": "",
-      "itCodigo": "01010115",
-      "lote": "LOTE-NOVO-01",
-      "codRefer": "",
-      "qtidadeAtu": 10,
-      "dtValiLote": "2028-12-31"
     }
   ],
   "inventario": [
