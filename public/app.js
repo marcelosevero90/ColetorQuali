@@ -1651,12 +1651,11 @@ const App = (() => {
           📷 Bipar Item / Código de Barras
         </button>
 
-        <!-- Pílulas de Status: Todas | Pendente | Contada | Divergente -->
+        <!-- Pílulas de Status: Todas | Pendente | Apurada -->
         <div class="status-pills-container">
           <button id="pill-todas" class="pill-filter-btn ${state.filtrosConferencia.status === 'TODAS' ? 'active' : ''}" onclick="App.mudarStatusFiltroConferencia('TODAS')">Todas (0)</button>
           <button id="pill-pendentes" class="pill-filter-btn ${state.filtrosConferencia.status === 'PENDENTES' ? 'active' : ''}" onclick="App.mudarStatusFiltroConferencia('PENDENTES')">Pendente (0)</button>
-          <button id="pill-contadas" class="pill-filter-btn ${state.filtrosConferencia.status === 'CONTADAS' ? 'active' : ''}" onclick="App.mudarStatusFiltroConferencia('CONTADAS')">Contada (0)</button>
-          <button id="pill-divergentes" class="pill-filter-btn divergente ${state.filtrosConferencia.status === 'DIVERGENTES' ? 'active' : ''}" onclick="App.mudarStatusFiltroConferencia('DIVERGENTES')">Diverg. (0)</button>
+          <button id="pill-contadas" class="pill-filter-btn ${state.filtrosConferencia.status === 'CONTADAS' || state.filtrosConferencia.status === 'APURADAS' ? 'active' : ''}" onclick="App.mudarStatusFiltroConferencia('APURADAS')">Apurada (0)</button>
         </div>
       </div>
 
@@ -1820,23 +1819,20 @@ const App = (() => {
 
   function atualizarMetricasConferencia() {
     const total = state.fichas.length;
-    const contadas = state.fichas.filter(isFichaContada).length;
-    const pendentes = total - contadas;
-    const divergentes = state.fichas.filter(isFichaDivergente).length;
+    const apuradas = state.fichas.filter(isFichaContada).length;
+    const pendentes = total - apuradas;
 
     const elAp = document.getElementById('metric-val-apuradas');
     const elPen = document.getElementById('metric-val-pendentes');
-    if (elAp) elAp.textContent = contadas;
+    if (elAp) elAp.textContent = apuradas;
     if (elPen) elPen.textContent = pendentes;
 
     const pTodas = document.getElementById('pill-todas');
     const pPen = document.getElementById('pill-pendentes');
     const pCont = document.getElementById('pill-contadas');
-    const pDiv = document.getElementById('pill-divergentes');
     if (pTodas) pTodas.textContent = `Todas (${total})`;
     if (pPen) pPen.textContent = `Pendente (${pendentes})`;
-    if (pCont) pCont.textContent = `Contada (${contadas})`;
-    if (pDiv) pDiv.textContent = `Diverg. (${divergentes})`;
+    if (pCont) pCont.textContent = `Apurada (${apuradas})`;
   }
 
   function tentarTrocarRodadaBloqueada(rodadaDesejada, rodadaAtiva) {
@@ -1872,8 +1868,7 @@ const App = (() => {
     document.querySelectorAll('.pill-filter-btn').forEach(b => b.classList.remove('active'));
     if (status === 'TODAS') document.getElementById('pill-todas')?.classList.add('active');
     if (status === 'PENDENTES') document.getElementById('pill-pendentes')?.classList.add('active');
-    if (status === 'CONTADAS') document.getElementById('pill-contadas')?.classList.add('active');
-    if (status === 'DIVERGENTES') document.getElementById('pill-divergentes')?.classList.add('active');
+    if (status === 'CONTADAS' || status === 'APURADAS') document.getElementById('pill-contadas')?.classList.add('active');
     aplicarFiltrosConferencia();
   }
 
@@ -1897,8 +1892,7 @@ const App = (() => {
       if (agrup && String(f.cdnAgrup) !== String(agrup)) return false;
 
       if (status === 'PENDENTES' && isFichaContada(f)) return false;
-      if (status === 'CONTADAS' && !isFichaContada(f)) return false;
-      if (status === 'DIVERGENTES' && !isFichaDivergente(f)) return false;
+      if ((status === 'CONTADAS' || status === 'APURADAS') && !isFichaContada(f)) return false;
       return true;
     });
 
@@ -1923,13 +1917,12 @@ const App = (() => {
 
     state.fichasFiltradas.forEach(f => {
       const contada = isFichaContada(f);
-      const divergente = isFichaDivergente(f);
 
-      const cardClass = divergente ? 'is-divergente' : (contada ? 'is-contada' : 'is-pendente');
-      const badgeClass = divergente ? 'badge-ficha-divergente' : (contada ? 'badge-ficha-contada' : 'badge-ficha-pendente');
-      const badgeTxt = divergente
-        ? `⚠ Diverg. (${Number(f.qtApurada).toFixed(2)})`
-        : (contada ? `✓ Contada (${Number(f.qtApurada).toFixed(2)})` : '○ Pendente');
+      const cardClass = contada ? 'is-contada' : 'is-pendente';
+      const badgeClass = contada ? 'badge-ficha-contada' : 'badge-ficha-pendente';
+      const badgeTxt = contada
+        ? `✓ Apurada (${Number(f.qtApurada).toFixed(2)})`
+        : '○ Pendente';
 
       const card = document.createElement('div');
       card.className = `ficha-item-card ${cardClass}`;
