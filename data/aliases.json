@@ -1,0 +1,50 @@
+{
+  "teste": {
+    "alias": "teste",
+    "nomeEmpresa": "AMBIENTE REAL PASOE (PROMOB)",
+    "empresaPrincipal": "001",
+    "codEstabelPadrao": "101",
+    "pasoeUrl": "http://10.15.1.20:8180/api/promob/v1",
+    "usuarioIntegracao": "matheus.st",
+    "senhaIntegracao": "qwe8451",
+    "descricao": "Base Real Totvs Datasul PASOE",
+    "status": "ativo",
+    "atualizadoEm": "2026-11-16T20:00:00.000Z"
+  },
+  "demo": {
+    "alias": "demo",
+    "nomeEmpresa": "TOTVS DATASUL 12 - AMBIENTE DEMO OFFLINE-FIRST",
+    "empresaPrincipal": "001",
+    "codEstabelPadrao": "101",
+    "pasoeUrl": "http://localhost:3000/api/datasul",
+    "status": "ativo",
+    "descricao": "Ambiente Local de Testes e Homologação (Simulador Fiel collect/*.p)"
+  },
+  "blanver": {
+    "alias": "blanver",
+    "nomeEmpresa": "CYG BIOTECH QUÍMICA & FARMACÊUTICA LTDA",
+    "empresaPrincipal": "001",
+    "codEstabelPadrao": "11",
+    "pasoeUrl": "http://localhost:3000/api/datasul",
+    "status": "ativo",
+    "descricao": "Base Blanver / CYG Biotech - Taboão da Serra e Indaiatuba"
+  },
+  "consigaz": {
+    "alias": "consigaz",
+    "nomeEmpresa": "CONSIGAZ DISTRIBUIDORA DE GAS LTDA",
+    "empresaPrincipal": "001",
+    "codEstabelPadrao": "1",
+    "pasoeUrl": "http://localhost:3000/api/datasul",
+    "status": "ativo",
+    "descricao": "Base Consigaz Homologação (CE0712)"
+  },
+  "santacolomba": {
+    "alias": "santacolomba",
+    "nomeEmpresa": "SANTA COLOMBA AGROPECUARIA S/A",
+    "empresaPrincipal": "002",
+    "codEstabelPadrao": "2100",
+    "pasoeUrl": "http://localhost:3000/api/datasul",
+    "status": "ativo",
+    "descricao": "Base Agropecuária Santa Colomba (Empresa 002)"
+  }
+}

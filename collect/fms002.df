@@ -1,0 +1,149 @@
+ADD TABLE "fmsc-inventario"
+  AREA "Dados Area"
+  LABEL "FMS Invent rio"
+  DUMP-NAME "fms002"
+
+ADD FIELD "ep-codigo" OF "fmsc-inventario" AS character 
+  FORMAT "x(3)"
+  INITIAL ""
+  LABEL "Empresa"
+  POSITION 16
+  MAX-WIDTH 6
+  COLUMN-LABEL "Empresa"
+  ORDER 5
+
+ADD FIELD "dt-saldo" OF "fmsc-inventario" AS date 
+  FORMAT "99/99/9999"
+  INITIAL ?
+  LABEL "Data Invent rio"
+  POSITION 2
+  MAX-WIDTH 4
+  COLUMN-LABEL "Dt Invent rio"
+  ORDER 10
+
+ADD FIELD "ind-tipo-inv" OF "fmsc-inventario" AS integer 
+  DESCRIPTION "1-Por Fichas
+2-Por Operador"
+  FORMAT ">>9"
+  INITIAL "1"
+  LABEL "Tipo Invent rio"
+  POSITION 3
+  MAX-WIDTH 4
+  COLUMN-LABEL "Tp Inv"
+  ORDER 20
+
+ADD FIELD "perm-contg-usuar-ficha" OF "fmsc-inventario" AS logical 
+  DESCRIPTION "Permite apura‡Æo na mesma ficha em contagens diferentes"
+  FORMAT "yes/no"
+  INITIAL "no"
+  LABEL "Permite apura‡Æo na mesma ficha em contagens dif"
+  POSITION 4
+  MAX-WIDTH 1
+  COLUMN-LABEL "Permite apura‡Æo na mesma ficha em contagens dif"
+  ORDER 30
+
+ADD FIELD "int-1" OF "fmsc-inventario" AS integer 
+  FORMAT "->,>>>,>>9"
+  INITIAL "0"
+  POSITION 5
+  MAX-WIDTH 4
+  ORDER 40
+
+ADD FIELD "int-2" OF "fmsc-inventario" AS integer 
+  FORMAT "->,>>>,>>9"
+  INITIAL "0"
+  POSITION 6
+  MAX-WIDTH 4
+  ORDER 50
+
+ADD FIELD "dec-1" OF "fmsc-inventario" AS decimal 
+  FORMAT "->>>>>>,>>9.99"
+  INITIAL "0"
+  POSITION 7
+  MAX-WIDTH 17
+  DECIMALS 2
+  ORDER 60
+
+ADD FIELD "dec-2" OF "fmsc-inventario" AS decimal 
+  FORMAT "->>>>>>,>>9.99"
+  INITIAL "0"
+  POSITION 8
+  MAX-WIDTH 17
+  DECIMALS 2
+  ORDER 70
+
+ADD FIELD "log-1" OF "fmsc-inventario" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 9
+  MAX-WIDTH 1
+  ORDER 80
+
+ADD FIELD "log-2" OF "fmsc-inventario" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 10
+  MAX-WIDTH 1
+  ORDER 90
+
+ADD FIELD "data-1" OF "fmsc-inventario" AS date 
+  FORMAT "99/99/9999"
+  INITIAL ?
+  POSITION 11
+  MAX-WIDTH 4
+  ORDER 100
+
+ADD FIELD "data-2" OF "fmsc-inventario" AS date 
+  FORMAT "99/99/9999"
+  INITIAL ?
+  POSITION 12
+  MAX-WIDTH 4
+  ORDER 110
+
+ADD FIELD "char-1" OF "fmsc-inventario" AS character 
+  FORMAT "x(200)"
+  INITIAL ""
+  POSITION 13
+  MAX-WIDTH 400
+  ORDER 120
+
+ADD FIELD "char-2" OF "fmsc-inventario" AS character 
+  FORMAT "x(200)"
+  INITIAL ""
+  POSITION 14
+  MAX-WIDTH 400
+  ORDER 130
+  
+ADD FIELD "ind-sit-inv" OF "fmsc-inventario" AS integer 
+  DESCRIPTION "1-Liberado
+2-Bloqueado"
+  FORMAT ">>9"
+  INITIAL "1"
+  LABEL "Situacao"
+  POSITION 15
+  MAX-WIDTH 4
+  COLUMN-LABEL "Situacao"
+  ORDER 140   
+
+ADD FIELD "nr-contag-ativa" OF "fmsc-inventario" AS integer 
+  DESCRIPTION "Num Contagem"
+  FORMAT ">>9"
+  INITIAL "1"
+  LABEL "Num Contagem"
+  POSITION 17
+  MAX-WIDTH 4
+  COLUMN-LABEL "Num Contagem"
+  ORDER 150
+
+ADD INDEX "ch-ph" ON "fmsc-inventario" 
+  AREA "Indice Area"
+  UNIQUE
+  PRIMARY
+  INDEX-FIELD "ep-codigo" ASCENDING 
+  INDEX-FIELD "dt-saldo" ASCENDING 
+
+.
+PSC
+cpstream=ibm850
+.
+0000002358

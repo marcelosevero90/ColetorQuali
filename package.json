@@ -1,0 +1,24 @@
+{
+  "name": "app-coletor-datasul",
+  "version": "3.0.0",
+  "description": "Aplicativo Coletor Móvel TOTVS Datasul Offline-First - Módulo de Inventário",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "verify": "node scripts/verifyInventarioOffline.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "keywords": [
+    "datasul",
+    "totvs",
+    "coletor",
+    "inventario",
+    "offline-first",
+    "pasoe"
+  ],
+  "author": "Quali IT / TOTVS Datasul",
+  "license": "ISC"
+}

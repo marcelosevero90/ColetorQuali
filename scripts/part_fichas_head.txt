@@ -1,0 +1,63 @@
+async function renderTelaInventarioFichas() {
+    const inv = state.inventarioSelecionado;
+    const dep = state.depositoSelecionado;
+    if (!inv || !dep) {
+      navegar('inventarios_ativos');
+      return;
+    }
+
+    if (state.abaInventario === 'AVULSA') {
+      renderTelaInventarioAvulsa();
+      return;
+    }
+
+    const codEmpresa = state.session.codEmpresa || '001';
+    const paramInv = (await DB.obterParamInventarioLocal(codEmpresa, inv.dtSaldo)) || inv;
+    const isBloqueado = Number(paramInv.indSitInv) === 2;
+    const nrContagAtiva = Number(paramInv.nrContagAtiva || inv.nrContagAtiva || 1);
+    const nrContagem = Number(state.contagemAtivaFichas || nrContagAtiva);
+    const agrupamentos = await DB.getAllByEmpresa('agrup_invent', codEmpresa);
+
+    const todasEmpresa = await DB.getAllByEmpresa('fichas_inventario', codEmpresa);
+    const fichasNormaisCount = todasEmpresa.filter(f =>
+      !f.avulsa &&
+      f.dtSaldo === inv.dtSaldo &&
+      (!state.session.codEstabel || f.codEstabel === state.session.codEstabel) &&
+      String(f.codDepos).toUpperCase() === String(dep.codDepos).toUpperCase() &&
+      Number(f.nrContagem || 1) === nrContagem &&
+      Number(f.situacao) !== 3
+    ).length;
+
+    const fichasAvulsasCount = todasEmpresa.filter(f =>
+      f.avulsa &&
+      f.dtSaldo === inv.dtSaldo &&
+      (!state.session.codEstabel || f.codEstabel === state.session.codEstabel) &&
+      String(f.codDepos).toUpperCase() === String(dep.codDepos).toUpperCase()
+    ).length;
+
+    const btnNovaFicha = isBloqueado
+      ? `<button class="btn-topbar-action" style="opacity:0.5;" onclick="App.mostrarAviso('Inventário bloqueado nos parâmetros (FMSC0102).', 'warning')">+ Avulsa</button>`
+      : `<button class="btn-topbar-action" onclick="App.alternarAbaInventario('AVULSA')">+ Nova Ficha</button>`;
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+        <button class="btn-topbar-action" onclick="App.entrarNoInventario('${inv.dtSaldo}')">‹ Depósitos</button>
+        <div style="font-size: 14px; font-weight: 800;">Dep. ${escapeHtml(dep.codDepos)}</div>
+        ${btnNovaFicha}
+      </div>
+
+      <!-- SELETOR DE FLUXO: APURAÇÃO CE0712 vs INCLUSÃO DE FICHA AVULSA -->
+      <div class="contagem-tabs-row" style="margin-bottom: 8px;">
+        <button class="contagem-tab-btn active" onclick="App.alternarAbaInventario('APURACAO')">
+          📋 Apuração CE0712 (${fichasNormaisCount})
+        </button>
+        <button class="contagem-tab-btn" onclick="App.alternarAbaInventario('AVULSA')">
+          ➕ Inclusão Ficha Avulsa (${fichasAvulsasCount})
+        </button>
+      </div>
+
+      ${isBloqueado ? `
+        <div style="background:#fef2f2; border:1.5px solid #fecaca; color:#991b1b; padding:8px 10px; border-radius:10px; font-size:11.5px; font-weight:700;">
+          🔒 Inventário BLOQUEADO (FMSC0102 - indSitInv = 2). Modo somente leitura.
+        </div>
+      ` : ''}

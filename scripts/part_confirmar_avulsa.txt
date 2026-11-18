@@ -1,0 +1,161 @@
+async function confirmarFichaAvulsa() {
+    const dep = state.depositoSelecionado;
+    const inv = state.inventarioSelecionado;
+    const codEmpresa = state.session.codEmpresa || '001';
+    const paramInv = (await DB.obterParamInventarioLocal(codEmpresa, inv.dtSaldo)) || inv;
+
+    if (Number(paramInv.indSitInv) === 2) {
+      mostrarAviso('Inventário bloqueado nos parâmetros (FMSC0102).', 'error');
+      return;
+    }
+
+    const nrAtiva = Number(paramInv.nrContagAtiva || inv.nrContagAtiva || 1);
+    if (nrAtiva === 4) {
+      mostrarAviso('Este inventário já foi concluído no Datasul (nr-contag-ativa = 4). Inclusão de ficha avulsa negada.', 'error');
+      return;
+    }
+
+    const itCodigo = document.getElementById('avulsa-item')?.value.trim();
+    const codLocaliz = document.getElementById('avulsa-localiz')?.value.trim() || '';
+    const lote = document.getElementById('avulsa-lote')?.value.trim() || '';
+    const codRefer = document.getElementById('avulsa-refer')?.value.trim() || '';
+    let dtValiLote = document.getElementById('avulsa-dt-valid')?.value || '';
+    const qtd = parseFloat(document.getElementById('avulsa-qtd')?.value);
+    const vlMaterial = parseFloat(document.getElementById('avulsa-vl-mat')?.value || '0') || 0;
+    const vlMob = parseFloat(document.getElementById('avulsa-vl-mob')?.value || '0') || 0;
+    const vlGgf = parseFloat(document.getElementById('avulsa-vl-ggf')?.value || '0') || 0;
+
+    if (!itCodigo || isNaN(qtd) || qtd < 0) {
+      mostrarAviso('Informe o Item e uma Quantidade Apurada válida (zero ou positiva).', 'warning');
+      return;
+    }
+
+    // Fallback inteligente para Validade do Lote (evita rejeição da boin157q01)
+    if (lote && !dtValiLote) {
+      const matchLote = await DB.obterLoteExato(codEmpresa, state.session.codEstabel || '', itCodigo, lote);
+      if (matchLote?.dtValiLote) {
+        dtValiLote = normalizarDataIso(matchLote.dtValiLote);
+      } else {
+        dtValiLote = '9999-12-31';
+      }
+    }
+
+    const payload = {
+      codEmpresa,
+      dtSaldo: inv.dtSaldo,
+      codEstabel: state.session.codEstabel,
+      codDepos: dep.codDepos,
+      codLocaliz,
+      lote,
+      codRefer,
+      dtValiLote,
+      itCodigo,
+      nrContagem: nrAtiva,
+      qtApurada: qtd,
+      vlMaterial,
+      vlMob,
+      vlGgf,
+      codUsuario: state.session.codUsuario,
+      codMobile: state.session.codMobile
+    };
+
+    let nrFichaGerada = null;
+    let sincronizado = false;
+
+    if (isOnline()) {
+      try {
+        const res = await pasoeFetch('/fcSetInventarioNovaFicha', {
+          method: 'PUT',
+          companyId: codEmpresa,
+          body: JSON.stringify({ ...payload, payload: [payload] })
+        });
+        const data = await res.json();
+        if (data.type === 'ERROR' || data.success === false) {
+          mostrarAviso(`Erro TOTVS: ${data.message || data.detailedMessage}`, 'error');
+          return;
+        }
+        nrFichaGerada = Number(data.nrFicha || data.message) || null;
+        sincronizado = true;
+      } catch (e) {
+        console.warn('Offline na criação de ficha avulsa:', e.message);
+      }
+    }
+
+    const fichasEmp = await DB.getAllByEmpresa('fichas_inventario', codEmpresa);
+    const localMax = fichasEmp.filter(f => f.dtSaldo === inv.dtSaldo).reduce((m, f) => Math.max(m, Number(f.nrFicha || 0)), 0);
+    const nrFichaFinal = nrFichaGerada || (localMax + 1);
+    const matchIt = await DB.obterItemExato(itCodigo, codEmpresa);
+
+    const novaFicha = {
+      codEmpresa,
+      nrFicha: nrFichaFinal,
+      dtSaldo: inv.dtSaldo,
+      codEstabel: payload.codEstabel,
+      codDepos: payload.codDepos,
+      codLocaliz,
+      lote,
+      codRefer,
+      itCodigo: matchIt?.item?.itCodigo || itCodigo,
+      descItem: matchIt?.item?.descItem || itCodigo,
+      un: matchIt?.item?.un || 'UN',
+      qtidadeAtu: 0,
+      qtApurada: qtd,
+      [`valApurado${nrAtiva}`]: qtd,
+      [`codConfteContag${nrAtiva}`]: payload.codUsuario,
+      nrContagem: nrAtiva,
+      situacao: 4,
+      dtValiLote,
+      avulsa: true,
+      sincronizado,
+      pendenteSync: !sincronizado
+    };
+
+    await DB.put('fichas_inventario', novaFicha, codEmpresa);
+    if (!sincronizado) {
+      await DB.adicionarFilaSync('INVENTARIO_AVULSA', payload, codEmpresa);
+    }
+
+    await DB.gravarHistoricoContagem({
+      codEmpresa,
+      dtSaldo: inv.dtSaldo,
+      codEstabel: payload.codEstabel,
+      codDepos: payload.codDepos,
+      nrFicha: nrFichaFinal,
+      itCodigo: novaFicha.itCodigo,
+      descItem: novaFicha.descItem,
+      lote,
+      codLocaliz,
+      codRefer,
+      nrContagem: nrAtiva,
+      qtApurada: qtd,
+      qtContabil: 0,
+      divergencia: qtd,
+      codUsuario: payload.codUsuario,
+      codMobile: state.session.codMobile,
+      statusEnvio: sincronizado ? 'Sincronizado' : 'Pendente Offline'
+    }, codEmpresa);
+
+    Scanner.tocarBeep();
+    atualizarBadgePendencias();
+    mostrarAviso(
+      sincronizado ? `Ficha avulsa #${nrFichaFinal} criada com sucesso no TOTVS!` : `Ficha avulsa #${nrFichaFinal} salva localmente (Modo Offline).`,
+      sincronizado ? 'success' : 'info'
+    );
+
+    // Limpar os campos do formulário para o operador bipar o próximo item
+    const elItem = document.getElementById('avulsa-item');
+    const elDesc = document.getElementById('avulsa-desc-item');
+    const elQtd = document.getElementById('avulsa-qtd');
+    const elLote = document.getElementById('avulsa-lote');
+    const elDtValid = document.getElementById('avulsa-dt-valid');
+    const elRef = document.getElementById('avulsa-refer');
+    if (elItem) elItem.value = '';
+    if (elDesc) elDesc.textContent = '-';
+    if (elQtd) elQtd.value = '';
+    if (elLote) elLote.value = '';
+    if (elDtValid) elDtValid.value = '';
+    if (elRef) elRef.value = '';
+
+    // Permanecer no fluxo de ficha avulsa e atualizar a lista de avulsas na tela
+    renderTelaInventarioAvulsa();
+  }

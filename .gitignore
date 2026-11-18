@@ -1,0 +1,7 @@
+node_modules/
+.edge-temp-profile/
+.user_uploaded/
+.DS_Store
+*.log
+.env
+.env.local

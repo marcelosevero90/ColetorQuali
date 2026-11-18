@@ -1,0 +1,316 @@
+ADD TABLE "fmsc-usuar-mestre"
+  AREA "Dados Area"
+  LABEL "FMS Usu†rios"
+  DESCRIPTION "FMS Usu†rios"
+  DUMP-NAME "fms001"
+
+ADD FIELD "ep-codigo" OF "fmsc-usuar-mestre" AS character 
+  FORMAT "x(3)"
+  INITIAL ""
+  LABEL "Empresa"
+  POSITION 39
+  MAX-WIDTH 6
+  COLUMN-LABEL "Empresa"
+  ORDER 5
+
+ADD FIELD "cod-usuario" OF "fmsc-usuar-mestre" AS character 
+  FORMAT "x(12)"
+  INITIAL ""
+  LABEL "Usu†rio"
+  POSITION 2
+  MAX-WIDTH 24
+  COLUMN-LABEL "Usu†rio"
+  ORDER 10
+
+ADD FIELD "l-estoque" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  LABEL "Habilitar Estoque"
+  POSITION 3
+  MAX-WIDTH 1
+  COLUMN-LABEL "Habilitar Estoque"
+  ORDER 20
+
+ADD FIELD "l-compras" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  LABEL "Habilitar Compras"
+  POSITION 4
+  MAX-WIDTH 1
+  COLUMN-LABEL "Habilitar Compras"
+  ORDER 30
+
+ADD FIELD "l-credito" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  LABEL "Habilitar CrÇdito"
+  POSITION 5
+  MAX-WIDTH 1
+  COLUMN-LABEL "Habilitar CrÇdito"
+  ORDER 40
+
+ADD FIELD "l-permis-estoq" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  LABEL "Permiss‰es Estoque"
+  POSITION 6
+  MAX-WIDTH 792
+  COLUMN-LABEL "Permiss‰es Estoque"
+  EXTENT 99
+  ORDER 50
+
+ADD FIELD "l-permis-compras" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  LABEL "Permiss∆o Compras"
+  POSITION 7
+  MAX-WIDTH 792
+  COLUMN-LABEL "Permiss∆o Compras"
+  EXTENT 99
+  ORDER 60
+
+ADD FIELD "l-permis-credito" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  LABEL "Permiss∆o CrÇdito"
+  POSITION 8
+  MAX-WIDTH 792
+  COLUMN-LABEL "Permiss∆o CrÇdito"
+  EXTENT 99
+  ORDER 70
+
+ADD FIELD "char-1" OF "fmsc-usuar-mestre" AS character 
+  FORMAT "x(500)"
+  INITIAL ""
+  POSITION 9
+  MAX-WIDTH 1000
+  ORDER 80
+
+ADD FIELD "char-2" OF "fmsc-usuar-mestre" AS character 
+  FORMAT "x(500)"
+  INITIAL ""
+  POSITION 10
+  MAX-WIDTH 1000
+  ORDER 90
+
+ADD FIELD "char-3" OF "fmsc-usuar-mestre" AS character 
+  FORMAT "x(500)"
+  INITIAL ""
+  POSITION 11
+  MAX-WIDTH 1000
+  ORDER 100
+
+ADD FIELD "char-4" OF "fmsc-usuar-mestre" AS character 
+  FORMAT "x(500)"
+  INITIAL ""
+  POSITION 12
+  MAX-WIDTH 1000
+  ORDER 110
+
+ADD FIELD "char-5" OF "fmsc-usuar-mestre" AS character 
+  FORMAT "x(500)"
+  INITIAL ""
+  POSITION 13
+  MAX-WIDTH 1000
+  ORDER 120
+
+ADD FIELD "int-1" OF "fmsc-usuar-mestre" AS integer 
+  FORMAT "->,>>>,>>9"
+  INITIAL "0"
+  POSITION 14
+  MAX-WIDTH 4
+  ORDER 130
+
+ADD FIELD "int-2" OF "fmsc-usuar-mestre" AS integer 
+  FORMAT "->,>>>,>>9"
+  INITIAL "0"
+  POSITION 15
+  MAX-WIDTH 4
+  ORDER 140
+
+ADD FIELD "int-3" OF "fmsc-usuar-mestre" AS integer 
+  FORMAT "->,>>>,>>9"
+  INITIAL "0"
+  POSITION 16
+  MAX-WIDTH 4
+  ORDER 150
+
+ADD FIELD "int-4" OF "fmsc-usuar-mestre" AS integer 
+  FORMAT "->,>>>,>>9"
+  INITIAL "0"
+  POSITION 17
+  MAX-WIDTH 4
+  ORDER 160
+
+ADD FIELD "int-5" OF "fmsc-usuar-mestre" AS integer 
+  FORMAT "->,>>>,>>9"
+  INITIAL "0"
+  POSITION 18
+  MAX-WIDTH 4
+  ORDER 170
+
+ADD FIELD "log-1" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 19
+  MAX-WIDTH 1
+  ORDER 180
+
+ADD FIELD "log-2" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 20
+  MAX-WIDTH 1
+  ORDER 190
+
+ADD FIELD "log-3" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 21
+  MAX-WIDTH 1
+  ORDER 200
+
+ADD FIELD "log-4" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 22
+  MAX-WIDTH 1
+  ORDER 210
+
+ADD FIELD "log-5" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 23
+  MAX-WIDTH 1
+  ORDER 220
+
+ADD FIELD "log-6" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 24
+  MAX-WIDTH 1
+  ORDER 230
+
+ADD FIELD "log-7" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 25
+  MAX-WIDTH 1
+  ORDER 240
+
+ADD FIELD "log-8" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 26
+  MAX-WIDTH 1
+  ORDER 250
+
+ADD FIELD "log-9" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 27
+  MAX-WIDTH 1
+  ORDER 260
+
+ADD FIELD "log-10" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  POSITION 28
+  MAX-WIDTH 1
+  ORDER 270
+
+ADD FIELD "data-1" OF "fmsc-usuar-mestre" AS date 
+  FORMAT "99/99/9999"
+  INITIAL ?
+  POSITION 29
+  MAX-WIDTH 4
+  ORDER 280
+
+ADD FIELD "data-2" OF "fmsc-usuar-mestre" AS date 
+  FORMAT "99/99/9999"
+  INITIAL ?
+  POSITION 30
+  MAX-WIDTH 4
+  ORDER 290
+
+ADD FIELD "dec-1" OF "fmsc-usuar-mestre" AS decimal 
+  FORMAT "->>,>>9.99"
+  INITIAL "0"
+  POSITION 31
+  MAX-WIDTH 17
+  DECIMALS 2
+  ORDER 300
+
+ADD FIELD "dec-2" OF "fmsc-usuar-mestre" AS decimal 
+  FORMAT "->>,>>9.99"
+  INITIAL "0"
+  POSITION 32
+  MAX-WIDTH 17
+  DECIMALS 2
+  ORDER 310
+
+ADD FIELD "dec-3" OF "fmsc-usuar-mestre" AS decimal 
+  FORMAT "->>,>>9.99"
+  INITIAL "0"
+  POSITION 33
+  MAX-WIDTH 17
+  DECIMALS 2
+  ORDER 320
+
+ADD FIELD "dec-4" OF "fmsc-usuar-mestre" AS decimal 
+  FORMAT "->>,>>9.99"
+  INITIAL "0"
+  POSITION 34
+  MAX-WIDTH 17
+  DECIMALS 2
+  ORDER 330
+
+ADD FIELD "cod-estabel-pad" OF "fmsc-usuar-mestre" AS character 	
+  FORMAT "x(5)"
+  INITIAL ""
+  LABEL "Estabel Pad"
+  POSITION 35
+  MAX-WIDTH 20
+  ORDER 340
+  
+ADD FIELD "l-permis-rep-ordem-prod" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  LABEL "Permiss∆o Reporte Ordem Prod"
+  POSITION 36
+  MAX-WIDTH 792
+  COLUMN-LABEL "Permiss∆o Reporte Ordem Prod"
+  EXTENT 99
+  ORDER 350
+  
+ADD FIELD "l-permis-est-ordem-prod" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  LABEL "Permiss∆o Estorno Ordem Prod"
+  POSITION 37
+  MAX-WIDTH 792
+  COLUMN-LABEL "Permiss∆o Estorno Ordem Prod"
+  EXTENT 99
+  ORDER 360    
+
+ADD FIELD "l-producao" OF "fmsc-usuar-mestre" AS logical 
+  FORMAT "yes/no"
+  INITIAL "no"
+  LABEL "Habilitar Producao"
+  POSITION 38
+  MAX-WIDTH 1
+  COLUMN-LABEL "Habilitar Producao"
+  ORDER 370
+
+ADD INDEX "ch-pk" ON "fmsc-usuar-mestre" 
+  AREA "Indice Area"
+  UNIQUE
+  PRIMARY
+  INDEX-FIELD "ep-codigo" ASCENDING 
+  INDEX-FIELD "cod-usuario" ASCENDING 
+
+.
+PSC
+cpstream=ibm850
+.
+0000005303

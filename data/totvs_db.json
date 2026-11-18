@@ -1,0 +1,2712 @@
+{
+  "estabelec": [
+    {
+      "codEstabel": "101",
+      "nome": "MATRIZ INDUSTRIAL - EMPRESA 001",
+      "codEmpresa": "001",
+      "cgc": "12.345.678/0001-01"
+    },
+    {
+      "codEstabel": "102",
+      "nome": "FILIAL LOGISTICA - EMPRESA 001",
+      "codEmpresa": "001",
+      "cgc": "12.345.678/0002-82"
+    },
+    {
+      "codEstabel": "11",
+      "nome": "CYG BIOTECH TABOAO - EMPRESA 001",
+      "codEmpresa": "001",
+      "cgc": "45.123.456/0001-11"
+    },
+    {
+      "codEstabel": "1",
+      "nome": "CONSIGAZ BARUERI - EMPRESA 001",
+      "codEmpresa": "001",
+      "cgc": "60.987.654/0001-01"
+    },
+    {
+      "codEstabel": "201",
+      "nome": "SANTA COLOMBA MATRIZ - EMPRESA 002",
+      "codEmpresa": "002",
+      "cgc": "98.765.432/0001-02"
+    },
+    {
+      "codEstabel": "2100",
+      "nome": "SANTA COLOMBA FAZENDA - EMPRESA 002",
+      "codEmpresa": "002",
+      "cgc": "98.765.432/0002-83"
+    }
+  ],
+  "param_estoq": [
+    {
+      "codEmpresa": "001",
+      "estabelPad": "101",
+      "consInvent": 1
+    },
+    {
+      "codEmpresa": "002",
+      "estabelPad": "2100",
+      "consInvent": 1
+    }
+  ],
+  "fmsc_usuar_mestre": [
+    {
+      "codEmpresa": "001",
+      "codUsuario": "matheus.st",
+      "nome": "Matheus ST (Administrador)",
+      "senha": "qwe8451",
+      "situacao": 9,
+      "codEstabPad": "101",
+      "TpAgrupTransf": 1,
+      "tabPrincipal": 1,
+      "permEstoque": true,
+      "permCompras": true,
+      "permCredito": true,
+      "permProducao": true,
+      "permEstoqReqAte": true,
+      "permEstoqReqDev": true,
+      "permEstoqReqMov": true,
+      "permEstoqReqInv": true,
+      "permEstoqReqRec": true,
+      "permComprMLA": true,
+      "permCredAvCli": true
+    },
+    {
+      "codEmpresa": "001",
+      "codUsuario": "admin",
+      "nome": "Administrador Datasul",
+      "senha": "admin",
+      "situacao": 9,
+      "codEstabPad": "101",
+      "TpAgrupTransf": 1,
+      "tabPrincipal": 1,
+      "permEstoque": true,
+      "permCompras": true,
+      "permCredito": true,
+      "permProducao": true,
+      "permEstoqReqAte": true,
+      "permEstoqReqDev": true,
+      "permEstoqReqMov": true,
+      "permEstoqReqInv": true,
+      "permEstoqReqRec": true,
+      "permComprMLA": true,
+      "permCredAvCli": true
+    },
+    {
+      "codEmpresa": "001",
+      "codUsuario": "aamaral",
+      "nome": "Alexandre Amaral",
+      "senha": "123",
+      "situacao": 9,
+      "codEstabPad": "101",
+      "TpAgrupTransf": 1,
+      "tabPrincipal": 1,
+      "permEstoque": true,
+      "permCompras": false,
+      "permCredito": false,
+      "permProducao": false,
+      "permEstoqReqAte": true,
+      "permEstoqReqDev": true,
+      "permEstoqReqMov": true,
+      "permEstoqReqInv": true,
+      "permEstoqReqRec": true,
+      "permComprMLA": false,
+      "permCredAvCli": false
+    },
+    {
+      "codEmpresa": "001",
+      "codUsuario": "conferente1",
+      "nome": "Carlos Conferente 1",
+      "senha": "123",
+      "situacao": 9,
+      "codEstabPad": "101",
+      "TpAgrupTransf": 1,
+      "tabPrincipal": 1,
+      "permEstoque": true,
+      "permCompras": false,
+      "permCredito": false,
+      "permProducao": false,
+      "permEstoqReqAte": false,
+      "permEstoqReqDev": false,
+      "permEstoqReqMov": false,
+      "permEstoqReqInv": true,
+      "permEstoqReqRec": false,
+      "permComprMLA": false,
+      "permCredAvCli": false
+    },
+    {
+      "codEmpresa": "001",
+      "codUsuario": "conferente2",
+      "nome": "Mariana Conferente 2",
+      "senha": "123",
+      "situacao": 9,
+      "codEstabPad": "101",
+      "TpAgrupTransf": 1,
+      "tabPrincipal": 1,
+      "permEstoque": true,
+      "permCompras": false,
+      "permCredito": false,
+      "permProducao": false,
+      "permEstoqReqAte": false,
+      "permEstoqReqDev": false,
+      "permEstoqReqMov": false,
+      "permEstoqReqInv": true,
+      "permEstoqReqRec": false,
+      "permComprMLA": false,
+      "permCredAvCli": false
+    },
+    {
+      "codEmpresa": "001",
+      "codUsuario": "sem_inv",
+      "nome": "Operador Sem Permissão Inventário",
+      "senha": "123",
+      "situacao": 9,
+      "codEstabPad": "101",
+      "TpAgrupTransf": 1,
+      "tabPrincipal": 1,
+      "permEstoque": true,
+      "permCompras": false,
+      "permCredito": false,
+      "permProducao": false,
+      "permEstoqReqAte": true,
+      "permEstoqReqDev": false,
+      "permEstoqReqMov": false,
+      "permEstoqReqInv": false,
+      "permEstoqReqRec": false,
+      "permComprMLA": false,
+      "permCredAvCli": false
+    },
+    {
+      "codEmpresa": "002",
+      "codUsuario": "matheus.st",
+      "nome": "Matheus ST (Empresa 002)",
+      "senha": "qwe8451",
+      "situacao": 9,
+      "codEstabPad": "2100",
+      "TpAgrupTransf": 1,
+      "tabPrincipal": 1,
+      "permEstoque": true,
+      "permCompras": true,
+      "permCredito": true,
+      "permProducao": true,
+      "permEstoqReqAte": true,
+      "permEstoqReqDev": true,
+      "permEstoqReqMov": true,
+      "permEstoqReqInv": true,
+      "permEstoqReqRec": true,
+      "permComprMLA": true,
+      "permCredAvCli": true
+    },
+    {
+      "codEmpresa": "002",
+      "codUsuario": "admin",
+      "nome": "Administrador Empresa 002",
+      "senha": "admin",
+      "situacao": 9,
+      "codEstabPad": "2100",
+      "TpAgrupTransf": 1,
+      "tabPrincipal": 1,
+      "permEstoque": true,
+      "permCompras": true,
+      "permCredito": true,
+      "permProducao": true,
+      "permEstoqReqAte": true,
+      "permEstoqReqDev": true,
+      "permEstoqReqMov": true,
+      "permEstoqReqInv": true,
+      "permEstoqReqRec": true,
+      "permComprMLA": true,
+      "permCredAvCli": true
+    },
+    {
+      "codEmpresa": "002",
+      "codUsuario": "aamaral",
+      "nome": "Alexandre Amaral",
+      "senha": "123",
+      "situacao": 9,
+      "codEstabPad": "2100",
+      "TpAgrupTransf": 1,
+      "tabPrincipal": 1,
+      "permEstoque": true,
+      "permCompras": false,
+      "permCredito": false,
+      "permProducao": false,
+      "permEstoqReqAte": true,
+      "permEstoqReqDev": true,
+      "permEstoqReqMov": true,
+      "permEstoqReqInv": true,
+      "permEstoqReqRec": true,
+      "permComprMLA": false,
+      "permCredAvCli": false
+    },
+    {
+      "codEmpresa": "002",
+      "codUsuario": "conferente1",
+      "nome": "Carlos Conferente 1",
+      "senha": "123",
+      "situacao": 9,
+      "codEstabPad": "2100",
+      "TpAgrupTransf": 1,
+      "tabPrincipal": 1,
+      "permEstoque": true,
+      "permCompras": false,
+      "permCredito": false,
+      "permProducao": false,
+      "permEstoqReqAte": false,
+      "permEstoqReqDev": false,
+      "permEstoqReqMov": false,
+      "permEstoqReqInv": true,
+      "permEstoqReqRec": false,
+      "permComprMLA": false,
+      "permCredAvCli": false
+    }
+  ],
+  "fmsc_inventario": [
+    {
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-16",
+      "indSitInv": 1,
+      "permContgUsFc": false,
+      "indTipoInv": 1,
+      "nrContagAtiva": 2
+    },
+    {
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-10",
+      "indSitInv": 2,
+      "permContgUsFc": false,
+      "indTipoInv": 1,
+      "nrContagAtiva": 1
+    },
+    {
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-01",
+      "indSitInv": 1,
+      "permContgUsFc": true,
+      "indTipoInv": 1,
+      "nrContagAtiva": 4
+    },
+    {
+      "codEmpresa": "002",
+      "dtSaldo": "2026-11-15",
+      "indSitInv": 1,
+      "permContgUsFc": true,
+      "indTipoInv": 1,
+      "nrContagAtiva": 2
+    },
+    {
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-17",
+      "indSitInv": 1,
+      "permContgUsFc": true,
+      "indTipoInv": 1,
+      "nrContagAtiva": 2
+    }
+  ],
+  "agrup_invent": [
+    {
+      "codEmpresa": "001",
+      "cdnAgrup": 10,
+      "dscAgrup": "INVENTARIO GERAL ALMOXARIFADO",
+      "codRespon": "aamaral",
+      "dtCriacao": "2026-11-16"
+    },
+    {
+      "codEmpresa": "001",
+      "cdnAgrup": 20,
+      "dscAgrup": "INVENTARIO PRODUCAO E EXPEDICAO",
+      "codRespon": "conferente1",
+      "dtCriacao": "2026-11-16"
+    },
+    {
+      "codEmpresa": "002",
+      "cdnAgrup": 100,
+      "dscAgrup": "INVENTARIO INSUMOS AGRO",
+      "codRespon": "aamaral",
+      "dtCriacao": "2026-11-15"
+    }
+  ],
+  "deposito": [
+    {
+      "codEmpresa": "001",
+      "codDepos": "ALM",
+      "nome": "ALMOXARIFADO CENTRAL",
+      "consSaldo": true
+    },
+    {
+      "codEmpresa": "001",
+      "codDepos": "EXP",
+      "nome": "EXPEDICAO PRODUTOS",
+      "consSaldo": true
+    },
+    {
+      "codEmpresa": "001",
+      "codDepos": "PRO",
+      "nome": "DEPOSITO PRODUCAO",
+      "consSaldo": true
+    },
+    {
+      "codEmpresa": "001",
+      "codDepos": "QUA",
+      "nome": "QUARENTENA / QUALIDADE",
+      "consSaldo": true
+    },
+    {
+      "codEmpresa": "001",
+      "codDepos": "AST",
+      "nome": "ASSISTENCIA TECNICA",
+      "consSaldo": true
+    },
+    {
+      "codEmpresa": "001",
+      "codDepos": "ACA",
+      "nome": "ACABADO",
+      "consSaldo": true
+    },
+    {
+      "codEmpresa": "001",
+      "codDepos": "SRO",
+      "nome": "SEMI-ACABADO / RETRABALHO",
+      "consSaldo": true
+    },
+    {
+      "codEmpresa": "002",
+      "codDepos": "102",
+      "nome": "DEPOSITO GERAL FAZENDA",
+      "consSaldo": true
+    },
+    {
+      "codEmpresa": "002",
+      "codDepos": "105",
+      "nome": "OFICINA E PECAS",
+      "consSaldo": true
+    }
+  ],
+  "referencia": [
+    {
+      "codEmpresa": "001",
+      "codRefer": "",
+      "descRefer": "Sem Referencia"
+    },
+    {
+      "codEmpresa": "001",
+      "codRefer": "PAD",
+      "descRefer": "Padrao Industrial"
+    },
+    {
+      "codEmpresa": "001",
+      "codRefer": "ESP",
+      "descRefer": "Acabamento Especial"
+    },
+    {
+      "codEmpresa": "002",
+      "codRefer": "",
+      "descRefer": "Sem Referencia"
+    },
+    {
+      "codEmpresa": "002",
+      "codRefer": "SAF26",
+      "descRefer": "Safra 2026"
+    }
+  ],
+  "localizacao": [
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "descricao": "BRANCO"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "TESTE",
+      "descricao": "TESTE"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "codDepos": "ACA",
+      "codLocaliz": "",
+      "descricao": "BRANCO"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "codDepos": "SRO",
+      "codLocaliz": "",
+      "descricao": "BRANCO"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "A-01-01",
+      "descricao": "RUA A - PRATELEIRA 01 - NIVEL 01"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "A-01-02",
+      "descricao": "RUA A - PRATELEIRA 01 - NIVEL 02"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "B-02-01",
+      "descricao": "RUA B - PRATELEIRA 02 - NIVEL 01"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "codDepos": "EXP",
+      "codLocaliz": "DOCA-01",
+      "descricao": "DOCA DE EXPEDICAO 01"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "codDepos": "EXP",
+      "codLocaliz": "DOCA-02",
+      "descricao": "DOCA DE EXPEDICAO 02"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "101",
+      "codDepos": "PRO",
+      "codLocaliz": "LIN-01",
+      "descricao": "LINHA DE MONTAGEM 01"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "102",
+      "codDepos": "ALM",
+      "codLocaliz": "F2-A01",
+      "descricao": "FILIAL 102 - CORREDOR A1"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "11",
+      "codDepos": "ALM",
+      "codLocaliz": "A-01-01",
+      "descricao": "TABOAO - PRATELEIRA A1"
+    },
+    {
+      "codEmpresa": "001",
+      "codEstabel": "11",
+      "codDepos": "EXP",
+      "codLocaliz": "221100018",
+      "descricao": "BOX 18 EXPEDICAO"
+    },
+    {
+      "codEmpresa": "002",
+      "codEstabel": "2100",
+      "codDepos": "102",
+      "codLocaliz": "4-2-2",
+      "descricao": "GALPAO 4 CORREDOR 2 NIVEL 2"
+    },
+    {
+      "codEmpresa": "002",
+      "codEstabel": "2100",
+      "codDepos": "102",
+      "codLocaliz": "4-3-4",
+      "descricao": "GALPAO 4 CORREDOR 3 NIVEL 4"
+    },
+    {
+      "codEmpresa": "002",
+      "codEstabel": "2100",
+      "codDepos": "105",
+      "codLocaliz": "OF-01",
+      "descricao": "BANCADA OFICINA 01"
+    }
+  ],
+  "item": [
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11000015",
+      "descItem": "CARBONATO DE CALCIO (PA)",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "KG",
+      "codBarras": "7891100000151",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11000028",
+      "descItem": "CLORETO DE SODIO CRISTAL",
+      "tipoConEst": 3,
+      "locUnica": false,
+      "depositoPad": "EXP",
+      "nomeDeposito": "EXPEDICAO PRODUTOS",
+      "codLocaliz": "DOCA-01",
+      "descricaoLocaliz": "DOCA DE EXPEDICAO 01",
+      "un": "KG",
+      "codBarras": "7891100000281",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11500028",
+      "descItem": "ACETATO DE ISOPROPILA GRAU FARMA",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "B-02-01",
+      "descricaoLocaliz": "RUA B - PRATELEIRA 02 - NIVEL 01",
+      "un": "KG",
+      "codBarras": "R2200000016883",
+      "requerValorFicha": true,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "33500002",
+      "descItem": "BENZOATO DE SODIO EM PO",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-02",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 02",
+      "un": "KG",
+      "codBarras": "7893350000025",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "PI0010",
+      "descItem": "TUBO ACO CARBONO SCH 40 1/2 6000MM",
+      "tipoConEst": 4,
+      "locUnica": false,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "PC",
+      "codBarras": "7897000000104",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "PI0020",
+      "descItem": "VALVULA ESFERA TRIPARTIDA INOX 1/2 BSP",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "PC",
+      "codBarras": "7897000000203",
+      "requerValorFicha": true,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "PI0030",
+      "descItem": "FLANGE SOBREPOSTO 150 LBS 1/2 POL",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "EXP",
+      "nomeDeposito": "EXPEDICAO PRODUTOS",
+      "codLocaliz": "DOCA-02",
+      "descricaoLocaliz": "DOCA DE EXPEDICAO 02",
+      "un": "PC",
+      "codBarras": "7897000000302",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "PI0041",
+      "descItem": "CURVA 90 RAIO LONGO SCH 40 1/2",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-02",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 02",
+      "un": "PC",
+      "codBarras": "7897000000418",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "PI0440",
+      "descItem": "ELETRODO SOLDA INOX 316L 2.5MM",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "PRO",
+      "nomeDeposito": "DEPOSITO PRODUCAO",
+      "codLocaliz": "LIN-01",
+      "descricaoLocaliz": "LINHA DE MONTAGEM 01",
+      "un": "KG",
+      "codBarras": "7897000004409",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "PI0600",
+      "descItem": "REGULADOR PRESSAO ALTA VAZAO 50KG/H",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "B-02-01",
+      "descricaoLocaliz": "RUA B - PRATELEIRA 02 - NIVEL 01",
+      "un": "PC",
+      "codBarras": "7897000006007",
+      "requerValorFicha": true,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "D352-221/1",
+      "descItem": "Roupeiro Lumiere 6Pts 6Gav Cinamomo/Off White Vol 1/5",
+      "tipoConEst": 3,
+      "locUnica": false,
+      "depositoPad": "AST",
+      "nomeDeposito": "ASSISTENCIA TECNICA",
+      "codLocaliz": "",
+      "descricaoLocaliz": "BRANCO",
+      "un": "UN",
+      "codBarras": "7890000352221",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0001",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0001",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000001",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0002",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0002",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000002",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0003",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0003",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000003",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0004",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0004",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000004",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0005",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0005",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000005",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0006",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0006",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000006",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0007",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0007",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000007",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0008",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0008",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000008",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0009",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0009",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000009",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0010",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0010",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000010",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0011",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0011",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000011",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0012",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0012",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000012",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0013",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0013",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000013",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0014",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0014",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000014",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0015",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0015",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000015",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0016",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0016",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000016",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0017",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0017",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000017",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0018",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0018",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000018",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0019",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0019",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000019",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0020",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0020",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000020",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0021",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0021",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000021",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0022",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0022",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000022",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0023",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0023",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000023",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0024",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0024",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000024",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0025",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0025",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000025",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0026",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0026",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000026",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0027",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0027",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000027",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0028",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0028",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000028",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0029",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0029",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000029",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0030",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0030",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000030",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0031",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0031",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000031",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0032",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0032",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000032",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0033",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0033",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000033",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0034",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0034",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000034",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0035",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0035",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000035",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0036",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0036",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000036",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0037",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0037",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000037",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0038",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0038",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000038",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0039",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0039",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000039",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "MP-0040",
+      "descItem": "COMPONENTE INDUSTRIAL PADRAO MP-0040",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "ALM",
+      "nomeDeposito": "ALMOXARIFADO CENTRAL",
+      "codLocaliz": "A-01-01",
+      "descricaoLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01",
+      "un": "UN",
+      "codBarras": "7899000000040",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "002",
+      "itCodigo": "052900017",
+      "descItem": "ANTIFERRUGEM INDUSTRIAL PROTETIVO",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "102",
+      "nomeDeposito": "DEPOSITO GERAL FAZENDA",
+      "codLocaliz": "4-2-2",
+      "descricaoLocaliz": "GALPAO 4 CORREDOR 2 NIVEL 2",
+      "un": "LT",
+      "codBarras": "7890529000172",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-15T08:00:00Z"
+    },
+    {
+      "codEmpresa": "002",
+      "itCodigo": "052900019",
+      "descItem": "LUBRIFICANTE SPRAY MULTIUSO",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "102",
+      "nomeDeposito": "DEPOSITO GERAL FAZENDA",
+      "codLocaliz": "4-3-4",
+      "descricaoLocaliz": "GALPAO 4 CORREDOR 3 NIVEL 4",
+      "un": "UN",
+      "codBarras": "7890529000196",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-15T08:00:00Z"
+    },
+    {
+      "codEmpresa": "002",
+      "itCodigo": "052900120",
+      "descItem": "FILTRO DE OLEO COMBUSTIVEL",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "105",
+      "nomeDeposito": "OFICINA E PECAS",
+      "codLocaliz": "OF-01",
+      "descricaoLocaliz": "BANCADA OFICINA 01",
+      "un": "PC",
+      "codBarras": "7890529001209",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-15T08:00:00Z"
+    },
+    {
+      "codEmpresa": "002",
+      "itCodigo": "AGRO-9901",
+      "descItem": "FERTILIZANTE NPK 20-05-20 SACO 50KG",
+      "tipoConEst": 3,
+      "locUnica": true,
+      "depositoPad": "102",
+      "nomeDeposito": "DEPOSITO GERAL FAZENDA",
+      "codLocaliz": "4-2-2",
+      "descricaoLocaliz": "GALPAO 4 CORREDOR 2 NIVEL 2",
+      "un": "SC",
+      "codBarras": "7890529990015",
+      "requerValorFicha": true,
+      "dataAtualiz": "2026-11-15T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "01010047",
+      "descItem": "Kit Pont Prince (10) Unidades",
+      "un": "UN",
+      "codFamilia": "DIVERSOS",
+      "tipoItem": "Fabricado",
+      "comprFabric": 1,
+      "situacao": 1
+    }
+  ],
+  "lote": [
+    {
+      "codEmpresa": "001",
+      "itCodigo": "D352-221/1",
+      "codEstabel": "101",
+      "codDepos": "SRO",
+      "lote": "5992945-10",
+      "dtValiLote": "9999-12-31",
+      "codLocaliz": "",
+      "qtDisponivel": 1,
+      "codRefer": "",
+      "nomeDepos": "SEMI-ACABADO / RETRABALHO",
+      "nomeLocaliz": "BRANCO"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "D352-221/1",
+      "codEstabel": "101",
+      "codDepos": "ACA",
+      "lote": "6000765-2290",
+      "dtValiLote": "9999-12-31",
+      "codLocaliz": "",
+      "qtDisponivel": 243,
+      "codRefer": "",
+      "nomeDepos": "ACABADO",
+      "nomeLocaliz": "BRANCO"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "D352-221/1",
+      "codEstabel": "101",
+      "codDepos": "ACA",
+      "lote": "6044671-50",
+      "dtValiLote": "9999-12-31",
+      "codLocaliz": "",
+      "qtDisponivel": 446,
+      "codRefer": "",
+      "nomeDepos": "ACABADO",
+      "nomeLocaliz": "BRANCO"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "D352-221/1",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "lote": "6044671-50",
+      "dtValiLote": "9999-12-31",
+      "codLocaliz": "",
+      "qtDisponivel": 350,
+      "codRefer": "",
+      "nomeDepos": "ASSISTENCIA TECNICA",
+      "nomeLocaliz": "BRANCO"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11000015",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "lote": "LT-2026-01",
+      "dtValiLote": "2028-06-30",
+      "codLocaliz": "A-01-01",
+      "qtDisponivel": 120,
+      "codRefer": "",
+      "nomeDepos": "ALMOXARIFADO CENTRAL",
+      "nomeLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 01"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11000015",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "lote": "LT-2026-02",
+      "dtValiLote": "2028-09-15",
+      "codLocaliz": "A-01-02",
+      "qtDisponivel": 45,
+      "codRefer": "",
+      "nomeDepos": "ALMOXARIFADO CENTRAL",
+      "nomeLocaliz": "RUA A - PRATELEIRA 01 - NIVEL 02"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11500028",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "lote": "211000049",
+      "dtValiLote": "2027-07-20",
+      "codLocaliz": "B-02-01",
+      "qtDisponivel": 4500,
+      "codRefer": "",
+      "nomeDepos": "ALMOXARIFADO CENTRAL",
+      "nomeLocaliz": "RUA B - PRATELEIRA 02 - NIVEL 01"
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11000028",
+      "codEstabel": "101",
+      "codDepos": "EXP",
+      "lote": "231000114",
+      "dtValiLote": "2029-03-17",
+      "codLocaliz": "DOCA-01",
+      "qtDisponivel": 25,
+      "codRefer": "",
+      "nomeDepos": "EXPEDICAO PRODUTOS",
+      "nomeLocaliz": "DOCA DE EXPEDICAO 01"
+    },
+    {
+      "codEmpresa": "002",
+      "itCodigo": "052900017",
+      "codEstabel": "2100",
+      "codDepos": "102",
+      "lote": "LT-AGRO-90",
+      "dtValiLote": "2028-12-31",
+      "codLocaliz": "4-2-2",
+      "qtDisponivel": 350,
+      "codRefer": "SAF26",
+      "nomeDepos": "DEPOSITO GERAL FAZENDA",
+      "nomeLocaliz": "GALPAO 4 CORREDOR 2 NIVEL 2"
+    }
+  ],
+  "saldo_estoq": [
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11000015",
+      "codEstab": "101",
+      "codDep": "ALM",
+      "codLocal": "A-01-01",
+      "lote": "LT-2026-01",
+      "codRefer": "",
+      "descItem": "CARBONATO DE CALCIO (PA)",
+      "qtAlocada": 0,
+      "qtidadeAtu": 120,
+      "qtAlocPed": 0,
+      "qtAlocProd": 0,
+      "dtValiLote": "2028-06-30",
+      "qtDisponivelCalc": 120
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11000015",
+      "codEstab": "101",
+      "codDep": "ALM",
+      "codLocal": "A-01-02",
+      "lote": "LT-2026-02",
+      "codRefer": "",
+      "descItem": "CARBONATO DE CALCIO (PA)",
+      "qtAlocada": 0,
+      "qtidadeAtu": 45,
+      "qtAlocPed": 0,
+      "qtAlocProd": 0,
+      "dtValiLote": "2028-09-15",
+      "qtDisponivelCalc": 45
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11500028",
+      "codEstab": "101",
+      "codDep": "ALM",
+      "codLocal": "B-02-01",
+      "lote": "211000049",
+      "codRefer": "",
+      "descItem": "ACETATO DE ISOPROPILA GRAU FARMA",
+      "qtAlocada": 0,
+      "qtidadeAtu": 4500,
+      "qtAlocPed": 0,
+      "qtAlocProd": 0,
+      "dtValiLote": "2027-07-20",
+      "qtDisponivelCalc": 4500
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "11000028",
+      "codEstab": "101",
+      "codDep": "EXP",
+      "codLocal": "DOCA-01",
+      "lote": "231000114",
+      "codRefer": "",
+      "descItem": "CLORETO DE SODIO CRISTAL",
+      "qtAlocada": 0,
+      "qtidadeAtu": 25,
+      "qtAlocPed": 0,
+      "qtAlocProd": 0,
+      "dtValiLote": "2029-03-17",
+      "qtDisponivelCalc": 25
+    },
+    {
+      "codEmpresa": "001",
+      "itCodigo": "PI0010",
+      "codEstab": "101",
+      "codDep": "ALM",
+      "codLocal": "A-01-01",
+      "lote": "",
+      "codRefer": "PAD",
+      "descItem": "TUBO ACO CARBONO SCH 40 1/2 6000MM",
+      "qtAlocada": 0,
+      "qtidadeAtu": 120,
+      "qtAlocPed": 0,
+      "qtAlocProd": 0,
+      "dtValiLote": "",
+      "qtDisponivelCalc": 120
+    },
+    {
+      "codEmpresa": "002",
+      "itCodigo": "052900017",
+      "codEstab": "2100",
+      "codDep": "102",
+      "codLocal": "4-2-2",
+      "lote": "LT-AGRO-90",
+      "codRefer": "SAF26",
+      "descItem": "ANTIFERRUGEM INDUSTRIAL PROTETIVO",
+      "qtAlocada": 0,
+      "qtidadeAtu": 350,
+      "qtAlocPed": 0,
+      "qtAlocProd": 0,
+      "dtValiLote": "2028-12-31",
+      "qtDisponivelCalc": 350
+    }
+  ],
+  "inventario": [
+    {
+      "codEmpresa": "001",
+      "nrFicha": 1,
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "A-01-01",
+      "lote": "LT-2026-01",
+      "codRefer": "",
+      "itCodigo": "11000015",
+      "qtidadeAtu": 120,
+      "valApurado": [
+        null,
+        50,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "matheus.st",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 10,
+      "dtValiLote": "2028-06-30",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 2,
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "A-01-02",
+      "lote": "LT-2026-02",
+      "codRefer": "",
+      "itCodigo": "11000015",
+      "qtidadeAtu": 45,
+      "valApurado": [
+        45,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "aamaral",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 10,
+      "dtValiLote": "2028-09-15",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 3,
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "B-02-01",
+      "lote": "211000049",
+      "codRefer": "",
+      "itCodigo": "11500028",
+      "qtidadeAtu": 4500,
+      "valApurado": [
+        4480,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "conferente1",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 10,
+      "dtValiLote": "2027-07-20",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 4,
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "A-01-01",
+      "lote": "",
+      "codRefer": "PAD",
+      "itCodigo": "PI0010",
+      "qtidadeAtu": 120,
+      "valApurado": [
+        110,
+        115,
+        null
+      ],
+      "codConfteContag": [
+        "conferente1",
+        "conferente2",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 10,
+      "dtValiLote": "",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 5,
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "A-01-01",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "PI0020",
+      "qtidadeAtu": 45,
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "situacao": 2,
+      "cdnAgrup": 10,
+      "dtValiLote": "",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 6,
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "EXP",
+      "codLocaliz": "DOCA-01",
+      "lote": "231000114",
+      "codRefer": "",
+      "itCodigo": "11000028",
+      "qtidadeAtu": 25,
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 20,
+      "dtValiLote": "2029-03-17",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 7,
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "EXP",
+      "codLocaliz": "DOCA-02",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "PI0030",
+      "qtidadeAtu": 30,
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 20,
+      "dtValiLote": "",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 8,
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "PRO",
+      "codLocaliz": "LIN-01",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "PI0440",
+      "qtidadeAtu": 18,
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 20,
+      "dtValiLote": "",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 101,
+      "dtSaldo": "2026-11-10",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "A-01-01",
+      "lote": "LT-2026-01",
+      "codRefer": "",
+      "itCodigo": "11000015",
+      "qtidadeAtu": 90,
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 10,
+      "dtValiLote": "2028-06-30",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "002",
+      "nrFicha": 1,
+      "dtSaldo": "2026-11-15",
+      "codEstabel": "2100",
+      "codDepos": "102",
+      "codLocaliz": "4-2-2",
+      "lote": "LT-AGRO-90",
+      "codRefer": "SAF26",
+      "itCodigo": "052900017",
+      "qtidadeAtu": 350,
+      "valApurado": [
+        340,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "aamaral",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 100,
+      "dtValiLote": "2028-12-31",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "002",
+      "nrFicha": 2,
+      "dtSaldo": "2026-11-15",
+      "codEstabel": "2100",
+      "codDepos": "102",
+      "codLocaliz": "4-3-4",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "052900019",
+      "qtidadeAtu": 80,
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 100,
+      "dtValiLote": "",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "002",
+      "nrFicha": 3,
+      "dtSaldo": "2026-11-15",
+      "codEstabel": "2100",
+      "codDepos": "105",
+      "codLocaliz": "OF-01",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "052900120",
+      "qtidadeAtu": 14,
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 100,
+      "dtValiLote": "",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 9,
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "A-01-01",
+      "lote": "LT-NOVO-AVULSO",
+      "codRefer": "",
+      "itCodigo": "11000015",
+      "qtidadeAtu": 0,
+      "valApurado": [
+        null,
+        15,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "matheus.st",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 0,
+      "dtValiLote": "2028-12-31",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ],
+      "avulsa": true
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 10,
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "codLocaliz": "A-01-02",
+      "lote": "LT-AVULSO-SYNC",
+      "codRefer": "",
+      "itCodigo": "11000015",
+      "qtidadeAtu": 0,
+      "valApurado": [
+        null,
+        25,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "matheus.st",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 0,
+      "dtValiLote": "2028-12-31",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ],
+      "avulsa": true
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 1,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010047",
+      "valApurado": [
+        10,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "operador.totvs",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 10,
+      "situacao": 4,
+      "descItem": "Kit Pont Prince (10) Unidades",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 2,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010116",
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 5,
+      "situacao": 2,
+      "descItem": "Item 01010116",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 3,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010125",
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 2,
+      "situacao": 2,
+      "descItem": "Item 01010125",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 4,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010126",
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 8,
+      "situacao": 2,
+      "descItem": "Item 01010126",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 5,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010167",
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 12,
+      "situacao": 2,
+      "descItem": "Item 01010167",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 6,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010217",
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 1,
+      "situacao": 2,
+      "descItem": "Item 01010217",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 7,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010219",
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 4,
+      "situacao": 2,
+      "descItem": "Item 01010219",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 8,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010227",
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 15,
+      "situacao": 2,
+      "descItem": "Item 01010227",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 9,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010240",
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 7,
+      "situacao": 2,
+      "descItem": "Item 01010240",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 10,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010247",
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 3,
+      "situacao": 2,
+      "descItem": "Item 01010247",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 11,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "",
+      "lote": "",
+      "codRefer": "",
+      "itCodigo": "01010250",
+      "valApurado": [
+        null,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "",
+        "",
+        ""
+      ],
+      "qtidadeAtu": 9,
+      "situacao": 2,
+      "descItem": "Item 01010250",
+      "cdnAgrup": 0,
+      "un": "UN"
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 12,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "TESTE",
+      "lote": "LOTE-TEST-01",
+      "codRefer": "",
+      "itCodigo": "01010047",
+      "qtidadeAtu": 0,
+      "valApurado": [
+        42.5,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "matheus.st",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 0,
+      "dtValiLote": "",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ],
+      "avulsa": true
+    },
+    {
+      "codEmpresa": "001",
+      "nrFicha": 13,
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "codLocaliz": "TESTE",
+      "lote": "LOTE-TEST-01",
+      "codRefer": "",
+      "itCodigo": "01010047",
+      "qtidadeAtu": 0,
+      "valApurado": [
+        42.5,
+        null,
+        null
+      ],
+      "codConfteContag": [
+        "matheus.st",
+        "",
+        ""
+      ],
+      "situacao": 4,
+      "cdnAgrup": 0,
+      "dtValiLote": "",
+      "valorMat": [
+        0,
+        0,
+        0
+      ],
+      "valorMob": [
+        0,
+        0,
+        0
+      ],
+      "valorGgf": [
+        0,
+        0,
+        0
+      ],
+      "avulsa": true
+    }
+  ],
+  "historico_contagens": [
+    {
+      "idHist": 9,
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "nrFicha": 13,
+      "itCodigo": "01010047",
+      "descItem": "Kit Pont Prince (10) Unidades",
+      "lote": "LOTE-TEST-01",
+      "codLocaliz": "TESTE",
+      "codRefer": "",
+      "nrContagem": 1,
+      "qtApurada": 42.5,
+      "qtContabil": 0,
+      "divergencia": 42.5,
+      "codUsuario": "matheus.st",
+      "codMobile": "WEB-COLETOR",
+      "dtLeitura": "2026-11-18 00:17:27",
+      "statusEnvio": "Sincronizado",
+      "origem": "Ficha em Branco (Avulsa)"
+    },
+    {
+      "idHist": 8,
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "nrFicha": 1,
+      "itCodigo": "01010047",
+      "descItem": "Kit Pont Prince (10) Unidades",
+      "lote": "",
+      "codLocaliz": "",
+      "codRefer": "",
+      "nrContagem": 1,
+      "qtApurada": 10,
+      "qtContabil": 10,
+      "divergencia": 0,
+      "codUsuario": "operador.totvs",
+      "codMobile": "WEB-COLETOR",
+      "dtLeitura": "2026-11-17 23:51:59",
+      "statusEnvio": "Sincronizado",
+      "origem": "Coletor Mobile"
+    },
+    {
+      "idHist": 7,
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-17",
+      "codEstabel": "101",
+      "codDepos": "AST",
+      "nrFicha": 12,
+      "itCodigo": "01010047",
+      "descItem": "Kit Pont Prince (10) Unidades",
+      "lote": "LOTE-TEST-01",
+      "codLocaliz": "TESTE",
+      "codRefer": "",
+      "nrContagem": 1,
+      "qtApurada": 42.5,
+      "qtContabil": 0,
+      "divergencia": 42.5,
+      "codUsuario": "matheus.st",
+      "codMobile": "WEB-COLETOR",
+      "dtLeitura": "2026-11-17 23:51:33",
+      "statusEnvio": "Sincronizado",
+      "origem": "Ficha em Branco (Avulsa)"
+    },
+    {
+      "idHist": 6,
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "nrFicha": 1,
+      "itCodigo": "11000015",
+      "descItem": "CARBONATO DE CALCIO (PA)",
+      "lote": "LT-2026-01",
+      "codLocaliz": "A-01-01",
+      "codRefer": "",
+      "nrContagem": 2,
+      "qtApurada": 50,
+      "qtContabil": 120,
+      "divergencia": -70,
+      "codUsuario": "matheus.st",
+      "codMobile": "WEB-COLETOR",
+      "dtLeitura": "2026-11-17 18:04:04",
+      "statusEnvio": "Sincronizado",
+      "origem": "Coletor Mobile"
+    },
+    {
+      "idHist": 5,
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "nrFicha": 10,
+      "itCodigo": "11000015",
+      "descItem": "CARBONATO DE CALCIO (PA)",
+      "lote": "LT-AVULSO-SYNC",
+      "codLocaliz": "A-01-02",
+      "codRefer": "",
+      "nrContagem": 2,
+      "qtApurada": 25,
+      "qtContabil": 0,
+      "divergencia": 25,
+      "codUsuario": "matheus.st",
+      "codMobile": "WEB-COLETOR",
+      "dtLeitura": "2026-11-17 18:04:04",
+      "statusEnvio": "Sincronizado",
+      "origem": "Ficha em Branco (Avulsa)"
+    },
+    {
+      "idHist": 4,
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "nrFicha": 9,
+      "itCodigo": "11000015",
+      "descItem": "CARBONATO DE CALCIO (PA)",
+      "lote": "LT-NOVO-AVULSO",
+      "codLocaliz": "A-01-01",
+      "codRefer": "",
+      "nrContagem": 2,
+      "qtApurada": 15,
+      "qtContabil": 0,
+      "divergencia": 15,
+      "codUsuario": "matheus.st",
+      "codMobile": "WEB-COLETOR",
+      "dtLeitura": "2026-11-17 18:04:04",
+      "statusEnvio": "Sincronizado",
+      "origem": "Ficha em Branco (Avulsa)"
+    },
+    {
+      "idHist": 3,
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "nrFicha": 1,
+      "itCodigo": "11000015",
+      "descItem": "CARBONATO DE CALCIO (PA)",
+      "lote": "LT-2026-01",
+      "codLocaliz": "A-01-01",
+      "codRefer": "",
+      "nrContagem": 2,
+      "qtApurada": 42,
+      "qtContabil": 120,
+      "divergencia": -78,
+      "codUsuario": "matheus.st",
+      "codMobile": "WEB-COLETOR",
+      "dtLeitura": "2026-11-17 18:04:04",
+      "statusEnvio": "Sincronizado",
+      "origem": "Coletor Mobile"
+    },
+    {
+      "idHist": 1,
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "nrFicha": 2,
+      "itCodigo": "11000015",
+      "descItem": "CARBONATO DE CALCIO (PA)",
+      "lote": "LT-2026-02",
+      "codLocaliz": "A-01-02",
+      "codRefer": "",
+      "nrContagem": 1,
+      "qtApurada": 45,
+      "qtContabil": 45,
+      "divergencia": 0,
+      "codUsuario": "aamaral",
+      "codMobile": "COL-ZEBRA-101",
+      "dtLeitura": "2026-11-16 09:10:00",
+      "statusEnvio": "Sincronizado",
+      "origem": "Coletor Industrial"
+    },
+    {
+      "idHist": 2,
+      "codEmpresa": "001",
+      "dtSaldo": "2026-11-16",
+      "codEstabel": "101",
+      "codDepos": "ALM",
+      "nrFicha": 3,
+      "itCodigo": "11500028",
+      "descItem": "ACETATO DE ISOPROPILA GRAU FARMA",
+      "lote": "211000049",
+      "codLocaliz": "B-02-01",
+      "codRefer": "",
+      "nrContagem": 1,
+      "qtApurada": 4480,
+      "qtContabil": 4500,
+      "divergencia": -20,
+      "codUsuario": "conferente1",
+      "codMobile": "COL-HONEYWELL-02",
+      "dtLeitura": "2026-11-16 09:35:00",
+      "statusEnvio": "Sincronizado",
+      "origem": "Coletor Industrial"
+    }
+  ]
+}
