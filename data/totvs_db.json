@@ -1619,7 +1619,7 @@
       "codRefer": "",
       "descItem": "Kit Pistão a Gás 50N Cinza",
       "qtAlocada": 0,
-      "qtidadeAtu": 6370,
+      "qtidadeAtu": 6365,
       "qtAlocPed": 0,
       "qtAlocProd": 0,
       "dtValiLote": "",
@@ -1651,6 +1651,28 @@
       "codRefer": "",
       "qtidadeAtu": 1,
       "dtValiLote": ""
+    },
+    {
+      "codEmpresa": "001",
+      "codEstab": "101",
+      "codDep": "MAN",
+      "codLocal": "",
+      "itCodigo": "01010125",
+      "lote": "",
+      "codRefer": "",
+      "qtidadeAtu": 5,
+      "dtValiLote": ""
+    },
+    {
+      "codEmpresa": "001",
+      "codEstab": "101",
+      "codDep": "AST",
+      "codLocal": "",
+      "itCodigo": "D352-221/1",
+      "lote": "6044671-50",
+      "codRefer": "",
+      "qtidadeAtu": 1,
+      "dtValiLote": "9999-12-31"
     }
   ],
   "inventario": [

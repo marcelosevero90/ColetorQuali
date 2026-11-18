@@ -49,5 +49,17 @@
     "pasoeUrl": "http://localhost:3000/api/datasul",
     "status": "ativo",
     "descricao": "Base Agropecuária Santa Colomba (Empresa 002)"
+  },
+  "henn": {
+    "alias": "henn",
+    "nomeEmpresa": "INDÚSTRIA E COMÉRCIO DE MÓVEIS HENN LTDA",
+    "empresaPrincipal": "001",
+    "codEstabelPadrao": "101",
+    "pasoeUrl": "http://10.15.1.20:8180/api/promob/v1",
+    "usuarioIntegracao": "matheus.st",
+    "senhaIntegracao": "qwe8451",
+    "descricao": "Base Real Totvs Datasul PASOE - Henn (VPN 10.15.1.20)",
+    "status": "ativo",
+    "atualizadoEm": "2026-11-18T21:35:13.404Z"
   }
 }
