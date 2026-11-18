@@ -108,11 +108,20 @@ app.all('/api/pasoe-proxy', async (req, res) => {
   } catch (err) {
     const isTimeout = err.name === 'AbortError';
     console.error('Erro no proxy PASOE:', err.message);
+
+    let detalheErro = err.message;
+    const isPrivateIp = /^(https?:\/\/)?(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.|localhost)/i.test(targetUrl);
+    const isCloudEnv = Boolean(process.env.VERCEL || process.env.AWS_REGION || !['localhost', '127.0.0.1'].includes(req.hostname));
+
+    if (isPrivateIp && isCloudEnv) {
+      detalheErro = `${err.message} — AVISO DE REDE: O servidor na nuvem (Vercel) não possui acesso ao IP privado (${targetUrl}) da rede interna da empresa. IPs locais (10.x.x.x / 192.168.x.x) só funcionam quando o Coletor é executado na intranet/servidor local ou quando o PASOE possui endereço público/VPN/Tunnel HTTPS.`;
+    }
+
     return res.status(isTimeout ? 504 : 502).json({
       success: false,
       mensagem: isTimeout
         ? `Timeout ao aguardar resposta do PASOE (${targetUrl}).`
-        : `Falha de comunicação com o PASOE (${targetUrl}): ${err.message}`
+        : `Falha de comunicação com o PASOE (${targetUrl}): ${detalheErro}`
     });
   }
 });

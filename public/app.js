@@ -730,7 +730,7 @@ const App = (() => {
 
       // Se primeira carga nesta empresa ou carga vencida (>24h), inicia carga offline em chunks
       if (FastLoader.precisaCargaDiaria(codEmpresa)) {
-        abrirModalCargaInicial(`Sincronizando cadastros mestres e fichas da Empresa ${codEmpresa} para operação Offline-First...`);
+        abrirModalCargaInicial(`Sincronizando cadastros mestres e fichas da Empresa ${codEmpresa} para operação Offline-First...`, true);
       } else {
         navegar('menu');
       }
@@ -1005,15 +1005,6 @@ const App = (() => {
 
   async function carregarInventariosAtivos(forcarOnline = false) {
     const codEmpresa = state.session.codEmpresa || '001';
-
-    if (forcarOnline) {
-      const confirma = confirm(
-        "Tem certeza que deseja sincronizar os dados do inventário com o TOTVS agora?\n\n" +
-        "Esta operação fará a carga das fichas e parâmetros mais frescos do ERP, podendo levar alguns minutos para concluir.\n\n" +
-        "Deseja continuar?"
-      );
-      if (!confirma) return;
-    }
     const codEstabel = state.session.codEstabel || '';
     const listDiv = document.getElementById('lista-inventarios-ativos');
     if (!listDiv) return;
@@ -3554,10 +3545,19 @@ const App = (() => {
   // =========================================================================
   // CARGA OFFLINE EM CHUNKS PROGRESSIVOS
   // =========================================================================
-  function abrirModalCargaInicial(tituloSub = null) {
+  function abrirModalCargaInicial(tituloSub = null, skipConfirm = false) {
     if (!isOnline()) {
       alert('Sem conexão no momento. O app continuará operando normalmente com os dados salvos no IndexedDB.');
       return;
+    }
+
+    if (!skipConfirm) {
+      const confirma = confirm(
+        "Tem certeza que deseja sincronizar os dados com o TOTVS agora?\n\n" +
+        "Esta operação realiza a carga dos cadastros e fichas do ERP e pode levar alguns minutos para concluir.\n\n" +
+        "Deseja continuar?"
+      );
+      if (!confirma) return;
     }
 
     const modal = document.getElementById('modal-carga-mestres');
@@ -3621,7 +3621,7 @@ const App = (() => {
     await DB.clearEmpresa('saldo_estoq', codEmpresa);
     await DB.clearEmpresa('fichas_inventario', codEmpresa);
     await DB.clearEmpresa('fmsc_inventario', codEmpresa);
-    abrirModalCargaInicial(`Recarregando base da Empresa ${codEmpresa}...`);
+    abrirModalCargaInicial(`Recarregando base da Empresa ${codEmpresa}...`, true);
   }
 
   // =========================================================================
