@@ -322,6 +322,8 @@ const Datasul = (() => {
     document.getElementById('alias-input-user-integ').value = a.usuarioIntegracao || '';
     document.getElementById('alias-input-pass-integ').value = '';
     document.getElementById('alias-input-desc').value = a.descricao || '';
+    const stEl = document.getElementById('alias-input-status');
+    if (stEl) stEl.value = (a.status || 'ativo').toLowerCase();
   }
 
   function limparFormAlias() {
@@ -329,6 +331,8 @@ const Datasul = (() => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
+    const stEl = document.getElementById('alias-input-status');
+    if (stEl) stEl.value = 'ativo';
   }
 
   async function salvarNovoAlias() {
@@ -339,6 +343,7 @@ const Datasul = (() => {
     const usuarioIntegracao = document.getElementById('alias-input-user-integ').value.trim();
     const senhaIntegracao = document.getElementById('alias-input-pass-integ').value;
     const descricao = document.getElementById('alias-input-desc').value.trim();
+    const status = (document.getElementById('alias-input-status')?.value || 'ativo').trim().toLowerCase();
 
     if (!alias || !pasoeUrl) {
       alert('ALIAS e URL do PASOE são obrigatórios.');
@@ -348,7 +353,7 @@ const Datasul = (() => {
     const res = await fetch('/api/discovery/aliases', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ alias, nomeEmpresa, pasoeUrl, empresaPrincipal, usuarioIntegracao, senhaIntegracao, descricao })
+      body: JSON.stringify({ alias, nomeEmpresa, pasoeUrl, empresaPrincipal, usuarioIntegracao, senhaIntegracao, descricao, status })
     });
     const data = await res.json();
     alert(data.mensagem);

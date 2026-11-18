@@ -360,7 +360,7 @@ const App = (() => {
         <div style="width: 52px; height: 52px; background: #e0f2fe; border: 2px solid #bae6fd; border-radius: 14px; margin: 0 auto 10px auto; display: flex; align-items: center; justify-content: center; font-size: 26px;">
           📦
         </div>
-        <h2 style="font-size: 19px; font-weight: 800; color: #0f172a;">Coletor TOTVS Datasul</h2>
+        <h2 style="font-size: 19px; font-weight: 800; color: #0f172a;">Coletor Quali</h2>
         <div style="font-size: 11.5px; color: #64748b;">Inventário Físico • Operação Offline-First</div>
       </div>
 
@@ -462,6 +462,12 @@ const App = (() => {
       const res = await fetch(`/api/discovery/resolve?alias=${encodeURIComponent(alias)}`);
       const data = await res.json();
       if (data.success) {
+        if (data.status === 'inativo') {
+          infoTag.textContent = `✕ O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`;
+          infoTag.style.color = '#dc2626';
+          mostrarAviso(`O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`, 'error');
+          return;
+        }
         state.session.pasoeUrl = data.pasoeUrl;
         state.session.alias = data.alias;
         await DB.putConfig(`alias_${alias}`, data);
@@ -526,6 +532,35 @@ const App = (() => {
     }
 
     try {
+      // Validação de status do ALIAS no Discovery (se online)
+      if (isOnline()) {
+        try {
+          const resCheck = await fetch(`/api/discovery/resolve?alias=${encodeURIComponent(alias)}`);
+          if (resCheck.ok) {
+            const dataCheck = await resCheck.json();
+            if (dataCheck.status === 'inativo' || dataCheck.inativo) {
+              mostrarAviso(`O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso. Contate o administrador.`, 'error');
+              if (btn) { btn.disabled = false; btn.textContent = 'Acessar Sistema ➔'; }
+              return;
+            }
+          } else if (resCheck.status === 403) {
+            const errCheck = await resCheck.json();
+            mostrarAviso(errCheck.mensagem || `O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`, 'error');
+            if (btn) { btn.disabled = false; btn.textContent = 'Acessar Sistema ➔'; }
+            return;
+          }
+        } catch (eCheck) {
+          console.warn('Discovery offline ou inacessível no momento do login:', eCheck);
+        }
+      } else {
+        const aliasCache = await DB.getConfig(`alias_${alias}`);
+        if (aliasCache && aliasCache.status === 'inativo') {
+          mostrarAviso(`O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`, 'error');
+          if (btn) { btn.disabled = false; btn.textContent = 'Acessar Sistema ➔'; }
+          return;
+        }
+      }
+
       // MODO OFFLINE: autentica contra parâmetros/sessão armazenados no dispositivo
       if (!isOnline()) {
         const paramLocal = await DB.obterParamUsuarioLocal(codEmpresa, usuario);
@@ -970,6 +1005,15 @@ const App = (() => {
 
   async function carregarInventariosAtivos(forcarOnline = false) {
     const codEmpresa = state.session.codEmpresa || '001';
+
+    if (forcarOnline) {
+      const confirma = confirm(
+        "Tem certeza que deseja sincronizar os dados do inventário com o TOTVS agora?\n\n" +
+        "Esta operação fará a carga das fichas e parâmetros mais frescos do ERP, podendo levar alguns minutos para concluir.\n\n" +
+        "Deseja continuar?"
+      );
+      if (!confirma) return;
+    }
     const codEstabel = state.session.codEstabel || '';
     const listDiv = document.getElementById('lista-inventarios-ativos');
     if (!listDiv) return;
@@ -1391,9 +1435,14 @@ const App = (() => {
         <div style="font-size: 14px; font-weight: 800;">Depósitos (${nrAtiva}ª Contagem)</div>
         <button class="btn-topbar-action" onclick="App.navegar('menu')">Menu</button>
       </div>
-      <div style="font-size: 11px; color: #64748b;">
-        Filial: <strong>${escapeHtml(state.session.codEstabel)}</strong> • Corte: <strong>${formatarDataBr(inv.dtSaldo)}</strong> • <strong>${nrAtiva}ª Contagem Ativa</strong>
-        ${isBloqueado ? ' • <strong style="color:#dc2626;">BLOQUEADO (FMSC0102)</strong>' : ''}
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px; margin-bottom: 8px;">
+        <div style="font-size: 11px; color: #64748b;">
+          Filial: <strong>${escapeHtml(state.session.codEstabel)}</strong> • Corte: <strong>${formatarDataBr(inv.dtSaldo)}</strong> • <strong>${nrAtiva}ª Contagem Ativa</strong>
+          ${isBloqueado ? ' • <strong style="color:#dc2626;">BLOQUEADO</strong>' : ''}
+        </div>
+        <button class="btn btn-secondary" style="width: auto; font-size: 11px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1;" onclick="App.abrirModalContingencia('${inv.dtSaldo}')">
+          📥 Contingência do Inventário
+        </button>
       </div>
       <div id="lista-depositos-inventario" style="display: flex; flex-direction: column; gap: 10px;"></div>
     `;
@@ -3581,12 +3630,67 @@ const App = (() => {
   let contingenciaFmt = 'CSV';
   let contingenciaCache = [];
 
-  async function abrirModalContingencia() {
+  async function abrirModalContingencia(dtSaldoParam) {
     const modal = document.getElementById('modal-contingencia');
     if (!modal) return;
     const codEmpresa = state.session.codEmpresa || '001';
+    const dtFiltro = dtSaldoParam || state.inventarioSelecionado?.dtSaldo;
+
     const historico = await DB.getHistoricoLocal(codEmpresa);
-    contingenciaCache = historico;
+    const fichas = await DB.getAllByEmpresa('fichas_inventario', codEmpresa);
+
+    let movimentos = [];
+
+    // Se informado inventário (ou estiver com inventário selecionado), lista os movimentos DESTE inventário
+    if (dtFiltro) {
+      const dtNorm = normalizarDataIso(dtFiltro);
+      const histInv = historico.filter(h => normalizarDataIso(h.dtSaldo) === dtNorm);
+      const fichasInv = fichas.filter(f =>
+        normalizarDataIso(f.dtSaldo) === dtNorm &&
+        f.qtApurada !== null && f.qtApurada !== undefined && f.qtApurada !== ''
+      );
+
+      const setChavesHist = new Set(histInv.map(h => `${h.nrContagem}_${h.nrFicha}`));
+      movimentos = [...histInv];
+
+      fichasInv.forEach(f => {
+        const k = `${f.nrContagem || 1}_${f.nrFicha}`;
+        if (!setChavesHist.has(k)) {
+          movimentos.push({
+            codEmpresa: f.codEmpresa || codEmpresa,
+            codEstabel: f.codEstabel || state.session.codEstabel,
+            codDepos: f.codDepos,
+            dtSaldo: f.dtSaldo,
+            nrContagem: f.nrContagem || 1,
+            nrFicha: f.nrFicha,
+            itCodigo: f.itCodigo,
+            descItem: f.descItem,
+            lote: f.lote || '',
+            codLocaliz: f.codLocaliz || '',
+            qtApurada: f.qtApurada,
+            codUsuario: f.codConfteContag || state.session.codUsuario || 'OPERADOR',
+            statusEnvio: f.sincronizado ? 'Sincronizado TOTVS' : (f.pendenteSync ? 'Pendente Fila Offline' : 'Apurado no Coletor'),
+            dtLeitura: f.dtLeitura || new Date().toISOString()
+          });
+        }
+      });
+
+      // Ordena por ficha e contagem
+      movimentos.sort((a, b) => Number(a.nrFicha) - Number(b.nrFicha) || Number(a.nrContagem) - Number(b.nrContagem));
+    } else {
+      movimentos = historico;
+    }
+
+    contingenciaCache = movimentos;
+
+    // Atualiza cabeçalho do modal de contingência com o contexto
+    const tituloModal = modal.querySelector('h4');
+    if (tituloModal) {
+      tituloModal.innerHTML = dtFiltro
+        ? `💾 Contingência — Inventário ${formatarDataBr(dtFiltro)}`
+        : '💾 Exportação de Contingência (Offline)';
+    }
+
     mudarFormatoContingencia('CSV');
     modal.style.display = 'flex';
   }

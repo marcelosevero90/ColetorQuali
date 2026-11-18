@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0284c7">
-  <title>Coletor Móvel TOTVS Datasul — Inventário Offline-First</title>
+  <title>Coletor Quali — Inventário Offline-First</title>
   <link rel="manifest" href="manifest.json">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,7 +18,7 @@
     <div class="global-brand">
       <div class="global-brand-logo">Q</div>
       <div>
-        <div class="global-brand-title">Coletor TOTVS Datasul — Inventário</div>
+        <div class="global-brand-title">Coletor Quali — Inventário</div>
         <div class="global-brand-subtitle">Offline-First • Multi-Empresa (companyId) • Basic Auth</div>
       </div>
     </div>
@@ -334,7 +334,7 @@
                   <input type="text" id="alias-input-emp-padrao" class="form-input" placeholder="001">
                 </div>
               </div>
-              <div style="display: grid; grid-template-columns: 1.2fr 1.2fr 1.8fr auto; gap: 8px; align-items: end;">
+              <div style="display: grid; grid-template-columns: 1.1fr 1.1fr 1.6fr 1fr auto; gap: 8px; align-items: end;">
                 <div>
                   <label class="form-label" for="alias-input-user-integ">Usuário Técnico</label>
                   <input type="text" id="alias-input-user-integ" class="form-input" placeholder="Opcional">
@@ -346,6 +346,13 @@
                 <div>
                   <label class="form-label" for="alias-input-desc">Descrição</label>
                   <input type="text" id="alias-input-desc" class="form-input" placeholder="Descrição do ambiente">
+                </div>
+                <div>
+                  <label class="form-label" for="alias-input-status">Situação *</label>
+                  <select id="alias-input-status" class="form-input" style="background:#fff; font-weight:700;">
+                    <option value="ativo" selected>✓ Ativo</option>
+                    <option value="inativo">✕ Inativo</option>
+                  </select>
                 </div>
                 <div style="display: flex; gap: 6px;">
                   <button class="btn btn-primary" style="width: auto; padding: 10px 14px;" onclick="Datasul.salvarNovoAlias()">💾 Salvar</button>
@@ -359,6 +366,7 @@
                 <thead>
                   <tr>
                     <th>ALIAS</th>
+                    <th>Situação</th>
                     <th>Empresa</th>
                     <th>URL PASOE</th>
                     <th>Emp. Padrão</th>

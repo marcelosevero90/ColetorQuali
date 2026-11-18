@@ -80,7 +80,9 @@ router.get(['/resolve', '/resolve/:alias'], (req, res) => {
   if (registro.status !== 'ativo') {
     return res.status(403).json({
       success: false,
-      mensagem: `O ALIAS '${chave}' está inativo no momento.`
+      inativo: true,
+      status: 'inativo',
+      mensagem: `O ambiente ALIAS '${chave}' está INATIVO e não está apto para o uso.`
     });
   }
 
@@ -149,7 +151,7 @@ router.post('/aliases', (req, res) => {
       ? senhaIntegracao
       : (existente.senhaIntegracao || ''),
     descricao: (descricao || '').trim(),
-    status: status || 'ativo',
+    status: (status || 'ativo').trim().toLowerCase(),
     atualizadoEm: new Date().toISOString()
   };
 

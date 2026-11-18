@@ -1,7 +1,7 @@
 {
-  "name": "app-coletor-datasul",
+  "name": "coletor-quali",
   "version": "3.0.0",
-  "description": "Aplicativo Coletor Móvel TOTVS Datasul Offline-First - Módulo de Inventário",
+  "description": "Aplicativo Coletor Móvel Quali Offline-First - Módulo de Inventário",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

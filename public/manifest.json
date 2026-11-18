@@ -1,7 +1,7 @@
 {
-  "name": "Coletor Móvel TOTVS Datasul",
-  "short_name": "Coletor TOTVS",
-  "description": "Aplicativo Offline-First de Inventário Físico integrado ao TOTVS Datasul",
+  "name": "Coletor Quali",
+  "short_name": "Coletor Quali",
+  "description": "Aplicativo Coletor Móvel Quali — Inventário Físico Offline-First",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f1f5f9",
