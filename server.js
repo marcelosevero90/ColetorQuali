@@ -51,14 +51,19 @@ app.all('/api/pasoe-proxy', async (req, res) => {
     if (!headers['Authorization']) {
       try {
         const aliasesFile = path.join(__dirname, 'data', 'aliases.json');
+        const tmpAliasesFile = path.join(require('os').tmpdir(), 'aliases.json');
+        let allAliases = {};
         if (fs.existsSync(aliasesFile)) {
-          const allAliases = JSON.parse(fs.readFileSync(aliasesFile, 'utf8'));
-          const match = Object.values(allAliases).find(a =>
-            a.usuarioIntegracao && a.senhaIntegracao && a.pasoeUrl && targetUrl.includes(a.pasoeUrl)
-          );
-          if (match) {
-            headers['Authorization'] = 'Basic ' + Buffer.from(`${match.usuarioIntegracao}:${match.senhaIntegracao}`).toString('base64');
-          }
+          allAliases = { ...allAliases, ...JSON.parse(fs.readFileSync(aliasesFile, 'utf8')) };
+        }
+        if (fs.existsSync(tmpAliasesFile)) {
+          allAliases = { ...allAliases, ...JSON.parse(fs.readFileSync(tmpAliasesFile, 'utf8')) };
+        }
+        const match = Object.values(allAliases).find(a =>
+          a.usuarioIntegracao && a.senhaIntegracao && a.pasoeUrl && targetUrl.includes(a.pasoeUrl)
+        );
+        if (match) {
+          headers['Authorization'] = 'Basic ' + Buffer.from(`${match.usuarioIntegracao}:${match.senhaIntegracao}`).toString('base64');
         }
       } catch (e) {}
     }

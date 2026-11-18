@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ALIASES_FILE = path.join(__dirname, '..', 'data', 'aliases.json');
+const TMP_ALIASES_FILE = path.join(require('os').tmpdir(), 'aliases.json');
 
 function carregarAliases() {
   const padrao = {
@@ -31,28 +32,51 @@ function carregarAliases() {
     }
   };
 
+  let aliases = { ...padrao };
+
   try {
     if (fs.existsSync(ALIASES_FILE)) {
       const conteudo = fs.readFileSync(ALIASES_FILE, 'utf8');
-      return { ...padrao, ...JSON.parse(conteudo) };
-    } else {
-      salvarAliases(padrao);
-      return padrao;
+      aliases = { ...aliases, ...JSON.parse(conteudo) };
     }
   } catch (err) {
-    console.error('Erro ao ler aliases.json:', err);
-    return padrao;
+    console.error('Erro ao ler aliases.json do projeto:', err);
   }
+
+  // Fallback para persistência em Lambda/Vercel (os.tmpdir)
+  try {
+    if (fs.existsSync(TMP_ALIASES_FILE)) {
+      const conteudoTmp = fs.readFileSync(TMP_ALIASES_FILE, 'utf8');
+      aliases = { ...aliases, ...JSON.parse(conteudoTmp) };
+    }
+  } catch (errTmp) {
+    console.error('Erro ao ler /tmp/aliases.json:', errTmp);
+  }
+
+  return aliases;
 }
 
 function salvarAliases(aliases) {
+  let gravou = false;
+  // 1. Tentar gravar no arquivo oficial do projeto (funciona em localhost / servidores com disco gravável)
   try {
     const dir = path.dirname(ALIASES_FILE);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(ALIASES_FILE, JSON.stringify(aliases, null, 2), 'utf8');
+    gravou = true;
   } catch (err) {
-    console.error('Erro ao gravar aliases.json:', err);
+    console.warn('Ambiente somente-leitura (Vercel/Serverless): não foi possível gravar em data/aliases.json:', err.message);
   }
+
+  // 2. Gravar em os.tmpdir() (único diretório com permissão de escrita em Lambdas da AWS/Vercel)
+  try {
+    fs.writeFileSync(TMP_ALIASES_FILE, JSON.stringify(aliases, null, 2), 'utf8');
+    gravou = true;
+  } catch (errTmp) {
+    console.error('Erro ao gravar em /tmp/aliases.json:', errTmp.message);
+  }
+
+  return gravou;
 }
 
 // 1. Resolução de ALIAS

@@ -209,8 +209,12 @@ const App = (() => {
       ? endpoint
       : `${pasoeUrl.replace(/\/+$/, '')}/${endpoint.replace(/^\/+/, '')}`;
 
+    // Se for aplicativo APK nativo (Capacitor ou Cordova)
+    const isNativeApp = !!(window.Capacitor || window.cordova);
     let finalUrl = rawUrl;
-    if ((rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) && !rawUrl.includes(window.location.host)) {
+    // O proxy no servidor só é usado no navegador Web comum para contornar restrições de Mixed Content (HTTPS -> HTTP) e CORS.
+    // No APK nativo no celular, o app comunica-se diretamente com o IP/URL local do PASOE na intranet do cliente.
+    if (!isNativeApp && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) && !rawUrl.includes(window.location.host)) {
       finalUrl = `/api/pasoe-proxy?url=${encodeURIComponent(rawUrl)}`;
     }
 
@@ -466,6 +470,41 @@ const App = (() => {
     const alias = aliasEl.value.trim().toLowerCase();
     state.aliasInput = alias;
     if (!alias) return;
+
+    // 1. Checa se há override salvo no dispositivo (localStorage do navegador/app)
+    let overrideAlias = null;
+    try {
+      const customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
+      if (customMap[alias]) overrideAlias = customMap[alias];
+    } catch (e) {}
+
+    if (overrideAlias) {
+      if ((overrideAlias.status || 'ativo').toLowerCase() === 'inativo') {
+        infoTag.textContent = `✕ O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`;
+        infoTag.style.color = '#dc2626';
+        mostrarAviso(`O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`, 'error');
+        return;
+      }
+      state.session.pasoeUrl = overrideAlias.pasoeUrl;
+      state.session.alias = overrideAlias.alias;
+      await DB.putConfig(`alias_${alias}`, overrideAlias);
+      infoTag.textContent = `✓ ${overrideAlias.nomeEmpresa || alias} (${overrideAlias.pasoeUrl})`;
+      infoTag.style.color = '#059669';
+
+      const empDefault = DB.normalizarEmpresa(overrideAlias.empresaPrincipal || '001');
+      if (empresaEl) {
+        const existeOpt = Array.from(empresaEl.options).some(o => o.value === empDefault);
+        if (!existeOpt) {
+          const opt = document.createElement('option');
+          opt.value = empDefault;
+          opt.textContent = `Empresa ${empDefault}`;
+          empresaEl.appendChild(opt);
+        }
+        empresaEl.value = empDefault;
+        state.empresaInput = empDefault;
+      }
+      return;
+    }
 
     if (!isOnline()) {
       const aliasSalvo = await DB.getConfig(`alias_${alias}`);

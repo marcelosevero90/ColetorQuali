@@ -397,9 +397,30 @@ const Datasul = (() => {
   // 5. ALIAS Manager
   async function carregarAliasManager() {
     try {
-      const res = await fetch('/api/discovery/aliases');
-      const data = await res.json();
-      aliasesCache = data.aliases || [];
+      let serverAliases = [];
+      try {
+        const res = await fetch('/api/discovery/aliases');
+        const data = await res.json();
+        serverAliases = data.aliases || [];
+      } catch (errApi) {
+        console.warn('Aviso ao consultar aliases do servidor:', errApi);
+      }
+
+      // Mescla com modificações salvas no navegador / dispositivo do usuário (localStorage)
+      let customMap = {};
+      try {
+        customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
+      } catch (e) {}
+
+      const aliasMap = {};
+      serverAliases.forEach(a => {
+        if (a && a.alias) aliasMap[a.alias.toLowerCase()] = a;
+      });
+      Object.keys(customMap).forEach(k => {
+        aliasMap[k.toLowerCase()] = { ...(aliasMap[k.toLowerCase()] || {}), ...customMap[k] };
+      });
+
+      aliasesCache = Object.values(aliasMap);
       const tbody = document.getElementById('alias-grid-body');
       if (!tbody) return;
       tbody.innerHTML = '';
@@ -469,7 +490,35 @@ const Datasul = (() => {
       body: JSON.stringify({ alias, nomeEmpresa, pasoeUrl, empresaPrincipal, usuarioIntegracao, senhaIntegracao, descricao, status })
     });
     const data = await res.json();
-    alert(data.mensagem);
+
+    // Persistência local no dispositivo/navegador (garante que mesmo em cloud/Vercel readonly o alias fique gravado)
+    try {
+      const chave = alias.trim().toLowerCase();
+      let customMap = {};
+      try {
+        customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
+      } catch (e) {}
+
+      customMap[chave] = {
+        alias: chave,
+        nomeEmpresa,
+        pasoeUrl,
+        empresaPrincipal,
+        usuarioIntegracao,
+        descricao,
+        status,
+        atualizadoEm: new Date().toISOString()
+      };
+      localStorage.setItem('coletor_custom_aliases', JSON.stringify(customMap));
+
+      if (window.DB && typeof DB.salvarConfig === 'function') {
+        await DB.salvarConfig(`alias_${chave}`, customMap[chave]);
+      }
+    } catch (errLocal) {
+      console.warn('Erro ao salvar alias localmente:', errLocal);
+    }
+
+    alert(data.mensagem || 'ALIAS salvo com sucesso!');
     carregarAliasManager();
   }
 
