@@ -69,12 +69,16 @@ function exigirBasicAuth(req, res, next) {
     });
   }
 
+  const usuarioRaw = creds.usuario;
+  const usuarioNorm = usuarioRaw.replace(/\//g, '\\');
+  const usuarioLimpo = usuarioNorm.includes('\\') ? usuarioNorm.split('\\')[1].trim() : usuarioRaw.trim();
+
   const companyId = extrairCompanyId(req);
   const user = (db.data.fmsc_usuar_mestre || []).find(u =>
     db.matchEmpresa(u.codEmpresa, companyId) &&
-    u.codUsuario.toLowerCase() === creds.usuario.toLowerCase()
+    (u.codUsuario.toLowerCase() === usuarioLimpo.toLowerCase() || u.codUsuario.toLowerCase() === usuarioRaw.toLowerCase())
   ) || (db.data.fmsc_usuar_mestre || []).find(u =>
-    u.codUsuario.toLowerCase() === creds.usuario.toLowerCase()
+    u.codUsuario.toLowerCase() === usuarioLimpo.toLowerCase() || u.codUsuario.toLowerCase() === usuarioRaw.toLowerCase()
   );
 
   if (!user || user.senha !== creds.senha) {
@@ -124,10 +128,10 @@ router.post(['/fcLogin', '/qdcLogin'], (req, res) => {
   const basic = extrairBasicAuth(req);
   const companyId = extrairCompanyId(req);
 
-  const usuario = (p.usuario || p.codUsuario || basic?.usuario || '').trim();
+  const usuarioRaw = (p.usuario || p.codUsuario || basic?.usuario || '').trim();
   const senha = (p.senha !== undefined ? p.senha : (basic?.senha || ''));
 
-  if (!usuario || !senha) {
+  if (!usuarioRaw || !senha) {
     return res.status(401).json({
       success: false,
       type: 'ERROR',
@@ -137,13 +141,23 @@ router.post(['/fcLogin', '/qdcLogin'], (req, res) => {
     });
   }
 
+  // Suporte a formato com domínio AD: "dominio/usuario" ou "dominio\usuario"
+  let dominio = '';
+  let usuario = usuarioRaw;
+  const usuarioNorm = usuarioRaw.replace(/\//g, '\\');
+  if (usuarioNorm.includes('\\')) {
+    const partes = usuarioNorm.split('\\');
+    dominio = partes[0].trim();
+    usuario = partes[1].trim();
+  }
+
   // Busca usuário na empresa conectada (ou no cadastro geral de usuários)
   const userEmpresa = (db.data.fmsc_usuar_mestre || []).find(u =>
     db.matchEmpresa(u.codEmpresa, companyId) &&
-    u.codUsuario.toLowerCase() === usuario.toLowerCase()
+    (u.codUsuario.toLowerCase() === usuario.toLowerCase() || u.codUsuario.toLowerCase() === usuarioRaw.toLowerCase())
   );
   const userGeral = userEmpresa || (db.data.fmsc_usuar_mestre || []).find(u =>
-    u.codUsuario.toLowerCase() === usuario.toLowerCase()
+    u.codUsuario.toLowerCase() === usuario.toLowerCase() || u.codUsuario.toLowerCase() === usuarioRaw.toLowerCase()
   );
 
   if (!userGeral) {
@@ -151,8 +165,8 @@ router.post(['/fcLogin', '/qdcLogin'], (req, res) => {
       success: false,
       type: 'ERROR',
       code: '401',
-      message: 'Usuario nao cadastrado!',
-      detailedMessage: 'Usuario nao cadastrado!'
+      message: dominio ? 'Usuario do dominio nao cadastrado!' : 'Usuario nao cadastrado!',
+      detailedMessage: dominio ? 'Usuario do dominio nao cadastrado!' : 'Usuario nao cadastrado!'
     });
   }
 
@@ -176,6 +190,8 @@ router.post(['/fcLogin', '/qdcLogin'], (req, res) => {
     message: estabPad,
     type: 'OK',
     success: true,
+    codUsuario: userGeral.codUsuario,
+    nomeUsuario: userGeral.nome,
     codEmpresa: companyId,
     codEstabPad: estabPad,
     usuario: {

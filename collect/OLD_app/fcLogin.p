@@ -28,6 +28,9 @@ PROCEDURE pi-create:
     DEFINE VAR c-Senha              AS CHAR         NO-UNDO.
     DEFINE VAR c-EstabPad           AS CHAR         NO-UNDO.
     DEFINE VAR c-Erro               AS CHAR         NO-UNDO.
+    DEFINE VAR c-Dominio            AS CHAR         NO-UNDO.
+    DEFINE VAR c-UsuarioSO          AS CHAR         NO-UNDO.
+    DEFINE VAR c-UsuarioInformado   AS CHAR         NO-UNDO.
 
 
     aJsonPayloadArray = NEW JsonArray().
@@ -51,20 +54,65 @@ PROCEDURE pi-create:
                c-Senha   = oJsonPayloadObject:GetCharacter("senha").
     END.
 
-    ASSIGN c-Erro = "".
-    
-    FOR FIRST usuar_mestre
-        WHERE usuar_mestre.cod_usuario = c-Usuario NO-LOCK:
+    ASSIGN c-Erro             = ""
+           c-Dominio          = ""
+           c-UsuarioSO        = ""
+           c-UsuarioInformado = TRIM(c-Usuario).
+
+    /* Suporta formato dominio/usuario ou dominio\usuario */
+    c-UsuarioInformado = REPLACE(c-UsuarioInformado, "/", "\").
+
+    IF NUM-ENTRIES(c-UsuarioInformado, "\") > 1 THEN DO:
+        ASSIGN c-Dominio   = TRIM(ENTRY(1, c-UsuarioInformado, "\"))
+               c-UsuarioSO = TRIM(ENTRY(2, c-UsuarioInformado, "\")).
+
+        /* Busca pela tabela usuar_mestre_ext pelos campos cod_domin_so e cod_usuar_so */
+        FIND FIRST usuar_mestre_ext NO-LOCK
+             WHERE usuar_mestre_ext.cod_domin_so = c-Dominio
+               AND usuar_mestre_ext.cod_usuar_so = c-UsuarioSO NO-ERROR.
+
+        IF NOT AVAIL usuar_mestre_ext THEN DO:
+            ASSIGN c-Erro = "Usuario do dominio nao cadastrado!".
+        END.
+        ELSE DO:
+            ASSIGN c-Usuario = usuar_mestre_ext.cod_usuario.
+
+            FIND FIRST usuar_mestre NO-LOCK
+                 WHERE usuar_mestre.cod_usuario = usuar_mestre_ext.cod_usuario NO-ERROR.
+
+            IF NOT AVAIL usuar_mestre THEN
+                ASSIGN c-Erro = "Usuario nao cadastrado!".
+            ELSE IF usuar_mestre.ind_tip_aces_usuar = "Externo" THEN
+                RUN LogonValidaUsuarioSO (INPUT  c-Dominio + "\" + c-UsuarioSO,
+                                          INPUT  c-Senha,
+                                          OUTPUT c-Erro).
+            ELSE IF BASE64-ENCODE(sha1-DIGEST(LC(c-Senha))) <> usuar_mestre.cod_senha THEN
+                ASSIGN c-Erro = "Falha na autentica‡Æo, Senha Inv lida!".
+        END.
     END.
-    IF NOT AVAIL usuar_mestre THEN
-        ASSIGN c-Erro = "Usuario nao cadastrado!".
-        
-    ELSE IF usuar_mestre.ind_tip_aces_usuar = "Externo" THEN
-        RUN LogonValidaUsuarioSO (INPUT  c-Usuario,
-                                  INPUT  c-Senha,
-                                  OUTPUT c-Erro).
-    ELSE IF BASE64-ENCODE(sha1-DIGEST(LC(c-Senha))) <> usuar_mestre.cod_senha THEN
-        ASSIGN c-Erro = "Falha na autentica‡Æo, Senha Inv lida!".
+    ELSE DO:
+        /* Mandou apenas o usuario: mantem validacao direta pela usuar_mestre */
+        FIND FIRST usuar_mestre NO-LOCK
+             WHERE usuar_mestre.cod_usuario = c-Usuario NO-ERROR.
+
+        IF NOT AVAIL usuar_mestre THEN
+            ASSIGN c-Erro = "Usuario nao cadastrado!".
+        ELSE IF usuar_mestre.ind_tip_aces_usuar = "Externo" THEN DO:
+            /* Se for Externo, busca se ha extensao cadastrada para obter o dominio */
+            FIND FIRST usuar_mestre_ext NO-LOCK
+                 WHERE usuar_mestre_ext.cod_usuario = usuar_mestre.cod_usuario NO-ERROR.
+            IF AVAIL usuar_mestre_ext THEN
+                RUN LogonValidaUsuarioSO (INPUT  usuar_mestre_ext.cod_domin_so + "\" + usuar_mestre_ext.cod_usuar_so,
+                                          INPUT  c-Senha,
+                                          OUTPUT c-Erro).
+            ELSE
+                RUN LogonValidaUsuarioSO (INPUT  c-Usuario,
+                                          INPUT  c-Senha,
+                                          OUTPUT c-Erro).
+        END.
+        ELSE IF BASE64-ENCODE(sha1-DIGEST(LC(c-Senha))) <> usuar_mestre.cod_senha THEN
+            ASSIGN c-Erro = "Falha na autentica‡Æo, Senha Inv lida!".
+    END.
       
     IF c-Erro <> "" THEN DO:
         ASSIGN oAppError = NEW Progress.Lang.AppError().     
@@ -97,6 +145,9 @@ PROCEDURE pi-create:
     jsonOutput:ADD('detailedMessage',   'Login V lido!').
     jsonOutput:ADD('code',              '0').
     jsonOutput:ADD('message',           c-EstabPad).
+    jsonOutput:ADD('codUsuario',        c-Usuario).
+    IF AVAIL usuar_mestre THEN
+        jsonOutput:ADD('nomeUsuario',   usuar_mestre.nom_usuario).
     jsonOutput:ADD('type',              'OK').
 
     CATCH erro AS Progress.Lang.Error:

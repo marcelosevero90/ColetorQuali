@@ -704,6 +704,7 @@ const App = (() => {
       }
 
       const estabLogin = (dataLogin.message || dataLogin.codEstabPad || '').trim();
+      const usuarioReal = (dataLogin.codUsuario || dataLogin.usuario?.codUsuario || (usuario.includes('/') ? usuario.split('/')[1] : (usuario.includes('\\') ? usuario.split('\\')[1] : usuario))).trim();
 
       // 3. Busca tabela global estabelec (fcGetEstabelecimentos) e salva no IndexedDB
       try {
@@ -732,8 +733,8 @@ const App = (() => {
           companyId: codEmpresa,
           authHeader,
           body: JSON.stringify({
-            usuario,
-            payload: [{ usuario }]
+            usuario: usuarioReal,
+            payload: [{ usuario: usuarioReal }]
           })
         });
         if (resParam.ok) {
@@ -750,10 +751,10 @@ const App = (() => {
 
       if (paramUsuario) {
         if (Number(paramUsuario.situacao) === 0) {
-          throw new Error(`Usuário '${usuario}' não habilitado no FMSC0101 para a empresa ${codEmpresa}.`);
+          throw new Error(`Usuário '${usuarioReal}' não habilitado no FMSC0101 para a empresa ${codEmpresa}.`);
         }
         if (!paramUsuario.permEstoque || !paramUsuario.permEstoqReqInv) {
-          throw new Error(`Usuário '${usuario}' não possui permissão de Estoque/Inventário (FMSC0101) na empresa ${codEmpresa}.`);
+          throw new Error(`Usuário '${usuarioReal}' não possui permissão de Estoque/Inventário (FMSC0101) na empresa ${codEmpresa}.`);
         }
       }
 
@@ -767,8 +768,8 @@ const App = (() => {
 
       state.session = {
         ...state.session,
-        codUsuario: dataLogin.usuario?.codUsuario || usuario,
-        nome: paramUsuario?.nome || dataLogin.usuario?.nome || usuario.toUpperCase(),
+        codUsuario: usuarioReal,
+        nome: paramUsuario?.nome || dataLogin.nomeUsuario || dataLogin.usuario?.nome || usuarioReal.toUpperCase(),
         alias,
         pasoeUrl: dataDisc.pasoeUrl,
         codEmpresa,
