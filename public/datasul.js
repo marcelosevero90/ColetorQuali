@@ -2,20 +2,99 @@
 // Permite testar em tempo real parâmetros mono-empresa (companyId), FMSC0101 e FMSC0102.
 
 const Datasul = (() => {
-  let programaAtivo = 'ce0712';
+  let abaPrincipalAtiva = 'alias';
+  let subProgramaAtivo = 'ce0712';
   let companyIdAtual = '001';
   let estabelecimentos = [];
   let aliasesCache = [];
+  let modoPendenteAdmin = null;
+
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function isAdminAutenticado() {
+    return sessionStorage.getItem('painel_admin_auth') === 'true';
+  }
+
+  function solicitarLoginAdmin(modoDesejado = 'erp') {
+    modoPendenteAdmin = modoDesejado;
+    const modal = document.getElementById('modal-login-admin');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    const userEl = document.getElementById('admin-login-usuario');
+    const passEl = document.getElementById('admin-login-senha');
+    if (userEl && !userEl.value) userEl.value = 'admin';
+    if (passEl) {
+      passEl.value = '';
+      setTimeout(() => passEl.focus(), 150);
+    }
+  }
+
+  function cancelarLoginAdmin() {
+    const modal = document.getElementById('modal-login-admin');
+    if (modal) modal.style.display = 'none';
+    App.setModoVisualizacao('app');
+  }
+
+  function confirmarLoginAdmin() {
+    const user = (document.getElementById('admin-login-usuario')?.value || '').trim();
+    const pass = document.getElementById('admin-login-senha')?.value || '';
+
+    // Credenciais válidas padrão: admin / admin (com flexibilidade para variações padrão)
+    const ehValido = (user.toLowerCase() === 'admin' && (pass === 'admin' || pass === 'admin123' || pass === 'quali123')) ||
+                     (user.toLowerCase() === 'quali' && (pass === 'quali123' || pass === 'admin'));
+
+    if (!ehValido) {
+      alert('Usuário ou senha do painel inválidos.\n\nCredenciais padrão:\nUsuário: admin\nSenha: admin');
+      document.getElementById('admin-login-senha')?.focus();
+      return;
+    }
+
+    sessionStorage.setItem('painel_admin_auth', 'true');
+    const modal = document.getElementById('modal-login-admin');
+    if (modal) modal.style.display = 'none';
+
+    App.setModoVisualizacao(modoPendenteAdmin || 'erp');
+  }
+
+  function logoutAdmin() {
+    if (!confirm('Deseja encerrar a sessão do Painel Totvs ERP?')) return;
+    sessionStorage.removeItem('painel_admin_auth');
+    App.setModoVisualizacao('app');
+  }
+
+  function alternarVisibilidadeSenhaAdmin() {
+    const passEl = document.getElementById('admin-login-senha');
+    const btn = document.querySelector('#form-login-admin .btn-toggle-pass');
+    if (!passEl) return;
+    if (passEl.type === 'password') {
+      passEl.type = 'text';
+      if (btn) btn.textContent = 'Ocultar';
+    } else {
+      passEl.type = 'password';
+      if (btn) btn.textContent = 'Mostrar';
+    }
+  }
 
   async function init() {
     await carregarEstabelecimentos();
-    mudarPrograma(programaAtivo);
+    mudarAbaPrincipal('alias');
   }
 
   function trocarEmpresaERP(codEmpresa) {
     companyIdAtual = codEmpresa || '001';
     preencherSelectsFiliais();
-    mudarPrograma(programaAtivo);
+    if (abaPrincipalAtiva === 'alias') {
+      carregarAliasManager();
+    } else {
+      mudarSubPrograma(subProgramaAtivo);
+    }
   }
 
   async function carregarEstabelecimentos() {
@@ -56,12 +135,33 @@ const Datasul = (() => {
     });
   }
 
-  function mudarPrograma(prog) {
-    programaAtivo = prog;
+  function mudarAbaPrincipal(grupo) {
+    abaPrincipalAtiva = grupo;
+
     document.querySelectorAll('.totvs-tab-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.prog === prog);
+      btn.classList.toggle('active', btn.dataset.tabGroup === grupo);
     });
-    document.querySelectorAll('.totvs-prog-screen').forEach(sc => {
+
+    const groupAlias = document.getElementById('group-alias');
+    const groupModulos = document.getElementById('group-modulos_erp');
+    if (groupAlias) groupAlias.style.display = grupo === 'alias' ? 'block' : 'none';
+    if (groupModulos) groupModulos.style.display = grupo === 'modulos_erp' ? 'block' : 'none';
+
+    if (grupo === 'alias') {
+      carregarAliasManager();
+    } else {
+      mudarSubPrograma(subProgramaAtivo || 'ce0712');
+    }
+  }
+
+  function mudarSubPrograma(prog) {
+    subProgramaAtivo = prog;
+
+    document.querySelectorAll('.totvs-sub-tab-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.subProg === prog);
+    });
+
+    document.querySelectorAll('#group-modulos_erp .totvs-prog-screen').forEach(sc => {
       sc.style.display = sc.id === `prog-${prog}` ? 'block' : 'none';
     });
 
@@ -69,7 +169,15 @@ const Datasul = (() => {
     else if (prog === 'fmsc0102') carregarFMSC0102();
     else if (prog === 'fmsc0101') carregarFMSC0101();
     else if (prog === 'ce0701') carregarCE0701();
-    else if (prog === 'alias_manager') carregarAliasManager();
+  }
+
+  function mudarPrograma(prog) {
+    if (prog === 'alias_manager' || prog === 'alias') {
+      mudarAbaPrincipal('alias');
+    } else {
+      mudarAbaPrincipal('modulos_erp');
+      mudarSubPrograma(prog);
+    }
   }
 
   // 1. CE0712
@@ -296,15 +404,20 @@ const Datasul = (() => {
       if (!tbody) return;
       tbody.innerHTML = '';
       aliasesCache.forEach(a => {
+        const badgeStatus = (a.status || 'ativo').toLowerCase() === 'inativo'
+          ? '<span class="badge" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;">✕ Inativo</span>'
+          : '<span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #86efac;">✓ Ativo</span>';
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td style="font-weight:800; color:#0284c7;">${a.alias}</td>
-          <td>${a.nomeEmpresa}</td>
-          <td><code>${a.pasoeUrl}</code></td>
-          <td style="text-align:center;">${a.empresaPrincipal || '001'}</td>
+          <td style="font-weight:800; color:#0284c7;">${escapeHtml(a.alias)}</td>
+          <td>${badgeStatus}</td>
+          <td>${escapeHtml(a.nomeEmpresa || '-')}</td>
+          <td><code>${escapeHtml(a.pasoeUrl)}</code></td>
+          <td style="text-align:center;">${escapeHtml(a.empresaPrincipal || '001')}</td>
           <td style="text-align:center;">
-            <button class="btn-topbar-action" onclick="Datasul.editarAlias('${a.alias}')">✏️</button>
-            <button class="btn-topbar-action" onclick="Datasul.testarAlias('${a.alias}')">📡</button>
+            <button class="btn-topbar-action" onclick="Datasul.editarAlias('${escapeHtml(a.alias)}')">✏️</button>
+            <button class="btn-topbar-action" onclick="Datasul.testarAlias('${escapeHtml(a.alias)}')">📡</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -373,17 +486,30 @@ const Datasul = (() => {
   }
 
   async function resetarBaseDados() {
+    if (!isAdminAutenticado()) {
+      solicitarLoginAdmin('erp');
+      return;
+    }
     if (!confirm('Deseja restaurar os dados padrão do simulador TOTVS?')) return;
     const res = await fetch('/api/datasul/resetBase', { method: 'POST' });
     const data = await res.json();
     alert(data.mensagem);
-    mudarPrograma(programaAtivo);
+    if (abaPrincipalAtiva === 'alias') carregarAliasManager();
+    else mudarSubPrograma(subProgramaAtivo);
   }
 
   return {
     init,
     trocarEmpresaERP,
     mudarPrograma,
+    mudarAbaPrincipal,
+    mudarSubPrograma,
+    isAdminAutenticado,
+    solicitarLoginAdmin,
+    cancelarLoginAdmin,
+    confirmarLoginAdmin,
+    logoutAdmin,
+    alternarVisibilidadeSenhaAdmin,
     carregarCE0712,
     carregarFMSC0102,
     salvarFMSC0102,

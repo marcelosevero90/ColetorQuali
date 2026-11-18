@@ -3766,6 +3766,11 @@ const App = (() => {
   }
 
   function setModoVisualizacao(modo) {
+    if ((modo === 'erp' || modo === 'split') && typeof Datasul !== 'undefined' && !Datasul.isAdminAutenticado()) {
+      Datasul.solicitarLoginAdmin(modo);
+      return;
+    }
+
     state.modoVisualizacao = modo;
     const vp = document.getElementById('main-viewport');
     const col = document.getElementById('coletor-device-container');
@@ -3780,12 +3785,12 @@ const App = (() => {
       vp.className = 'main-viewport';
       col.style.display = 'none';
       erp.style.display = 'flex';
-      Datasul.carregarCE0712();
+      if (typeof Datasul !== 'undefined') Datasul.mudarAbaPrincipal('alias');
     } else {
       vp.className = 'main-viewport split-mode';
       col.style.display = 'flex';
       erp.style.display = 'flex';
-      Datasul.carregarCE0712();
+      if (typeof Datasul !== 'undefined') Datasul.mudarAbaPrincipal('alias');
     }
   }
 
