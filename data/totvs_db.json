@@ -689,6 +689,21 @@
     },
     {
       "codEmpresa": "001",
+      "itCodigo": "01010047",
+      "descItem": "Kit Pont Prince (10) Unidades",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "depositoPad": "AL1",
+      "nomeDeposito": "Almoxarifado 1",
+      "codLocaliz": "BRANCO",
+      "descricaoLocaliz": "BRANCO",
+      "un": "UN",
+      "codBarras": "7890101004700",
+      "requerValorFicha": false,
+      "dataAtualiz": "2026-11-16T08:00:00Z"
+    },
+    {
+      "codEmpresa": "001",
       "itCodigo": "D352-221/1",
       "descItem": "Roupeiro Lumiere 6Pts 6Gav Cinamomo/Off White Vol 1/5",
       "tipoConEst": 3,

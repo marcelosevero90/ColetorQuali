@@ -3470,7 +3470,7 @@ const App = (() => {
           <div class="form-group" style="margin-bottom: 10px;">
             <label class="form-label" for="transf-sai-item">Item (Código / EAN) *</label>
             <div style="display: flex; gap: 5px;">
-              <input type="text" id="transf-sai-item" class="form-input" style="font-weight: 700;" placeholder="Código do item..." value="${escapeHtml(itCodigoVal)}" required onblur="App.onItemSaidaAlterado(this.value)">
+              <input type="text" id="transf-sai-item" class="form-input" style="font-weight: 700;" placeholder="Código do item..." value="${escapeHtml(itCodigoVal)}" required onblur="App.onItemSaidaAlterado(this.value)" onchange="App.onItemSaidaAlterado(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault(); App.onItemSaidaAlterado(this.value);}">
               <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 10px;" onclick="App.abrirPesquisaItemInterna('transf_saida')" title="Buscar Item">🔍</button>
               <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 10px;" onclick="App.abrirScannerCamera('TRANSF_SAIDA_ITEM')" title="Ler Código de Barras">📷</button>
             </div>
@@ -3494,8 +3494,9 @@ const App = (() => {
               <label class="form-label" for="transf-sai-localiz">Localização Saída</label>
               <div style="display: flex; gap: 4px;">
                 <input type="text" id="transf-sai-localiz" class="form-input" placeholder="ex: BRANCO" value="${escapeHtml(locSaiVal)}">
-                <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLocalizInterna('transf_saida')" title="Buscar Localização">🔍</button>
+                <button type="button" id="transf-sai-btn-lupa-loc" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLocalizInterna('transf_saida')" title="Buscar Localização">🔍</button>
               </div>
+              <div id="transf-sai-loc-tip" style="display: none; font-size: 10.5px; color: #475569; margin-top: 3px; font-weight: 600;"></div>
             </div>
 
             <div class="form-group" style="margin: 0;">
@@ -3511,7 +3512,7 @@ const App = (() => {
                 <label class="form-label" for="transf-sai-lote">Lote Saída <span id="transf-sai-lote-req">*</span></label>
                 <div style="display: flex; gap: 4px;">
                   <input type="text" id="transf-sai-lote" class="form-input" placeholder="Lote..." value="${escapeHtml(loteSaiVal)}" onblur="App.onLoteSaidaAlterado(this.value)">
-                  <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLoteInterna('transf_saida')" title="Buscar Lote com Saldo">🔍</button>
+                  <button type="button" id="transf-sai-btn-lupa-lote" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLoteInterna('transf_saida')" title="Buscar Lote com Saldo">🔍</button>
                 </div>
               </div>
 
@@ -3531,7 +3532,7 @@ const App = (() => {
               <label class="form-label" for="transf-sai-refer">Referência</label>
               <div style="display: flex; gap: 3px;">
                 <input type="text" id="transf-sai-refer" class="form-input" placeholder="Ref..." value="${escapeHtml(refSaiVal)}">
-                <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 6px;" onclick="App.abrirPesquisaReferenciaInterna('transf_saida')" title="Buscar Referência">🔍</button>
+                <button type="button" id="transf-sai-btn-lupa-refer" class="btn btn-secondary" style="width: auto; padding: 0 6px;" onclick="App.abrirPesquisaReferenciaInterna('transf_saida')" title="Buscar Referência">🔍</button>
               </div>
             </div>
 
@@ -3574,23 +3575,120 @@ const App = (() => {
     const elDesc = document.getElementById('transf-sai-desc-item');
     if (!cod) {
       if (elDesc) elDesc.textContent = '-';
+      stateTransferencias.itemSaidaSelecionado = null;
+      aplicarRegrasTipoItemSaida(null);
       return;
     }
 
-    const item = await DB.obterItemExato(codEmpresa, cod);
-    const blocoLote = document.getElementById('transf-sai-bloco-lote');
-    const loteReq = document.getElementById('transf-sai-lote-req');
+    let match = await DB.obterItemExato(cod, codEmpresa);
+    let item = match?.item || match || null;
+
+    // Fallback: varredura em buscarItensLocal caso a busca exata tenha divergência de pontuação/zeros
+    if (!item) {
+      const lista = await DB.buscarItensLocal(cod, codEmpresa, 10);
+      const exato = (lista || []).find(it =>
+        String(it.itCodigo).trim().toUpperCase() === cod.toUpperCase() ||
+        String(it.codBarras || '').trim() === cod
+      );
+      if (exato) item = exato;
+    }
 
     if (item) {
-      if (elDesc) elDesc.textContent = `${item.descItem || cod} (${item.un || 'UN'})`;
-      const ehLote = item.tipoContrEstoque === 2 || Boolean(item.indLote);
-      if (blocoLote) blocoLote.style.display = ehLote ? 'block' : 'none';
-      if (loteReq) loteReq.style.display = ehLote ? 'inline' : 'none';
+      const un = item.un || 'UN';
+      if (elDesc) elDesc.textContent = `${item.descItem || cod} (${un})`;
       stateTransferencias.itemSaidaSelecionado = item;
+      aplicarRegrasTipoItemSaida(item);
     } else {
       if (elDesc) elDesc.textContent = `${cod} (Não localizado no catálogo offline)`;
-      if (blocoLote) blocoLote.style.display = 'block';
       stateTransferencias.itemSaidaSelecionado = null;
+      aplicarRegrasTipoItemSaida(null);
+    }
+  }
+
+  function aplicarRegrasTipoItemSaida(item) {
+    // 1. Tipo de Controle de Estoque (tipoConEst): 1=Serial/Total, 2=Número de Série, 3=Lote, 4=Referência
+    const tipoConEst = item ? Number(item.tipoConEst || item.tipoContrEstoque || 1) : 1;
+    const ehLote = (tipoConEst === 3);
+    const ehRefer = (tipoConEst === 4);
+
+    // Campos de Lote na Saída
+    const inpLote = document.getElementById('transf-sai-lote');
+    const btnLupaLote = document.getElementById('transf-sai-btn-lupa-lote');
+    const inpDtValid = document.getElementById('transf-sai-dt-valid');
+    const loteReq = document.getElementById('transf-sai-lote-req');
+    const loteInfo = document.getElementById('transf-sai-lote-info');
+    const blocoLote = document.getElementById('transf-sai-bloco-lote');
+
+    if (inpLote) {
+      inpLote.disabled = !ehLote;
+      if (!ehLote) inpLote.value = '';
+    }
+    if (btnLupaLote) btnLupaLote.disabled = !ehLote;
+    if (inpDtValid) {
+      inpDtValid.disabled = !ehLote;
+      if (!ehLote) inpDtValid.value = '';
+    }
+    if (loteReq) loteReq.style.display = ehLote ? 'inline' : 'none';
+    if (loteInfo) {
+      if (ehLote) {
+        loteInfo.textContent = 'Item controlado por Lote (tipoConEst 3). Informe o lote de origem com saldo.';
+        loteInfo.style.color = '#b45309';
+      } else {
+        const descTipo = tipoConEst === 4 ? 'Referência' : (tipoConEst === 2 ? 'Número de Série' : 'Convencional / Total');
+        loteInfo.textContent = `Item sem controle de lote (tipoConEst ${tipoConEst}: ${descTipo}).`;
+        loteInfo.style.color = '#64748b';
+      }
+    }
+    if (blocoLote) {
+      blocoLote.style.opacity = ehLote ? '1' : '0.6';
+      blocoLote.style.background = ehLote ? '#fffbeb' : '#f8fafc';
+      blocoLote.style.borderColor = ehLote ? '#fde68a' : '#cbd5e1';
+    }
+
+    // Campos de Referência na Saída
+    const inpRefer = document.getElementById('transf-sai-refer');
+    const btnLupaRefer = document.getElementById('transf-sai-btn-lupa-refer');
+    if (inpRefer) {
+      inpRefer.disabled = !ehRefer;
+      if (!ehRefer) inpRefer.value = '';
+    }
+    if (btnLupaRefer) btnLupaRefer.disabled = !ehRefer;
+
+    // 2. Localização Única (locUnica)
+    const isLocUnica = Boolean(item && (item.locUnica === true || item.locUnica === 1 || item.locUnica === 'true'));
+    const inpLocaliz = document.getElementById('transf-sai-localiz');
+    const btnLupaLoc = document.getElementById('transf-sai-btn-lupa-loc');
+    const tipLoc = document.getElementById('transf-sai-loc-tip');
+
+    if (inpLocaliz) {
+      if (isLocUnica) {
+        const locPadrao = item?.codLocaliz || 'BRANCO';
+        inpLocaliz.value = locPadrao;
+        inpLocaliz.readOnly = true;
+        inpLocaliz.style.background = '#f1f5f9';
+        inpLocaliz.style.color = '#334155';
+        if (btnLupaLoc) btnLupaLoc.disabled = true;
+        if (tipLoc) {
+          tipLoc.textContent = `🔒 Localização única do item (${locPadrao}).`;
+          tipLoc.style.display = 'block';
+        }
+      } else {
+        inpLocaliz.value = item ? (item.codLocaliz || '') : '';
+        inpLocaliz.readOnly = false;
+        inpLocaliz.style.background = '#ffffff';
+        inpLocaliz.style.color = '';
+        if (btnLupaLoc) btnLupaLoc.disabled = false;
+        if (tipLoc) tipLoc.style.display = 'none';
+      }
+    }
+
+    // Depósito padrão do item
+    if (item && item.depositoPad) {
+      const selDep = document.getElementById('transf-sai-depos');
+      if (selDep) {
+        const existe = Array.from(selDep.options).some(o => o.value === item.depositoPad);
+        if (existe) selDep.value = item.depositoPad;
+      }
     }
   }
 
@@ -3647,13 +3745,25 @@ const App = (() => {
       return;
     }
 
-    // Validar lote se o item exigir
-    const item = stateTransferencias.itemSaidaSelecionado || await DB.obterItemExato(codEmpresa, itCodigo);
-    const ehLote = item ? (item.tipoContrEstoque === 2 || Boolean(item.indLote)) : false;
+    // Validar lote e referência conforme tipoConEst
+    const match = stateTransferencias.itemSaidaSelecionado || await DB.obterItemExato(itCodigo, codEmpresa);
+    const item = match?.item || match || null;
+    const tipoConEst = item ? Number(item.tipoConEst || item.tipoContrEstoque || 1) : 1;
+    const ehLote = (tipoConEst === 3);
+    const ehRefer = (tipoConEst === 4);
+
     if (ehLote && !loteSai) {
-      alert('Este item possui controle de lote. Informe o Lote de Saída.');
+      alert('Este item possui controle de lote (tipoConEst 3). Informe o Lote de Saída.');
       document.getElementById('transf-sai-lote')?.focus();
       return;
+    }
+
+    if (!ehLote) {
+      loteSai = '';
+      dtValiSai = '';
+    }
+    if (!ehRefer) {
+      codReferSai = '';
     }
 
     const editando = stateTransferencias.transferenciaAtiva;
@@ -3701,6 +3811,13 @@ const App = (() => {
     const codEmpresa = state.session.codEmpresa || '001';
     stateTransferencias.transferenciaAtiva = transf;
 
+    const matchItem = await DB.obterItemExato(transf.itCodigo, codEmpresa);
+    const item = matchItem?.item || matchItem || null;
+    const tipoConEst = item ? Number(item.tipoConEst || item.tipoContrEstoque || 1) : 1;
+    const ehLote = (tipoConEst === 3);
+    const ehRefer = (tipoConEst === 4);
+    const isLocUnica = Boolean(item && (item.locUnica === true || item.locUnica === 1 || item.locUnica === 'true'));
+
     const depositos = await DB.getAllByEmpresa('deposito', codEmpresa);
     let depEntPadrao = transf.codDeposEnt || '';
     if (!depEntPadrao) {
@@ -3708,10 +3825,10 @@ const App = (() => {
       depEntPadrao = outro ? outro.codDepos : (depositos[0]?.codDepos || '');
     }
 
-    const locEntPadrao = transf.codLocalizEnt || '';
-    const loteEntPadrao = transf.loteEnt || transf.loteSai || '';
-    const dtValiEntPadrao = transf.dtValiLoteEnt || transf.dtValiLote || '';
-    const refEntPadrao = transf.codReferEnt || transf.codReferSai || '';
+    const locEntPadrao = isLocUnica ? (item?.codLocaliz || transf.codLocalizEnt || '') : (transf.codLocalizEnt || '');
+    const loteEntPadrao = ehLote ? (transf.loteEnt || transf.loteSai || '') : '';
+    const dtValiEntPadrao = ehLote ? (transf.dtValiLoteEnt || transf.dtValiLote || '') : '';
+    const refEntPadrao = ehRefer ? (transf.codReferEnt || transf.codReferSai || '') : '';
 
     container.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
@@ -3759,31 +3876,32 @@ const App = (() => {
           <div class="form-group" style="margin-bottom: 10px;">
             <label class="form-label" for="transf-ent-localiz">Localização Entrada</label>
             <div style="display: flex; gap: 4px;">
-              <input type="text" id="transf-ent-localiz" class="form-input" placeholder="ex: BRANCO" value="${escapeHtml(locEntPadrao)}">
-              <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLocalizInterna('transf_entrada')" title="Buscar Localização">🔍</button>
+              <input type="text" id="transf-ent-localiz" class="form-input" placeholder="ex: BRANCO" value="${escapeHtml(locEntPadrao)}" ${isLocUnica ? 'readonly style="background:#f1f5f9; color:#334155;"' : ''}>
+              <button type="button" id="transf-ent-btn-lupa-loc" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLocalizInterna('transf_entrada')" title="Buscar Localização" ${isLocUnica ? 'disabled' : ''}>🔍</button>
             </div>
+            ${isLocUnica ? `<div id="transf-ent-loc-tip" style="font-size: 10.5px; color: #475569; margin-top: 3px; font-weight: 600;">🔒 Localização única do item (${escapeHtml(locEntPadrao || 'Padrão')}).</div>` : ''}
           </div>
 
           <!-- Bloco Lote Entrada e Data de Validade com Regra Crítica -->
-          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+          <div id="transf-ent-bloco-lote" style="background: ${ehLote ? '#f8fafc' : '#f1f5f9'}; border: 1px solid ${ehLote ? '#cbd5e1' : '#e2e8f0'}; border-radius: 8px; padding: 10px; margin-bottom: 10px; opacity: ${ehLote ? '1' : '0.6'};">
             <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px;">
               <div class="form-group" style="margin: 0;">
-                <label class="form-label" for="transf-ent-lote">Lote Entrada</label>
+                <label class="form-label" for="transf-ent-lote">Lote Entrada ${ehLote ? '<span style="color:#dc2626;">*</span>' : ''}</label>
                 <div style="display: flex; gap: 4px;">
-                  <input type="text" id="transf-ent-lote" class="form-input" placeholder="Lote destino..." value="${escapeHtml(loteEntPadrao)}" oninput="App.onLoteEntradaAlterado(this.value)">
-                  <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLoteInterna('transf_entrada', '${escapeHtml(transf.itCodigo)}')" title="Buscar Lotes Existentes">🔍</button>
+                  <input type="text" id="transf-ent-lote" class="form-input" placeholder="Lote destino..." value="${escapeHtml(loteEntPadrao)}" oninput="App.onLoteEntradaAlterado(this.value)" ${!ehLote ? 'disabled' : ''}>
+                  <button type="button" id="transf-ent-btn-lupa-lote" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLoteInterna('transf_entrada', '${escapeHtml(transf.itCodigo)}')" title="Buscar Lotes Existentes" ${!ehLote ? 'disabled' : ''}>🔍</button>
                 </div>
               </div>
 
               <div class="form-group" style="margin: 0;">
                 <label class="form-label" for="transf-ent-dt-valid">Validade Entrada <span id="transf-ent-dt-valid-req" style="display:none; color:#dc2626;">*</span></label>
-                <input type="date" id="transf-ent-dt-valid" class="form-input" value="${formatarParaInputDate(dtValiEntPadrao)}">
+                <input type="date" id="transf-ent-dt-valid" class="form-input" value="${formatarParaInputDate(dtValiEntPadrao)}" ${!ehLote ? 'disabled' : ''}>
               </div>
             </div>
 
             <!-- Tip Informativo Dinâmico do Lote de Entrada -->
             <div id="transf-ent-lote-tip" class="field-tip tip-info" style="margin-top: 6px;">
-              Digite o lote para verificar se já existe no estoque ou se é um lote novo.
+              ${ehLote ? 'Digite o lote para verificar se já existe no estoque ou se é um lote novo.' : `Item sem controle de lote (tipoConEst: ${tipoConEst}).`}
             </div>
           </div>
 
@@ -3791,9 +3909,10 @@ const App = (() => {
           <div class="form-group" style="margin-bottom: 14px;">
             <label class="form-label" for="transf-ent-refer">Referência Entrada</label>
             <div style="display: flex; gap: 4px;">
-              <input type="text" id="transf-ent-refer" class="form-input" placeholder="Referência (opcional)..." value="${escapeHtml(refEntPadrao)}">
-              <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaReferenciaInterna('transf_entrada')" title="Buscar Referência">🔍</button>
+              <input type="text" id="transf-ent-refer" class="form-input" placeholder="Referência..." value="${escapeHtml(refEntPadrao)}" ${!ehRefer ? 'disabled' : ''}>
+              <button type="button" id="transf-ent-btn-lupa-refer" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaReferenciaInterna('transf_entrada')" title="Buscar Referência" ${!ehRefer ? 'disabled' : ''}>🔍</button>
             </div>
+            ${!ehRefer ? '<div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">Item sem controle de referência.</div>' : ''}
           </div>
 
           <!-- Botões de Finalização -->
@@ -3814,7 +3933,7 @@ const App = (() => {
       </div>
     `;
 
-    if (loteEntPadrao) {
+    if (ehLote && loteEntPadrao) {
       await onLoteEntradaAlterado(loteEntPadrao);
     }
   }
@@ -3832,7 +3951,7 @@ const App = (() => {
       inpDt.required = false;
       if (reqBadge) reqBadge.style.display = 'none';
       tip.className = 'field-tip tip-info';
-      tip.innerHTML = 'Sem lote informado (para itens sem controle de lote).';
+      tip.innerHTML = 'Sem lote informado.';
       return;
     }
 
@@ -3867,11 +3986,18 @@ const App = (() => {
       return;
     }
 
+    const codEmpresa = state.session.codEmpresa || '001';
+    const matchItem = await DB.obterItemExato(transf.itCodigo, codEmpresa);
+    const item = matchItem?.item || matchItem || null;
+    const tipoConEst = item ? Number(item.tipoConEst || item.tipoContrEstoque || 1) : 1;
+    const ehLote = (tipoConEst === 3);
+    const ehRefer = (tipoConEst === 4);
+
     const codDeposEnt = document.getElementById('transf-ent-depos')?.value.trim() || '';
     const codLocalizEnt = document.getElementById('transf-ent-localiz')?.value.trim() || '';
-    const loteEnt = document.getElementById('transf-ent-lote')?.value.trim() || '';
-    const dtValiEnt = document.getElementById('transf-ent-dt-valid')?.value.trim() || '';
-    const codReferEnt = document.getElementById('transf-ent-refer')?.value.trim() || '';
+    let loteEnt = document.getElementById('transf-ent-lote')?.value.trim() || '';
+    let dtValiEnt = document.getElementById('transf-ent-dt-valid')?.value.trim() || '';
+    let codReferEnt = document.getElementById('transf-ent-refer')?.value.trim() || '';
 
     if (!codDeposEnt) {
       alert('Informe o depósito de entrada.');
@@ -3879,13 +4005,25 @@ const App = (() => {
       return;
     }
 
-    // Validação de lote novo
-    const codEmpresa = state.session.codEmpresa || '001';
-    const infoLote = await DB.obterDataValidadeLote(codEmpresa, transf.itCodigo, loteEnt);
-    if (loteEnt && (!infoLote || !infoLote.existe) && !dtValiEnt) {
-      alert('Para lote novo, é obrigatório informar a data de validade!');
-      document.getElementById('transf-ent-dt-valid')?.focus();
-      return;
+    if (ehLote) {
+      if (!loteEnt) {
+        alert('Este item possui controle de lote. Informe o Lote de Entrada.');
+        document.getElementById('transf-ent-lote')?.focus();
+        return;
+      }
+      const infoLote = await DB.obterDataValidadeLote(codEmpresa, transf.itCodigo, loteEnt);
+      if ((!infoLote || !infoLote.existe) && !dtValiEnt) {
+        alert('⚠️ Para lote novo, é obrigatório informar a data de validade!');
+        document.getElementById('transf-ent-dt-valid')?.focus();
+        return;
+      }
+    } else {
+      loteEnt = '';
+      dtValiEnt = '';
+    }
+
+    if (!ehRefer) {
+      codReferEnt = '';
     }
 
     // Atualiza o objeto da transferência

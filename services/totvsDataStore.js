@@ -527,6 +527,7 @@ class TotvsDataStore {
       { itCodigo: 'PI0440', descItem: 'ELETRODO SOLDA INOX 316L 2.5MM', tipoConEst: 1, locUnica: true, depositoPad: 'PRO', nomeDeposito: 'DEPOSITO PRODUCAO', codLocaliz: 'LIN-01', descricaoLocaliz: 'LINHA DE MONTAGEM 01', un: 'KG', codBarras: '7897000004409', requerValorFicha: false },
       { itCodigo: 'PI0600', descItem: 'REGULADOR PRESSAO ALTA VAZAO 50KG/H', tipoConEst: 3, locUnica: true, depositoPad: 'ALM', nomeDeposito: 'ALMOXARIFADO CENTRAL', codLocaliz: 'B-02-01', descricaoLocaliz: 'RUA B - PRATELEIRA 02 - NIVEL 01', un: 'PC', codBarras: '7897000006007', requerValorFicha: true },
       { itCodigo: '01010115', descItem: 'Porta Latas Simples 348 x 91 x 115mm 01010115', tipoConEst: 1, locUnica: false, depositoPad: 'AL1', nomeDeposito: 'Almoxarifado 1', codLocaliz: 'BRANCO', descricaoLocaliz: 'BRANCO', un: 'Un', codBarras: '7890101011500', requerValorFicha: false },
+      { itCodigo: '01010047', descItem: 'Kit Pont Prince (10) Unidades', tipoConEst: 1, locUnica: true, depositoPad: 'AL1', nomeDeposito: 'Almoxarifado 1', codLocaliz: 'BRANCO', descricaoLocaliz: 'BRANCO', un: 'UN', codBarras: '7890101004700', requerValorFicha: false },
       { itCodigo: 'D352-221/1', descItem: 'Roupeiro Lumiere 6Pts 6Gav Cinamomo/Off White Vol 1/5', tipoConEst: 3, locUnica: false, depositoPad: 'AST', nomeDeposito: 'ASSISTENCIA TECNICA', codLocaliz: '', descricaoLocaliz: 'BRANCO', un: 'UN', codBarras: '7890000352221', requerValorFicha: false }
     ].map(it => ({ codEmpresa: '001', ...it, dataAtualiz: '2026-11-16T08:00:00Z' }));
 

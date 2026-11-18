@@ -401,12 +401,27 @@ const DB = (() => {
   }
 
   // Busca Exata O(1) por itCodigo ou codBarras dentro da empresa selecionada
-  async function obterItemExato(termo, codEmpresa) {
+  async function obterItemExato(arg1, arg2) {
+    if (!arg1 && !arg2) return null;
+    let termo = arg1;
+    let codEmpresa = arg2;
+
+    // Tolerância para inversão acidental de parâmetros (ex: obterItemExato(emp, cod))
+    if (typeof arg1 === 'string' && /^\d{1,3}$/.test(arg1.trim()) && typeof arg2 === 'string' && arg2.trim().length > 3) {
+      termo = arg2;
+      codEmpresa = arg1;
+    }
+
     if (!termo || !String(termo).trim()) return null;
     const db = await openDB();
     const emp = normalizarEmpresa(codEmpresa);
     const t = String(termo).trim();
     const tUpper = t.toUpperCase();
+
+    function wrapResult(itemObj, matchedBy) {
+      if (!itemObj) return null;
+      return Object.assign({ item: itemObj, matchedBy }, itemObj);
+    }
 
     return new Promise((resolve) => {
       try {
@@ -416,11 +431,11 @@ const DB = (() => {
         // 1. Chave primária exata [codEmpresa, itCodigo]
         const reqPk = store.get([emp, t]);
         reqPk.onsuccess = () => {
-          if (reqPk.result) return resolve({ item: reqPk.result, matchedBy: 'CODIGO' });
+          if (reqPk.result) return resolve(wrapResult(reqPk.result, 'CODIGO'));
           if (t !== tUpper) {
             const reqUpper = store.get([emp, tUpper]);
             reqUpper.onsuccess = () => {
-              if (reqUpper.result) return resolve({ item: reqUpper.result, matchedBy: 'CODIGO' });
+              if (reqUpper.result) return resolve(wrapResult(reqUpper.result, 'CODIGO'));
               tentarBarras();
             };
             reqUpper.onerror = () => tentarBarras();
@@ -434,8 +449,15 @@ const DB = (() => {
           const reqBar = store.index('codBarras').getAll(t);
           reqBar.onsuccess = () => {
             const matches = (reqBar.result || []).filter(i => matchEmpresa(i.codEmpresa, emp));
-            if (matches.length > 0) return resolve({ item: matches[0], matchedBy: 'BARRAS' });
-            resolve(null);
+            if (matches.length > 0) return resolve(wrapResult(matches[0], 'BARRAS'));
+            // 3. Fallback: varredura por busca local para itens case-insensitive ou com formatação
+            buscarItensLocal(t, emp, 10).then(lista => {
+              const exato = (lista || []).find(it =>
+                String(it.itCodigo).trim().toUpperCase() === tUpper ||
+                String(it.codBarras || '').trim() === t
+              );
+              resolve(exato ? wrapResult(exato, 'BUSCA') : null);
+            }).catch(() => resolve(null));
           };
           reqBar.onerror = () => resolve(null);
         }
