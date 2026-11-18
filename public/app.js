@@ -3713,91 +3713,96 @@ const App = (() => {
   }
 
   async function salvarSaidaTransferencia(irParaEntrada = false) {
-    const codEmpresa = state.session.codEmpresa || '001';
-    const codEstabel = state.session.codEstabel || '101';
-    const codUsuario = state.session.codUsuario || '';
+    try {
+      const codEmpresa = state.session.codEmpresa || '001';
+      const codEstabel = state.session.codEstabel || '101';
+      const codUsuario = state.session.codUsuario || '';
 
-    const itCodigo = document.getElementById('transf-sai-item')?.value.trim() || '';
-    const codDeposSai = document.getElementById('transf-sai-depos')?.value.trim() || '';
-    const codLocalizSai = document.getElementById('transf-sai-localiz')?.value.trim() || '';
-    const loteSai = document.getElementById('transf-sai-lote')?.value.trim() || '';
-    const dtValiSai = document.getElementById('transf-sai-dt-valid')?.value.trim() || '';
-    const codReferSai = document.getElementById('transf-sai-refer')?.value.trim() || '';
-    const quantidade = parseFloat(document.getElementById('transf-sai-qtd')?.value || '0');
-    const nroDocto = document.getElementById('transf-sai-doc')?.value.trim() || '';
-    const serie = document.getElementById('transf-sai-serie')?.value.trim() || '';
+      const itCodigo = document.getElementById('transf-sai-item')?.value.trim() || '';
+      const codDeposSai = document.getElementById('transf-sai-depos')?.value.trim() || '';
+      const codLocalizSai = document.getElementById('transf-sai-localiz')?.value.trim() || '';
+      let loteSai = document.getElementById('transf-sai-lote')?.value.trim() || '';
+      let dtValiSai = document.getElementById('transf-sai-dt-valid')?.value.trim() || '';
+      let codReferSai = document.getElementById('transf-sai-refer')?.value.trim() || '';
+      const quantidade = parseFloat(document.getElementById('transf-sai-qtd')?.value || '0');
+      const nroDocto = document.getElementById('transf-sai-doc')?.value.trim() || '';
+      const serie = document.getElementById('transf-sai-serie')?.value.trim() || '';
 
-    if (!itCodigo) {
-      alert('Informe o código do item.');
-      document.getElementById('transf-sai-item')?.focus();
-      return;
-    }
+      if (!itCodigo) {
+        alert('Informe o código do item.');
+        document.getElementById('transf-sai-item')?.focus();
+        return;
+      }
 
-    if (!codDeposSai) {
-      alert('Informe o depósito de saída.');
-      document.getElementById('transf-sai-depos')?.focus();
-      return;
-    }
+      if (!codDeposSai) {
+        alert('Informe o depósito de saída.');
+        document.getElementById('transf-sai-depos')?.focus();
+        return;
+      }
 
-    if (!quantidade || quantidade <= 0 || isNaN(quantidade)) {
-      alert('Informe uma quantidade válida maior que zero.');
-      document.getElementById('transf-sai-qtd')?.focus();
-      return;
-    }
+      if (!quantidade || quantidade <= 0 || isNaN(quantidade)) {
+        alert('Informe uma quantidade válida maior que zero.');
+        document.getElementById('transf-sai-qtd')?.focus();
+        return;
+      }
 
-    // Validar lote e referência conforme tipoConEst
-    const match = stateTransferencias.itemSaidaSelecionado || await DB.obterItemExato(itCodigo, codEmpresa);
-    const item = match?.item || match || null;
-    const tipoConEst = item ? Number(item.tipoConEst || item.tipoContrEstoque || 1) : 1;
-    const ehLote = (tipoConEst === 3);
-    const ehRefer = (tipoConEst === 4);
+      // Validar lote e referência conforme tipoConEst
+      const match = stateTransferencias.itemSaidaSelecionado || await DB.obterItemExato(itCodigo, codEmpresa);
+      const item = match?.item || match || null;
+      const tipoConEst = item ? Number(item.tipoConEst || item.tipoContrEstoque || 1) : 1;
+      const ehLote = (tipoConEst === 3);
+      const ehRefer = (tipoConEst === 4);
 
-    if (ehLote && !loteSai) {
-      alert('Este item possui controle de lote (tipoConEst 3). Informe o Lote de Saída.');
-      document.getElementById('transf-sai-lote')?.focus();
-      return;
-    }
+      if (ehLote && !loteSai) {
+        alert('Este item possui controle de lote (tipoConEst 3). Informe o Lote de Saída.');
+        document.getElementById('transf-sai-lote')?.focus();
+        return;
+      }
 
-    if (!ehLote) {
-      loteSai = '';
-      dtValiSai = '';
-    }
-    if (!ehRefer) {
-      codReferSai = '';
-    }
+      if (!ehLote) {
+        loteSai = '';
+        dtValiSai = '';
+      }
+      if (!ehRefer) {
+        codReferSai = '';
+      }
 
-    const editando = stateTransferencias.transferenciaAtiva;
-    const transf = {
-      ...(editando || {}),
-      id_uuid: editando?.id_uuid || ('tr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9)),
-      codEmpresa,
-      codEstabel,
-      codUsuario,
-      dtTransf: editando?.dtTransf || new Date().toISOString().slice(0, 10),
-      itCodigo,
-      descItem: item?.descItem || editando?.descItem || itCodigo,
-      un: item?.un || editando?.un || 'UN',
-      quantidade,
-      codDeposSai,
-      codLocalizSai,
-      loteSai,
-      dtValiLote: dtValiSai,
-      codReferSai,
-      nroDocto,
-      serie,
-      status: editando?.status === 'ERRO' ? 'PRONTO_ENVIO' : (editando?.status || 'PENDENTE_ENTRADA'),
-      pendenteSync: editando?.pendenteSync || false,
-      criadoEm: editando?.criadoEm || new Date().toISOString(),
-      atualizadoEm: new Date().toISOString()
-    };
+      const editando = stateTransferencias.transferenciaAtiva;
+      const transf = {
+        ...(editando || {}),
+        id_uuid: editando?.id_uuid || ('tr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9)),
+        codEmpresa,
+        codEstabel,
+        codUsuario,
+        dtTransf: editando?.dtTransf || new Date().toISOString().slice(0, 10),
+        itCodigo,
+        descItem: item?.descItem || editando?.descItem || itCodigo,
+        un: item?.un || editando?.un || 'UN',
+        quantidade,
+        codDeposSai,
+        codLocalizSai,
+        loteSai,
+        dtValiLote: dtValiSai,
+        codReferSai,
+        nroDocto,
+        serie,
+        status: editando?.status === 'ERRO' ? 'PRONTO_ENVIO' : (editando?.status || 'PENDENTE_ENTRADA'),
+        pendenteSync: editando?.pendenteSync || false,
+        criadoEm: editando?.criadoEm || new Date().toISOString(),
+        atualizadoEm: new Date().toISOString()
+      };
 
-    const salvo = await DB.salvarTransferencia(transf);
+      const salvo = await DB.salvarTransferencia(transf);
 
-    if (irParaEntrada) {
-      renderTelaTransferenciaEntrada(salvo);
-    } else {
-      alert('Saída salva com sucesso! O registro está pendente de entrada.');
-      App.navegar('transferencias', { filtro: 'pendente_entrada' });
+      if (irParaEntrada) {
+        renderTelaTransferenciaEntrada(salvo);
+      } else {
+        alert('Saída salva com sucesso! O registro está pendente de entrada.');
+        App.navegar('transferencias', { filtro: 'pendente_entrada' });
+      }
+    } catch (errSalvar) {
+      console.error('Erro ao salvar saída de transferência:', errSalvar);
+      alert('Erro ao salvar saída: ' + errSalvar.message);
     }
   }
 
