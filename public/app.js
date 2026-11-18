@@ -289,7 +289,7 @@ const App = (() => {
   }
 
   function bloquearAcesso(modulo, campo) {
-    alert(`🔒 Acesso Bloqueado\n\nO usuário '${state.session.codUsuario || 'operador'}' não possui permissão para acessar ${modulo}.\n\nRequer no TOTVS (FMSC0101): ${campo} = SIM`);
+    alert(`🔒 Acesso Bloqueado\n\nO usuário '${state.session.codUsuario || 'operador'}' não possui permissão para acessar ${modulo}.\n\nPara liberar o acesso, contate o administrador do sistema TOTVS (FMSC0101).`);
   }
 
   function navegar(tela, params = {}) {
@@ -320,12 +320,12 @@ const App = (() => {
         if (isInv) {
           btn.style.opacity = podeInv ? '' : '0.35';
           btn.style.cursor = podeInv ? '' : 'not-allowed';
-          btn.title = podeInv ? '' : 'Sem permissão (permEstoqReqInv)';
+          btn.title = podeInv ? '' : 'Acesso Bloqueado';
         }
         if (isTransf) {
           btn.style.opacity = podeTransf ? '' : '0.35';
           btn.style.cursor = podeTransf ? '' : 'not-allowed';
-          btn.title = podeTransf ? '' : 'Sem permissão (permEstoqReqMov)';
+          btn.title = podeTransf ? '' : 'Acesso Bloqueado';
         }
 
         const isInvActive = isInv && tela.startsWith('inventario');
@@ -918,7 +918,7 @@ const App = (() => {
           <div class="home-banner-icon">${podeInv ? '📦' : '🔒'}</div>
           <div>
             <div class="home-banner-title">Inventário Físico (CE0712)</div>
-            <div class="home-banner-sub">${podeInv ? (fichasFilial.length > 0 ? `${fichasFilial.length} ficha(s) no aparelho • ${pendentes} pendente(s)` : 'Consultar inventários do ERP TOTVS (Online/Offline)') : '<span style="color:#ef4444; font-weight:700;">Bloqueado no TOTVS (FMSC0101: permEstoqReqInv = NÃO)</span>'}</div>
+            <div class="home-banner-sub">${podeInv ? (fichasFilial.length > 0 ? `${fichasFilial.length} ficha(s) no aparelho • ${pendentes} pendente(s)` : 'Consultar inventários do ERP TOTVS (Online/Offline)') : '<span style="color:#ef4444; font-weight:700;">Bloqueado</span>'}</div>
           </div>
         </div>
         ${podeInv ? `
@@ -945,7 +945,7 @@ const App = (() => {
           <button type="button" class="home-service-card" style="opacity: 0.55; cursor: not-allowed; border-color: #cbd5e1; background: #f8fafc;" onclick="App.bloquearAcesso('Contagem Física de Inventário', 'permEstoqReqInv')">
             <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#94a3b8;">🔒</div>
             <div class="home-card-title" style="color: #64748b;">Contagem Física</div>
-            <div class="home-card-desc" style="color: #ef4444; font-weight: 700;">Bloqueado: permEstoqReqInv = NÃO</div>
+            <div class="home-card-desc" style="color: #ef4444; font-weight: 700;">Bloqueado</div>
           </button>
         `}
 
@@ -959,7 +959,7 @@ const App = (() => {
           <button type="button" class="home-service-card" style="opacity: 0.55; cursor: not-allowed; border-color: #cbd5e1; background: #f8fafc;" onclick="App.bloquearAcesso('Transferência de Material', 'permEstoqReqMov')">
             <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#94a3b8;">🔒</div>
             <div class="home-card-title" style="color: #64748b;">Transf. Material</div>
-            <div class="home-card-desc" style="color: #ef4444; font-weight: 700;">Bloqueado: permEstoqReqMov = NÃO</div>
+            <div class="home-card-desc" style="color: #ef4444; font-weight: 700;">Bloqueado</div>
           </button>
         `}
 
