@@ -112,17 +112,6 @@ app.all('/api/pasoe-proxy', async (req, res) => {
     if (contentType.includes('application/json') || bodyText.trim().startsWith('{') || bodyText.trim().startsWith('[')) {
       try {
         const json = JSON.parse(bodyText);
-        if (targetUrl && (targetUrl.includes('fcGetParamUsuario') || targetUrl.includes('qdcGetParamUsuario'))) {
-          if (json && Array.isArray(json.items)) {
-            json.items.forEach(item => {
-              if (item.permProducao === undefined || item.permProducao === false) {
-                item.permProducao = true;
-                item.permRepRepOrd = true;
-              }
-            });
-          }
-        }
-
         if (targetUrl && (targetUrl.includes('fcGetOrdemProdEst') || targetUrl.includes('qdcGetOrdemProdEst'))) {
           let items = Array.isArray(json.items) ? json.items : (Array.isArray(json) ? json : []);
           let payload = req.body || {};

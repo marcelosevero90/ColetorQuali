@@ -318,16 +318,14 @@ const App = (() => {
 
   function temPermissaoProducao() {
     const p = state.session?.paramUsuario;
-    if (!p) return true;
-    if (p.permProducao === undefined) return Boolean(p.permEstoque ?? true);
+    if (!p) return false;
     return Boolean(p.permProducao === true || p.permProducao === 'true' || p.permProducao === 1);
   }
 
   function temPermissaoReporteOrdem() {
     const p = state.session?.paramUsuario;
-    if (!p) return true;
+    if (!p) return false;
     if (!temPermissaoProducao()) return false;
-    if (p.permRepRepOrd === undefined) return true;
     return Boolean(p.permRepRepOrd === true || p.permRepRepOrd === 'true' || p.permRepRepOrd === 1);
   }
 
@@ -6624,8 +6622,16 @@ const App = (() => {
         </button>
       </div>
 
-      <!-- Barra de Controles: Paginação e Itens por Página -->
+      <!-- Barra de Controles: Paginação, Ordenação e Itens por Página -->
       <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 6px 10px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px;">
+          <span style="font-size: 11px; color: #b45309; font-weight: 700; white-space: nowrap;">Ordem:</span>
+          <select class="form-input" style="font-size: 11.5px; padding: 3px 6px; height: 30px; font-weight: 600;"
+                  onchange="App.onAlterarOrdemDataReporte(this.value)">
+            <option value="desc" ${rep.ordemData === 'desc' ? 'selected' : ''}>📅 Data: Mais recente ➔ Mais antiga (Maior para menor)</option>
+            <option value="asc" ${rep.ordemData === 'asc' ? 'selected' : ''}>📅 Data: Mais antiga ➔ Mais recente (Menor para maior)</option>
+          </select>
+        </div>
         <div style="display: flex; align-items: center; gap: 6px;">
           <span style="font-size: 11px; color: #b45309; font-weight: 700; white-space: nowrap;">Exibir:</span>
           <select class="form-input" style="font-size: 11.5px; padding: 3px 6px; height: 30px; width: 85px; font-weight: 600;"
@@ -6750,13 +6756,23 @@ const App = (() => {
       );
     }
 
-    // Prioriza ordens com erro no topo da listagem para rápida ação e visualização do usuário
+    // Ordenação por data de emissão conforme escolha do usuário (rep.ordemData: 'desc' ou 'asc')
     ordens.sort((a, b) => {
+      const dtA = normalizarDataIso(a.dtEmissao || a.dtInicio || '') || '';
+      const dtB = normalizarDataIso(b.dtEmissao || b.dtInicio || '') || '';
+      const cmp = dtA.localeCompare(dtB);
+      if (cmp !== 0) {
+        return rep.ordemData === 'asc' ? cmp : -cmp;
+      }
+      // Desempate na mesma data: prioriza ordens com erro e número da OP
       const erroA = Boolean(obterErroOrdem(a.nrOrdProdu) || a.ultimoErro);
       const erroB = Boolean(obterErroOrdem(b.nrOrdProdu) || b.ultimoErro);
       if (erroA && !erroB) return -1;
       if (!erroA && erroB) return 1;
-      return 0;
+
+      return rep.ordemData === 'asc'
+        ? (Number(a.nrOrdProdu) - Number(b.nrOrdProdu))
+        : (Number(b.nrOrdProdu) - Number(a.nrOrdProdu));
     });
 
     const resumoCont = document.getElementById('rep-ord-resumo-contador');
@@ -6835,13 +6851,16 @@ const App = (() => {
                 </div>
               ` : ''}
 
-              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748b;">
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748b; margin-top: 4px;">
+                <div>
+                  📅 Emissão: <strong style="color: #1e293b;">${formatarDataBr(op.dtEmissao || op.dtInicio) || '-'}</strong>
+                </div>
                 <div>
                   Est: <strong>${escapeHtml(op.codEstabel || '101')}</strong> • Dep: <strong>${escapeHtml(op.codDepos || 'ACA')}</strong> • Un: <strong>${escapeHtml(op.un || 'UN')}</strong>
                 </div>
-                <div style="color: #d97706; font-weight: 800; font-size: 12px;">
-                  Reportar ➔
-                </div>
+              </div>
+              <div style="display: flex; justify-content: flex-end; align-items: center; font-size: 12px; color: #d97706; font-weight: 800; margin-top: 4px;">
+                Reportar ➔
               </div>
             </div>
           `;
@@ -6863,6 +6882,13 @@ const App = (() => {
         </button>
       </div>
     `;
+  }
+
+  function onAlterarOrdemDataReporte(valor) {
+    const rep = stateProducao.reporte;
+    rep.ordemData = valor || 'desc';
+    rep.paginaAtual = 1;
+    renderizarGridListaOrdens();
   }
 
   function onAlterarItensPorPaginaReporte(qtd) {
@@ -8277,6 +8303,7 @@ const App = (() => {
     renderTelaProducaoMenu,
     renderTelaReporteOrdem,
     buscarOrdensProducao,
+    onAlterarOrdemDataReporte,
     onAlterarItensPorPaginaReporte,
     mudarPaginaReporte,
     abrirDetalheReporteOrdem,
