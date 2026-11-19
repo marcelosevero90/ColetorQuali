@@ -1064,6 +1064,76 @@ const DB = (() => {
       }
     }
 
+    // FASE 5: Processa Reportes de Ordem de Produção (CP0311)
+    const pendentesProd = pendentes.filter(p => p.tipo === 'REPORTE_ORDEM_PRODUCAO');
+    for (const p of pendentesProd) {
+      try {
+        let itensReporte = [];
+        if (p.payload && Array.isArray(p.payload.payload)) {
+          const primeiro = p.payload.payload[0];
+          if (primeiro && Array.isArray(primeiro.payload)) {
+            itensReporte = primeiro.payload;
+          } else {
+            itensReporte = p.payload.payload;
+          }
+        } else if (p.payload && Array.isArray(p.payload)) {
+          itensReporte = p.payload;
+        } else if (p.payload && (p.payload.nrOrdProdu || p.payload.itCodigo)) {
+          itensReporte = [p.payload];
+        }
+
+        const payloadEnvio = {
+          payload: itensReporte,
+          codEmpresa: emp
+        };
+
+        if (itensReporte.length > 0 && typeof itensReporte[0] === 'object') {
+          Object.keys(itensReporte[0]).forEach(k => {
+            if (payloadEnvio[k] === undefined) {
+              payloadEnvio[k] = itensReporte[0][k];
+            }
+          });
+        }
+
+        const data = await dispararApi('/fcSetReporteOrdProd', payloadEnvio);
+        const nrOpLog = payloadEnvio.nrOrdProdu || payloadEnvio.payload?.[0]?.nrOrdProdu || '';
+        const isOk = (data.type === 'OK' || data.code === '0' || String(data.code) === '0') &&
+                     (!data.type || data.type.toUpperCase() !== 'ERROR');
+
+        if (isOk) {
+          await remove('fila_sync', p.id_uuid);
+          processados++;
+          relatorio.push({
+            id_uuid: p.id_uuid,
+            tipo: p.tipo,
+            status: 'OK',
+            mensagem: `Reporte OP #${nrOpLog} sincronizado com sucesso no ERP!`
+          });
+        } else {
+          erros++;
+          const msgErro = data.detailedMessage || data.message || 'Erro ao efetivar reporte no Datasul';
+          p.ultimoErro = msgErro;
+          await put('fila_sync', p, emp);
+          relatorio.push({
+            id_uuid: p.id_uuid,
+            tipo: p.tipo,
+            status: 'ERROR',
+            mensagem: msgErro
+          });
+        }
+      } catch (err) {
+        erros++;
+        p.ultimoErro = err.message;
+        await put('fila_sync', p, emp);
+        relatorio.push({
+          id_uuid: p.id_uuid,
+          tipo: p.tipo,
+          status: 'ERROR',
+          mensagem: err.message
+        });
+      }
+    }
+
     return {
       success: erros === 0,
       processados,

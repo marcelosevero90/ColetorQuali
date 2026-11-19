@@ -45,6 +45,8 @@ PROCEDURE pi-find:
     DEFINE VAR c-scRefugo           AS CHAR         NO-UNDO.
     DEFINE VAR c-nroDocto           AS CHAR         NO-UNDO.
     DEFINE VAR c-serie              AS CHAR         NO-UNDO.
+    DEFINE VAR c-codDeposSai        AS CHAR         NO-UNDO.
+    DEFINE VAR c-codLocalSai        AS CHAR         NO-UNDO.
     
     DEFINE VAR h-boin157q01         AS HANDLE       NO-UNDO.    
         
@@ -95,7 +97,9 @@ PROCEDURE pi-find:
                    c-ctRefugo      = oJsonPayloadObject:GetCharacter("ctRefugo")
                    c-scRefugo      = oJsonPayloadObject:GetCharacter("scRefugo")
                    c-nroDocto      = oJsonPayloadObject:GetCharacter("nroDocto")
-                   c-serie         = oJsonPayloadObject:GetCharacter("serie").
+                   c-serie         = oJsonPayloadObject:GetCharacter("serie")
+                   c-codDeposSai   = oJsonPayloadObject:GetCharacter("codDeposSai") NO-ERROR
+                   c-codLocalSai   = oJsonPayloadObject:GetCharacter("codLocalSai") NO-ERROR.
         END.                                            
         
         
@@ -133,8 +137,8 @@ PROCEDURE pi-find:
                tt-rep-prod.carrega-reservas      = no
                tt-rep-prod.baixa-reservas        = 1                                                                                                   
                tt-rep-prod.requis-automatica     = NO                                                                                          
-               tt-rep-prod.cod-depos-sai         = param-cp.dep-fabrica
-               tt-rep-prod.cod-local-sai         = ''
+               tt-rep-prod.cod-depos-sai         = (IF c-codDeposSai <> "" AND c-codDeposSai <> ? THEN c-codDeposSai ELSE param-cp.dep-fabrica)
+               tt-rep-prod.cod-local-sai         = (IF c-codLocalSai <> ? THEN c-codLocalSai ELSE '')
                tt-rep-prod.data                  = d-dtReporte                                                                                               
                tt-rep-prod.un                    = ord-prod.un                                                                                         
                tt-rep-prod.qt-reporte            = d-qtReporte
@@ -148,7 +152,6 @@ PROCEDURE pi-find:
                tt-rep-prod.lote-serie            = c-lote
                tt-rep-prod.cod-refer             = c-codRefer                                                                                                           
                tt-rep-prod.dt-vali-lote          = ?
-               tt-rep-prod.cod-localiz           = ""
                tt-rep-prod.ct-codigo             = ord-prod.ct-codigo
                tt-rep-prod.sc-codigo             = ord-prod.sc-codigo
                tt-rep-prod.finaliza-ordem        = NO               

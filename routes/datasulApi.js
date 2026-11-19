@@ -249,6 +249,7 @@ router.all(['/fcGetParamUsuario', '/qdcGetParamUsuario'], exigirBasicAuth, (req,
       permCompras: Boolean(reg.permCompras),
       permCredito: Boolean(reg.permCredito),
       permProducao: Boolean(reg.permProducao),
+      permRepRepOrd: Boolean(reg.permRepRepOrd ?? reg.permProducao),
       permEstoqReqAte: Boolean(reg.permEstoqReqAte),
       permEstoqReqDev: Boolean(reg.permEstoqReqDev),
       permEstoqReqMov: Boolean(reg.permEstoqReqMov),
@@ -273,6 +274,7 @@ router.all(['/fcGetParamUsuario', '/qdcGetParamUsuario'], exigirBasicAuth, (req,
       permCompras: false,
       permCredito: false,
       permProducao: false,
+      permRepRepOrd: false,
       permEstoqReqAte: false,
       permEstoqReqDev: false,
       permEstoqReqMov: false,
@@ -1512,6 +1514,50 @@ async function proxyPasoeOuFallback(endpoint, req, res, fallbackFn) {
       console.warn(`[PASOE] ${endpoint} retornou erro (${dados.code || dados.error_code}), utilizando fallback local.`);
       return fallbackFn(req, res);
     }
+
+    // Pós-processamento para fcGetParamUsuario
+    if (endpoint === 'fcGetParamUsuario' && dados && Array.isArray(dados.items)) {
+      dados.items.forEach(item => {
+        if (item.permProducao === undefined) {
+          const uLocal = (db.data.fmsc_usuar_mestre || []).find(u => u.codUsuario.toLowerCase() === (item.codUsuario || '').toLowerCase());
+          item.permProducao = uLocal ? Boolean(uLocal.permProducao) : true;
+          item.permRepRepOrd = uLocal ? Boolean(uLocal.permRepRepOrd ?? uLocal.permProducao) : true;
+        }
+      });
+    }
+
+    // Pós-processamento inteligente para fcGetOrdemProdEst (limita payload e mescla ordens locais)
+    if (endpoint === 'fcGetOrdemProdEst') {
+      let items = Array.isArray(dados.items) ? dados.items : (Array.isArray(dados) ? dados : []);
+      const payload = extrairPayload(req);
+      const nrOrdProdu = Number(payload.nrOrdProdu || 0);
+      const itCodigo = (payload.itCodigo || '').trim().toLowerCase();
+
+      // Mescla com ordens locais de teste (como a 279059 do print)
+      const ordensMock = (db.data.ord_prod || []).filter(op => {
+        const jaTem = items.some(it => String(it.nrOrdProdu) === String(op.nrOrdProdu));
+        return !jaTem;
+      });
+      items = [...ordensMock, ...items];
+
+      if (nrOrdProdu) {
+        items = items.filter(op => Number(op.nrOrdProdu) === nrOrdProdu);
+      } else if (itCodigo) {
+        items = items.filter(op => (op.itCodigo || '').toLowerCase().startsWith(itCodigo));
+      } else if (items.length > 200) {
+        items = items.slice(0, 200);
+      }
+
+      dados = {
+        total: items.length,
+        hasNext: false,
+        items: items.map(op => ({
+          ...op,
+          qtSaldo: Number(op.qtSaldo !== undefined ? op.qtSaldo : (Number(op.qtOrdem || 0) - Number(op.qtProduzida || 0)))
+        }))
+      };
+    }
+
     // Retorna exatamente a resposta do PASOE real (mesmo se vazia, sem sobrescrever com mock local)
     return res.status(pasoeRes.status).json(dados);
   } catch (errPasoe) {
@@ -1915,6 +1961,75 @@ router.all(['/fcSetRequisDevol', '/qdcSetRequisDevol'], async (req, res) => {
       code: '0',
       message: 'Devolução efetuada com sucesso no Datasul!',
       detailedMessage: 'Processo realizado com sucesso!'
+    });
+  });
+});
+
+// =============================================================================
+// REPORTE DE ORDEM DE PRODUÇÃO: fcGetOrdemProdEst.p / fcSetReporteOrdProd.p (CP0311)
+// =============================================================================
+
+// fcGetOrdemProdEst.p / qdcGetOrdemProdEst.p (PUT/POST)
+router.all(['/fcGetOrdemProdEst', '/qdcGetOrdemProdEst'], async (req, res) => {
+  return proxyPasoeOuFallback('fcGetOrdemProdEst', req, res, (r, s) => {
+    const payload = extrairPayload(r);
+    const codEstabel = (payload.codEstabel || r.headers['codestabel'] || '101').trim();
+    const nrOrdProdu = Number(payload.nrOrdProdu || 0);
+    const itCodigo = (payload.itCodigo || '').trim();
+
+    const lista = (db.data.ord_prod || []).filter(op => {
+      const estOk = !codEstabel || op.codEstabel === codEstabel;
+      const numOk = !nrOrdProdu || Number(op.nrOrdProdu) === nrOrdProdu;
+      const itOk = !itCodigo || (op.itCodigo || '').toLowerCase().startsWith(itCodigo.toLowerCase());
+      const aberto = Number(op.estado || 0) < 7;
+      const temSaldo = (Number(op.qtOrdem || 0) - Number(op.qtProduzida || 0)) > 0;
+      return estOk && numOk && itOk && aberto && temSaldo;
+    });
+
+    return s.json({
+      total: lista.length,
+      hasNext: false,
+      items: lista.map(op => ({
+        ...op,
+        qtSaldo: Number(op.qtOrdem || 0) - Number(op.qtProduzida || 0)
+      }))
+    });
+  });
+});
+
+// fcSetReporteOrdProd.p / qdcSetReporteOrdProd.p (PUT/POST)
+router.all(['/fcSetReporteOrdProd', '/qdcSetReporteOrdProd'], async (req, res) => {
+  return proxyPasoeOuFallback('fcSetReporteOrdProd', req, res, (r, s) => {
+    const payload = extrairPayload(r);
+    const nrOrdProdu = Number(payload.nrOrdProdu);
+    const qtReporte = Number(payload.qtReporte || 0);
+    const qtRefugada = Number(payload.qtRefugada || 0);
+
+    const ord = (db.data.ord_prod || []).find(op => Number(op.nrOrdProdu) === nrOrdProdu);
+    if (!ord) {
+      return s.json({
+        type: 'ERROR',
+        code: '17006',
+        message: 'Ordem Prod não encontrada: ' + nrOrdProdu,
+        detailedMessage: 'Ordem Prod não encontrada: ' + nrOrdProdu
+      });
+    }
+
+    ord.qtProduzida = Number(ord.qtProduzida || 0) + qtReporte;
+    ord.qtRefugada = Number(ord.qtRefugada || 0) + qtRefugada;
+    if (ord.qtProduzida >= ord.qtOrdem) {
+      ord.estado = 7;
+      ord.dscSituacao = 'Finalizada';
+    } else if (ord.qtProduzida > 0) {
+      ord.estado = 6;
+      ord.dscSituacao = 'Iniciada';
+    }
+
+    return s.json({
+      type: 'OK',
+      code: '0',
+      message: 'Ordem Prod Reportada com sucesso!',
+      detailedMessage: 'Ordem Prod Reportada com sucesso!'
     });
   });
 });

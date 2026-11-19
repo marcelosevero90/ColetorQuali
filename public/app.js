@@ -316,6 +316,21 @@ const App = (() => {
     return temPermissaoEstoque() && (temPermissaoReqAtendimento() || temPermissaoReqDevolucao());
   }
 
+  function temPermissaoProducao() {
+    const p = state.session?.paramUsuario;
+    if (!p) return true;
+    if (p.permProducao === undefined) return Boolean(p.permEstoque ?? true);
+    return Boolean(p.permProducao === true || p.permProducao === 'true' || p.permProducao === 1);
+  }
+
+  function temPermissaoReporteOrdem() {
+    const p = state.session?.paramUsuario;
+    if (!p) return true;
+    if (!temPermissaoProducao()) return false;
+    if (p.permRepRepOrd === undefined) return true;
+    return Boolean(p.permRepRepOrd === true || p.permRepRepOrd === 'true' || p.permRepRepOrd === 1);
+  }
+
   function bloquearAcesso(modulo, campo) {
     alert(`🔒 Acesso Bloqueado\n\nO usuário '${state.session.codUsuario || 'operador'}' não possui permissão para acessar ${modulo}.\n\nPara liberar o acesso, contate o administrador do sistema TOTVS (FMSC0101).`);
   }
@@ -353,6 +368,18 @@ const App = (() => {
 
     if (tela.startsWith('requisic') && !temPermissaoRequisicoes()) {
       bloquearAcesso('Requisições de Material', 'permEstoqReqAte / permEstoqReqDev');
+      if (state.telaAtual !== 'menu') navegar('menu');
+      return;
+    }
+
+    if (tela.startsWith('producao') && !temPermissaoProducao()) {
+      bloquearAcesso('Módulo de Produção', 'permProducao');
+      if (state.telaAtual !== 'menu') navegar('menu');
+      return;
+    }
+
+    if (tela.startsWith('producao_reporte') && !temPermissaoReporteOrdem()) {
+      bloquearAcesso('Reporte de Ordem de Produção (CP0311)', 'permRepRepOrd');
       if (state.telaAtual !== 'menu') navegar('menu');
       return;
     }
@@ -403,6 +430,8 @@ const App = (() => {
       case 'requisicoes_menu': renderTelaRequisicoesMenu(); break;
       case 'requisicao_atendimento': renderTelaRequisicaoAtendimento(params); break;
       case 'requisicao_devolucao': renderTelaRequisicaoDevolucao(params); break;
+      case 'producao_menu': renderTelaProducaoMenu(); break;
+      case 'producao_reporte': renderTelaReporteOrdem(params); break;
       case 'historico_contagens': renderTelaHistoricoContagens(); break;
       case 'sincronizacao': renderTelaSincronizacao(); break;
       default: renderTelaMenu();
@@ -960,6 +989,7 @@ const App = (() => {
 
     const qtdSync = await DB.getQtdPendenciasSync(codEmpresa);
     const podeEstoque = temPermissaoEstoque();
+    const podeProducao = temPermissaoProducao();
 
     container.innerHTML = `
       <!-- Banner Superior -->
@@ -999,11 +1029,19 @@ const App = (() => {
           </button>
         `}
 
-        <button type="button" class="home-service-card" style="opacity: 0.6; cursor: not-allowed; border-color: #e2e8f0; background: #f8fafc;" onclick="alert('ℹ️ Módulo de Produção / Chão de Fábrica previsto para próximas versões.')">
-          <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#64748b; font-size:24px;">🏭</div>
-          <div class="home-card-title" style="color: #64748b; font-size: 14px;">Produção</div>
-          <div class="home-card-desc" style="color: #94a3b8; font-weight: 600;">Em breve</div>
-        </button>
+        ${podeProducao ? `
+          <button type="button" class="home-service-card is-active" style="border: 2px solid #d97706; background: #ffffff;" onclick="App.navegar('producao_menu')">
+            <div class="home-card-icon-wrap" style="background:#fef3c7; color:#d97706; font-size:24px;">🏭</div>
+            <div class="home-card-title" style="color: #b45309; font-size: 15px; font-weight: 800;">Produção</div>
+            <div class="home-card-desc">Chão de fábrica e reportes</div>
+          </button>
+        ` : `
+          <button type="button" class="home-service-card" style="opacity: 0.55; cursor: not-allowed; border-color: #cbd5e1; background: #f8fafc;" onclick="App.bloquearAcesso('Módulo de Produção', 'permProducao')">
+            <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#94a3b8; font-size:24px;">🔒</div>
+            <div class="home-card-title" style="color: #64748b; font-size: 15px; font-weight: 800;">Produção</div>
+            <div class="home-card-desc" style="color: #ef4444; font-weight: 700;">Bloqueado</div>
+          </button>
+        `}
       </div>
 
       <div class="home-section-title" style="margin-top: 18px;">Ferramentas do Coletor</div>
@@ -6364,6 +6402,820 @@ const App = (() => {
     }
   }
 
+// Bloco do Módulo de Produção para public/app.js
+
+  // =========================================================================
+  // MÓDULO: PRODUÇÃO & CHÃO DE FÁBRICA (CP0311 - REPORTE DE ORDEM DE PRODUÇÃO)
+  // =========================================================================
+
+  const stateProducao = {
+    reporte: {
+      telaSub: 'lista', // 'lista' | 'detalhe'
+      termoBusca: '',
+      carregando: false,
+      listaOrdens: [], // ordens de fcGetOrdemProdEst
+      ordSelecionada: null,
+      abaAtiva: 'reporte', // 'reporte' | 'entrada'
+
+      // Campos da Aba 1 (Reporte & Saída Matéria-Prima)
+      qtReporte: 0,
+      qtRefugada: 0,
+      dtReporte: new Date().toISOString().split('T')[0],
+      nroDocto: '',
+      serie: '',
+      codDeposSai: 'PRO',
+      codLocalSai: '',
+      serieProd: '',
+      qtAprCond: 0,
+
+      // Campos da Aba 2 (Entrada Acabado)
+      codDeposEnt: 'ACA',
+      codLocalizEnt: '',
+      codReferEnt: '',
+      loteEnt: '',
+      dtValiLoteEnt: '',
+      loteExiste: false,
+
+      isOffline: false,
+      paginaAtual: 1,
+      itensPorPagina: 10,
+      ordemData: 'desc'
+    }
+  };
+  window.stateProducao = stateProducao;
+
+  // 1. TELA MENU DE PRODUÇÃO
+  function renderTelaProducaoMenu() {
+    const podeRep = temPermissaoReporteOrdem();
+    const codEstabel = state.session.codEstabel || '101';
+    const codEmpresa = state.session.codEmpresa || '001';
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <button class="btn-topbar-action" onclick="App.navegar('menu')">‹ Início</button>
+        <div style="text-align: center;">
+          <h3 style="font-size: 15px; font-weight: 800; margin: 0; color: #b45309;">Módulo de Produção</h3>
+          <span style="font-size: 11px; color: #64748b; font-weight: 600;">Emp ${escapeHtml(codEmpresa)} • Filial ${escapeHtml(codEstabel)}</span>
+        </div>
+        <div style="width: 45px;"></div>
+      </div>
+
+      <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 12px; margin-bottom: 16px;">
+        <div style="font-size: 12.5px; color: #b45309; font-weight: 700; margin-bottom: 4px;">Chão de Fábrica & Apontamentos</div>
+        <div style="font-size: 11.5px; color: #92400e;">
+          Realize o reporte de produção de ordens (CP0311), entrada de produtos acabados, controle de lotes e baixa automática de matérias-primas com suporte offline.
+        </div>
+      </div>
+
+      <div class="home-service-grid" style="grid-template-columns: 1fr; gap: 12px;">
+        ${podeRep ? `
+          <button type="button" class="home-service-card is-active" onclick="App.navegar('producao_reporte')" style="padding: 16px; border-left: 4px solid #d97706;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div class="home-card-icon-wrap" style="font-size: 24px; width: 44px; height: 44px; display:flex; align-items:center; justify-content:center; background:#fef3c7; color:#d97706;">🏭</div>
+              <div style="text-align: left; flex: 1;">
+                <div class="home-card-title" style="font-size: 14px; color: #b45309; font-weight: 800;">1. Reportar Produção (CP0311)</div>
+                <div class="home-card-desc" style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
+                  Consultar ordens de produção abertas, reportar acabados, registrar refugo e dar baixa de componentes
+                </div>
+              </div>
+              <div style="color: #d97706; font-weight: 800; font-size: 18px;">➔</div>
+            </div>
+          </button>
+        ` : `
+          <button type="button" class="home-service-card" style="padding: 16px; opacity: 0.55; cursor: not-allowed; border-color: #cbd5e1; background: #f8fafc;" onclick="App.bloquearAcesso('Reporte de Ordem de Produção (CP0311)', 'permRepRepOrd')">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#94a3b8; font-size: 24px; width: 44px; height: 44px; display:flex; align-items:center; justify-content:center;">🔒</div>
+              <div style="text-align: left; flex: 1;">
+                <div class="home-card-title" style="font-size: 14px; color: #64748b; font-weight: 800;">1. Reportar Produção (CP0311)</div>
+                <div class="home-card-desc" style="color: #ef4444; font-weight: 700; font-size: 11.5px; margin-top: 2px;">Bloqueado</div>
+              </div>
+            </div>
+          </button>
+        `}
+      </div>
+    `;
+  }
+
+  // 2. TELA PRINCIPAL: REPORTE DE ORDEM DE PRODUÇÃO (CP0311)
+  async function renderTelaReporteOrdem(params = null) {
+    const rep = stateProducao.reporte;
+    const codEstabel = state.session.codEstabel || '101';
+
+    // Se estiver no modo detalhe com ordem selecionada, renderiza Tela 2
+    if (rep.telaSub === 'detalhe' && rep.ordSelecionada) {
+      renderizarTela2DetalheReporte();
+      return;
+    }
+
+    // Tela 1: Lista / Grid de Ordens de Produção
+    rep.telaSub = 'lista';
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <button class="btn-topbar-action" onclick="App.navegar('producao_menu')">‹ Início</button>
+        <div style="text-align: center;">
+          <h3 style="font-size: 14.5px; font-weight: 800; margin: 0; color: #b45309;">Reportar Produção</h3>
+          <span style="font-size: 11px; color: #64748b;">CP0311 • Filial ${escapeHtml(codEstabel)}</span>
+        </div>
+        <button class="btn-topbar-action" onclick="App.buscarOrdensProducao(document.getElementById('rep-ord-input-busca')?.value || '', true)" title="Recarregar">🔄</button>
+      </div>
+
+      <!-- Barra de Busca -->
+      <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+        <input type="text" id="rep-ord-input-busca" class="form-input" style="font-size: 12.5px; flex: 1;"
+               placeholder="Buscar por OP, item ou descrição..."
+               value="${escapeHtml(rep.termoBusca || '')}"
+               onkeydown="if(event.key==='Enter') App.buscarOrdensProducao(this.value)">
+        <button type="button" class="btn btn-primary" style="width: auto; padding: 0 12px; font-size: 12px; background: #d97706; border-color: #b45309;"
+                onclick="App.buscarOrdensProducao(document.getElementById('rep-ord-input-busca').value)">
+          Buscar 🔍
+        </button>
+      </div>
+
+      <!-- Barra de Controles: Paginação e Itens por Página -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 6px 10px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 11px; color: #b45309; font-weight: 700; white-space: nowrap;">Exibir:</span>
+          <select class="form-input" style="font-size: 11.5px; padding: 3px 6px; height: 30px; width: 85px; font-weight: 600;"
+                  onchange="App.onAlterarItensPorPaginaReporte(this.value)">
+            <option value="10" ${Number(rep.itensPorPagina) === 10 ? 'selected' : ''}>10 por pág</option>
+            <option value="25" ${Number(rep.itensPorPagina) === 25 ? 'selected' : ''}>25 por pág</option>
+            <option value="50" ${Number(rep.itensPorPagina) === 50 ? 'selected' : ''}>50 por pág</option>
+          </select>
+        </div>
+        <div id="rep-ord-resumo-contador" style="font-size: 11px; color: #92400e; font-weight: 700;"></div>
+      </div>
+
+      <!-- Status Offline se aplicável -->
+      ${rep.isOffline ? `
+        <div style="background: #fefce8; border: 1px solid #fde047; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; font-size: 11.5px; color: #854d0e; display: flex; align-items: center; gap: 6px;">
+          <span>📴</span>
+          <span><strong>Modo Offline:</strong> Exibindo ordens de produção em cache local.</span>
+        </div>
+      ` : ''}
+
+      <!-- Grid de Cards de Ordens de Produção -->
+      <div id="rep-ord-conteudo">
+        <div class="card" style="text-align: center; color: #94a3b8; font-size: 12.5px; padding: 24px;">
+          <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
+          Consultando ordens de produção no TOTVS...
+        </div>
+      </div>
+    `;
+
+    if (!rep.listaOrdens || rep.listaOrdens.length === 0) {
+      await buscarOrdensProducao(rep.termoBusca);
+    } else {
+      renderizarGridListaOrdens();
+    }
+  }
+
+  async function buscarOrdensProducao(termo = '', forcarOnline = false) {
+    const rep = stateProducao.reporte;
+    rep.termoBusca = termo || '';
+    const codEstabel = (state.session.codEstabel || '101').trim();
+    const codEmpresa = state.session.codEmpresa || '001';
+
+    const cont = document.getElementById('rep-ord-conteudo');
+    if (cont) {
+      cont.innerHTML = `
+        <div style="text-align:center; padding: 30px; color: #64748b;">
+          <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
+          <div style="font-size: 13px; font-weight: 600;">Consultando ordens de produção no ERP TOTVS (fcGetOrdemProdEst)...</div>
+        </div>
+      `;
+    }
+
+    let dadosCarregados = null;
+    let offline = false;
+
+    if (isOnline()) {
+      const payload = {
+        codEstabel,
+        payload: [{ codEstabel }]
+      };
+      try {
+        const res = await pasoeFetch('/fcGetOrdemProdEst', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        dadosCarregados = extrairLista(data);
+        if (dadosCarregados && dadosCarregados.length > 0) {
+          await DB.putConfig('cache_ordens_prod_' + codEmpresa, dadosCarregados);
+        }
+      } catch (err) {
+        console.warn('Falha na consulta online de fcGetOrdemProdEst. Tentando cache offline:', err.message);
+      }
+    }
+
+    if (!dadosCarregados) {
+      const emCache = await DB.getConfig('cache_ordens_prod_' + codEmpresa);
+      if (emCache && emCache.length > 0) {
+        dadosCarregados = emCache;
+        offline = true;
+      } else {
+        dadosCarregados = [];
+      }
+    }
+
+    rep.listaOrdens = dadosCarregados;
+    rep.isOffline = offline;
+
+    renderizarGridListaOrdens();
+  }
+
+  function renderizarGridListaOrdens() {
+    const rep = stateProducao.reporte;
+    const cont = document.getElementById('rep-ord-conteudo');
+    if (!cont) return;
+
+    let ordens = rep.listaOrdens || [];
+
+    // Filtro por termo de busca (número da OP, código do item ou descrição)
+    if (rep.termoBusca && rep.termoBusca.trim() !== '') {
+      const t = rep.termoBusca.trim().toLowerCase();
+      ordens = ordens.filter(op =>
+        String(op.nrOrdProdu || '').toLowerCase().includes(t) ||
+        String(op.itCodigo || '').toLowerCase().includes(t) ||
+        String(op.descItem || '').toLowerCase().includes(t)
+      );
+    }
+
+    const resumoCont = document.getElementById('rep-ord-resumo-contador');
+    if (resumoCont) {
+      resumoCont.textContent = `${ordens.length} ordem(ns) aberta(s)`;
+    }
+
+    if (ordens.length === 0) {
+      cont.innerHTML = `
+        <div class="card" style="text-align: center; color: #64748b; padding: 32px 16px;">
+          <div style="font-size: 32px; margin-bottom: 8px;">🏭</div>
+          <div style="font-weight: 700; font-size: 13.5px; color: #1e293b; margin-bottom: 4px;">Nenhuma Ordem de Produção Encontrada</div>
+          <div style="font-size: 11.5px; color: #94a3b8;">
+            ${rep.termoBusca ? 'Nenhum resultado para o filtro informado.' : 'Não existem ordens de produção abertas pendentes de reporte nesta filial.'}
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // Paginação
+    const itensPorPag = Number(rep.itensPorPagina) || 10;
+    const totalPaginas = Math.ceil(ordens.length / itensPorPag) || 1;
+    if (rep.paginaAtual > totalPaginas) rep.paginaAtual = totalPaginas;
+    if (rep.paginaAtual < 1) rep.paginaAtual = 1;
+
+    const inicio = (rep.paginaAtual - 1) * itensPorPag;
+    const ordensPaginadas = ordens.slice(inicio, inicio + itensPorPag);
+
+    cont.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${ordensPaginadas.map(op => {
+          const saldo = Math.max(0, Number(op.qtOrdem || 0) - Number(op.qtProduzida || 0));
+          const badgeCor = Number(op.estado) === 2 ? '#16a34a' : (Number(op.estado) === 6 ? '#0284c7' : '#d97706');
+          const badgeBg = Number(op.estado) === 2 ? '#dcfce7' : (Number(op.estado) === 6 ? '#e0f2fe' : '#fef3c7');
+
+          return `
+            <div class="card" style="padding: 12px; border-left: 4px solid #d97706; margin: 0; cursor: pointer; transition: all 0.15s;"
+                 onclick="App.abrirDetalheReporteOrdem('${escapeHtml(String(op.nrOrdProdu))}')">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <div style="font-size: 13.5px; font-weight: 800; color: #b45309;">
+                  OP #${escapeHtml(String(op.nrOrdProdu))}
+                </div>
+                <span class="badge" style="background: ${badgeBg}; color: ${badgeCor}; font-weight: 800; font-size: 11px;">
+                  ${escapeHtml(op.dscSituacao || 'Aberta')}
+                </span>
+              </div>
+
+              <div style="font-size: 12.5px; font-weight: 700; color: #1e293b; margin-bottom: 2px;">
+                ${escapeHtml(op.itCodigo)}
+              </div>
+              <div style="font-size: 11.5px; color: #64748b; margin-bottom: 8px; line-height: 1.3;">
+                ${escapeHtml(op.descItem || '')}
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; font-size: 11px; background: #f8fafc; padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: 6px;">
+                <div>Ordem: <strong>${Number(op.qtOrdem || 0).toFixed(4)}</strong></div>
+                <div>Produzida: <strong style="color: #0284c7;">${Number(op.qtProduzida || 0).toFixed(4)}</strong></div>
+                <div>Saldo: <strong style="color: #b45309; font-size: 12px;">${saldo.toFixed(4)}</strong></div>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748b;">
+                <div>
+                  Est: <strong>${escapeHtml(op.codEstabel || '101')}</strong> • Dep: <strong>${escapeHtml(op.codDepos || 'ACA')}</strong> • Un: <strong>${escapeHtml(op.un || 'UN')}</strong>
+                </div>
+                <div style="color: #d97706; font-weight: 800; font-size: 12px;">
+                  Reportar ➔
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- Barra de Paginação -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 12px; font-size: 11.5px;"
+                ${rep.paginaAtual <= 1 ? 'disabled style="opacity:0.5;"' : `onclick="App.mudarPaginaReporte(${rep.paginaAtual - 1})"`}>
+          ‹ Anterior
+        </button>
+        <span style="font-size: 11.5px; color: #475569; font-weight: 700;">
+          Página ${rep.paginaAtual} de ${totalPaginas}
+        </span>
+        <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 12px; font-size: 11.5px;"
+                ${rep.paginaAtual >= totalPaginas ? 'disabled style="opacity:0.5;"' : `onclick="App.mudarPaginaReporte(${rep.paginaAtual + 1})"`}>
+          Próxima ›
+        </button>
+      </div>
+    `;
+  }
+
+  function onAlterarItensPorPaginaReporte(qtd) {
+    stateProducao.reporte.itensPorPagina = Number(qtd) || 10;
+    stateProducao.reporte.paginaAtual = 1;
+    renderizarGridListaOrdens();
+  }
+
+  function mudarPaginaReporte(pag) {
+    stateProducao.reporte.paginaAtual = pag;
+    renderizarGridListaOrdens();
+  }
+
+  // 3. TELA 2: DETALHES & ABAS DE REPORTE DA OP (CP0311)
+  async function abrirDetalheReporteOrdem(nrOrdProdu) {
+    const rep = stateProducao.reporte;
+    const ord = (rep.listaOrdens || []).find(o => String(o.nrOrdProdu) === String(nrOrdProdu));
+    if (!ord) return;
+
+    rep.ordSelecionada = ord;
+    rep.telaSub = 'detalhe';
+    rep.abaAtiva = 'reporte';
+
+    const saldo = Math.max(0, Number(ord.qtOrdem || 0) - Number(ord.qtProduzida || 0));
+
+    // Inicializa valores da Aba 1 (Reporte)
+    rep.qtReporte = saldo;
+    rep.qtRefugada = 0;
+    rep.dtReporte = new Date().toISOString().split('T')[0];
+    rep.nroDocto = String(ord.nrOrdProdu);
+    rep.serie = '';
+    rep.codDeposSai = 'PRO';
+    rep.codLocalSai = '';
+    rep.serieProd = '';
+    rep.qtAprCond = 0;
+
+    // Inicializa valores da Aba 2 (Entrada Acabado)
+    rep.codDeposEnt = ord.codDepos || 'ACA';
+    rep.codLocalizEnt = ord.locUnica ? (ord.codLocaliz || 'BRANCO') : '';
+    rep.codReferEnt = ord.codRefer || '';
+    rep.loteEnt = ord.loteSerie || '';
+    rep.dtValiLoteEnt = ord.dtValiLote ? ord.dtValiLote.slice(0, 10) : '';
+
+    renderizarTela2DetalheReporte();
+
+    // Se a ordem já tiver um lote, verifica validade
+    if (rep.loteEnt) {
+      await onLoteReporteAlterado(rep.loteEnt);
+    }
+  }
+
+  function voltarListaOrdensReporte() {
+    const rep = stateProducao.reporte;
+    rep.telaSub = 'lista';
+    rep.ordSelecionada = null;
+    renderTelaReporteOrdem();
+  }
+
+  function alternarAbaReporte(aba) {
+    stateProducao.reporte.abaAtiva = aba;
+    renderizarTela2DetalheReporte();
+  }
+
+  function renderizarTela2DetalheReporte() {
+    const rep = stateProducao.reporte;
+    const ord = rep.ordSelecionada;
+    if (!ord) return;
+
+    const saldo = Math.max(0, Number(ord.qtOrdem || 0) - Number(ord.qtProduzida || 0));
+    const ehLote = Number(ord.tipoConEst) === 3;
+    const ehRefer = Number(ord.tipoConEst) === 4;
+    const isLocUnica = Boolean(ord.locUnica === true || ord.locUnica === 1 || ord.locUnica === 'true');
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <button class="btn-topbar-action" onclick="App.voltarListaOrdensReporte()">‹ Ordens</button>
+        <div style="text-align: center;">
+          <h3 style="font-size: 14.5px; font-weight: 800; margin: 0; color: #b45309;">Reporte de Produção</h3>
+          <span style="font-size: 11px; color: #64748b;">OP #${escapeHtml(String(ord.nrOrdProdu))} • CP0311</span>
+        </div>
+        <div style="width: 45px;"></div>
+      </div>
+
+      <!-- Resumo do Cabeçalho da Ordem de Produção -->
+      <div class="card" style="margin-bottom: 12px; border-left: 4px solid #d97706; padding: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 14px; font-weight: 800; color: #b45309;">
+            Ordem Produção: ${escapeHtml(String(ord.nrOrdProdu))}
+          </span>
+          <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 800;">
+            ${escapeHtml(ord.dscSituacao || 'Liberada')}
+          </span>
+        </div>
+
+        <div style="font-size: 13px; font-weight: 700; color: #1e293b;">
+          ${escapeHtml(ord.itCodigo)}
+        </div>
+        <div style="font-size: 11.5px; color: #64748b; margin-bottom: 8px;">
+          ${escapeHtml(ord.descItem || '')}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; font-size: 11px; background: #fffbeb; padding: 6px 8px; border-radius: 6px; border: 1px solid #fde68a;">
+          <div>Ordem: <strong>${Number(ord.qtOrdem || 0).toFixed(4)}</strong></div>
+          <div>Produzida: <strong>${Number(ord.qtProduzida || 0).toFixed(4)}</strong></div>
+          <div>Refugo: <strong>${Number(ord.qtRefugada || 0).toFixed(4)}</strong></div>
+          <div>Saldo: <strong style="color: #b45309; font-size: 12px;">${saldo.toFixed(4)}</strong></div>
+        </div>
+
+        <div style="margin-top: 6px; font-size: 11px; color: #64748b;">
+          Estab: <strong>${escapeHtml(ord.codEstabel || '101')}</strong> • Unid Negoc: <strong>${escapeHtml(ord.codUnidNegoc || 'MOV')}</strong>
+        </div>
+      </div>
+
+      <!-- Seletor de Abas: Reporte vs Entrada Ac -->
+      <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 2px;">
+        <button type="button" class="btn" style="flex: 1; padding: 8px 10px; font-size: 12px; font-weight: 800; border-radius: 8px 8px 0 0; border: none; background: ${rep.abaAtiva === 'reporte' ? '#d97706' : '#f1f5f9'}; color: ${rep.abaAtiva === 'reporte' ? '#ffffff' : '#64748b'};"
+                onclick="App.alternarAbaReporte('reporte')">
+          📋 1. Reporte (Saída MP)
+        </button>
+        <button type="button" class="btn" style="flex: 1; padding: 8px 10px; font-size: 12px; font-weight: 800; border-radius: 8px 8px 0 0; border: none; background: ${rep.abaAtiva === 'entrada' ? '#d97706' : '#f1f5f9'}; color: ${rep.abaAtiva === 'entrada' ? '#ffffff' : '#64748b'};"
+                onclick="App.alternarAbaReporte('entrada')">
+          📥 2. Entrada Acabado
+        </button>
+      </div>
+
+      <!-- CONTEÚDO DA ABA 1: REPORTE & SAÍDA DE MATÉRIA-PRIMA -->
+      <div id="aba-conteudo-reporte" style="display: ${rep.abaAtiva === 'reporte' ? 'block' : 'none'};">
+        <div class="card" style="padding: 12px; margin-bottom: 12px;">
+          <div style="font-size: 12px; font-weight: 700; color: #b45309; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">
+            Quantidades e Apontamento
+          </div>
+
+          <div style="display: flex; gap: 8px; margin-bottom: 10px; align-items: flex-end;">
+            <div style="flex: 1;">
+              <label class="form-label" style="font-size: 11.5px;">Quantidade Reportada <span style="color:#dc2626;">*</span>:</label>
+              <input type="number" step="0.0001" min="0" id="rep-input-qt-reporte" class="form-input" style="font-size: 14px; font-weight: 700;"
+                     value="${rep.qtReporte !== undefined ? rep.qtReporte : saldo}" placeholder="0.0000"
+                     oninput="stateProducao.reporte.qtReporte = parseFloat(this.value) || 0">
+            </div>
+            <button type="button" class="btn btn-secondary" style="width: auto; padding: 0 10px; height: 38px; font-size: 11.5px;"
+                    onclick="App.preencherReporteTudo()">
+              Reportar Tudo
+            </button>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div>
+              <label class="form-label" style="font-size: 11.5px;">Quantidade Refugada:</label>
+              <input type="number" step="0.0001" min="0" id="rep-input-qt-refugo" class="form-input" style="font-size: 13px;"
+                     value="${rep.qtRefugada || 0}" placeholder="0.0000"
+                     oninput="stateProducao.reporte.qtRefugada = parseFloat(this.value) || 0">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 11.5px;">Data Fabricação / Reporte:</label>
+              <input type="date" id="rep-input-dt-reporte" class="form-input" style="font-size: 12.5px;"
+                     value="${rep.dtReporte}"
+                     onchange="stateProducao.reporte.dtReporte = this.value">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div>
+              <label class="form-label" style="font-size: 11.5px;">Documento:</label>
+              <input type="text" id="rep-input-nro-docto" class="form-input" style="font-size: 12.5px;"
+                     value="${escapeHtml(rep.nroDocto || String(ord.nrOrdProdu))}"
+                     oninput="stateProducao.reporte.nroDocto = this.value">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 11.5px;">Série:</label>
+              <input type="text" id="rep-input-serie" class="form-input" style="font-size: 12.5px;"
+                     value="${escapeHtml(rep.serie || '')}" placeholder="Ex: 1"
+                     oninput="stateProducao.reporte.serie = this.value">
+            </div>
+          </div>
+
+          <div style="font-size: 12px; font-weight: 700; color: #b45309; margin: 12px 0 8px; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">
+            Depósito de Saída (Matéria-Prima)
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div>
+              <label class="form-label" style="font-size: 11.5px;">Depósito Saída:</label>
+              <input type="text" id="rep-input-dep-sai" class="form-input" style="font-size: 12.5px; font-weight: 700;"
+                     value="${escapeHtml(rep.codDeposSai || 'PRO')}" placeholder="PRO"
+                     oninput="stateProducao.reporte.codDeposSai = this.value">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 11.5px;">Localização Saída:</label>
+              <input type="text" id="rep-input-loc-sai" class="form-input" style="font-size: 12.5px;"
+                     value="${escapeHtml(rep.codLocalSai || '')}" placeholder="Local..."
+                     oninput="stateProducao.reporte.codLocalSai = this.value">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTEÚDO DA ABA 2: ENTRADA ACABADO (ENTRADA AC) -->
+      <div id="aba-conteudo-entrada" style="display: ${rep.abaAtiva === 'entrada' ? 'block' : 'none'};">
+        <div class="card" style="padding: 12px; margin-bottom: 12px;">
+          <div style="font-size: 12px; font-weight: 700; color: #b45309; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">
+            Destino do Acabado (Entrada Estoque)
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div>
+              <label class="form-label" style="font-size: 11.5px;">Depósito Entrada <span style="color:#dc2626;">*</span>:</label>
+              <input type="text" id="rep-input-dep-ent" class="form-input" style="font-size: 13px; font-weight: 700;"
+                     value="${escapeHtml(rep.codDeposEnt || ord.codDepos || 'ACA')}"
+                     oninput="stateProducao.reporte.codDeposEnt = this.value">
+            </div>
+            <div>
+              <label class="form-label" style="font-size: 11.5px;">Localização Entrada:</label>
+              <input type="text" id="rep-input-loc-ent" class="form-input" style="font-size: 12.5px; ${isLocUnica ? 'background:#f1f5f9; color:#475569;' : ''}"
+                     value="${escapeHtml(rep.codLocalizEnt || (isLocUnica ? 'BRANCO' : ''))}"
+                     ${isLocUnica ? 'readonly' : ''}
+                     oninput="stateProducao.reporte.codLocalizEnt = this.value">
+              ${isLocUnica ? '<div style="font-size: 10px; color: #64748b; margin-top: 2px;">🔒 Localização única do item</div>' : ''}
+            </div>
+          </div>
+
+          ${ehRefer ? `
+            <div style="margin-bottom: 10px;">
+              <label class="form-label" style="font-size: 11.5px;">Referência Entrada:</label>
+              <input type="text" id="rep-input-refer-ent" class="form-input" style="font-size: 12.5px;"
+                     value="${escapeHtml(rep.codReferEnt || ord.codRefer || '')}"
+                     oninput="stateProducao.reporte.codReferEnt = this.value">
+            </div>
+          ` : ''}
+
+          <!-- Bloco de Controle de Lote -->
+          <div id="rep-bloco-lote" style="background: ${ehLote ? '#fffbeb' : '#f8fafc'}; border: 1px solid ${ehLote ? '#fde68a' : '#cbd5e1'}; border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+            <div style="font-size: 12px; font-weight: 700; color: ${ehLote ? '#b45309' : '#64748b'}; margin-bottom: 6px;">
+              ${ehLote ? 'Controle de Lote (tipoConEst 3)' : 'Item sem controle de lote'}
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px;">
+              <div>
+                <label class="form-label" style="font-size: 11.5px;">Lote/Série ${ehLote ? '<span style="color:#dc2626;">*</span>' : ''}:</label>
+                <input type="text" id="rep-input-lote-ent" class="form-input" style="font-size: 12.5px; font-weight: 700;"
+                       value="${escapeHtml(rep.loteEnt || ord.loteSerie || '')}" placeholder="Lote..."
+                       ${!ehLote ? 'disabled' : ''}
+                       oninput="App.onLoteReporteAlterado(this.value)">
+              </div>
+              <div>
+                <label class="form-label" style="font-size: 11.5px;">Validade Lote <span id="rep-lote-valid-req" style="display:none; color:#dc2626;">*</span>:</label>
+                <input type="date" id="rep-input-dt-valid-ent" class="form-input" style="font-size: 12.5px;"
+                       value="${rep.dtValiLoteEnt || ''}"
+                       ${!ehLote ? 'disabled' : ''}
+                       onchange="stateProducao.reporte.dtValiLoteEnt = this.value">
+              </div>
+            </div>
+
+            <div id="rep-lote-tip" style="font-size: 10.5px; color: #64748b; line-height: 1.3;">
+              ${ehLote ? 'Informe o lote para verificação automática de validade.' : 'Este item não utiliza controle por lote.'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botão de Efetivação do Reporte -->
+      <div class="card" style="padding: 12px; background: #f8fafc; border: 1px solid #cbd5e1;">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 8px;">
+          <span style="color: #64748b;">Saldo Restante na OP:</span>
+          <strong style="color: #b45309; font-size: 13.5px;">${saldo.toFixed(4)}</strong>
+        </div>
+
+        <button type="button" class="btn btn-primary" onclick="App.executarReporteOrdemProducao()"
+                style="width: 100%; padding: 12px; font-size: 14px; font-weight: 800; background: #d97706; border-color: #b45309;">
+          Reportar Produção (Efetivar CP0311) ➔
+        </button>
+      </div>
+    `;
+  }
+
+  async function onLoteReporteAlterado(lote) {
+    const rep = stateProducao.reporte;
+    rep.loteEnt = (lote || '').trim();
+    const ord = rep.ordSelecionada;
+    if (!ord) return;
+
+    const inpDt = document.getElementById('rep-input-dt-valid-ent');
+    const tip = document.getElementById('rep-lote-tip');
+    const reqBadge = document.getElementById('rep-lote-valid-req');
+
+    if (!inpDt || !tip) return;
+
+    if (!rep.loteEnt) {
+      if (reqBadge) reqBadge.style.display = 'none';
+      tip.style.color = '#64748b';
+      tip.textContent = 'Sem lote informado.';
+      return;
+    }
+
+    const codEmpresa = state.session.codEmpresa || '001';
+    const itCodigo = ord.itCodigo;
+    const info = await DB.obterDataValidadeLote(codEmpresa, itCodigo, rep.loteEnt);
+
+    if (info && info.existe) {
+      rep.loteExiste = true;
+      if (info.dtValiLote) {
+        rep.dtValiLoteEnt = formatarParaInputDate(info.dtValiLote);
+        inpDt.value = rep.dtValiLoteEnt;
+      }
+      inpDt.required = false;
+      inpDt.disabled = false;
+      if (reqBadge) reqBadge.style.display = 'none';
+      tip.style.color = '#16a34a';
+      tip.innerHTML = `✓ Lote <strong>${escapeHtml(rep.loteEnt)}</strong> já cadastrado no Totvs/Estoque. ${info.dtValiLote ? 'Validade carregada.' : 'Validade opcional.'}`;
+    } else {
+      rep.loteExiste = false;
+      inpDt.required = true;
+      inpDt.disabled = false;
+      if (reqBadge) reqBadge.style.display = 'inline';
+      tip.style.color = '#b45309';
+      tip.innerHTML = `⚠️ <strong>Lote novo!</strong> Este lote não consta no estoque. <strong>É obrigatório informar a data de validade.</strong>`;
+    }
+  }
+
+  function preencherReporteTudo() {
+    const rep = stateProducao.reporte;
+    const ord = rep.ordSelecionada;
+    if (!ord) return;
+    const saldo = Math.max(0, Number(ord.qtOrdem || 0) - Number(ord.qtProduzida || 0));
+    rep.qtReporte = saldo;
+    const inp = document.getElementById('rep-input-qt-reporte');
+    if (inp) inp.value = saldo;
+  }
+
+  async function executarReporteOrdemProducao() {
+    const rep = stateProducao.reporte;
+    const ord = rep.ordSelecionada;
+    const codEmpresa = state.session.codEmpresa || '001';
+
+    if (!ord) {
+      alert('Selecione uma ordem de produção para efetivar o reporte.');
+      return;
+    }
+
+    const inpQtdRep = document.getElementById('rep-input-qt-reporte');
+    const inpQtdRef = document.getElementById('rep-input-qt-refugo');
+    const inpDtRep = document.getElementById('rep-input-dt-reporte');
+    const inpDoc = document.getElementById('rep-input-nro-docto');
+    const inpSerie = document.getElementById('rep-input-serie');
+    const inpDepSai = document.getElementById('rep-input-dep-sai');
+    const inpLocSai = document.getElementById('rep-input-loc-sai');
+    const inpDepEnt = document.getElementById('rep-input-dep-ent');
+    const inpLocEnt = document.getElementById('rep-input-loc-ent');
+    const inpReferEnt = document.getElementById('rep-input-refer-ent');
+    const inpLoteEnt = document.getElementById('rep-input-lote-ent');
+    const inpDtValidEnt = document.getElementById('rep-input-dt-valid-ent');
+
+    const qtdReporte = parseFloat(inpQtdRep ? inpQtdRep.value : rep.qtReporte) || 0;
+    const qtdRefugada = parseFloat(inpQtdRef ? inpQtdRef.value : rep.qtRefugada) || 0;
+    const dtReporte = inpDtRep ? inpDtRep.value : rep.dtReporte;
+    const nroDocto = inpDoc ? inpDoc.value.trim() : (rep.nroDocto || String(ord.nrOrdProdu));
+    const serie = inpSerie ? inpSerie.value.trim() : (rep.serie || '');
+    const codDeposSai = inpDepSai ? inpDepSai.value.trim() : (rep.codDeposSai || 'PRO');
+    const codLocalSai = inpLocSai ? inpLocSai.value.trim() : (rep.codLocalSai || '');
+    const codDeposEnt = inpDepEnt ? inpDepEnt.value.trim() : (rep.codDeposEnt || ord.codDepos || 'ACA');
+    const codLocalizEnt = inpLocEnt ? inpLocEnt.value.trim() : (rep.codLocalizEnt || '');
+    const codReferEnt = inpReferEnt ? inpReferEnt.value.trim() : (rep.codReferEnt || ord.codRefer || '');
+    const loteEnt = inpLoteEnt ? inpLoteEnt.value.trim() : (rep.loteEnt || ord.loteSerie || '');
+    const dtValiLoteEnt = inpDtValidEnt ? inpDtValidEnt.value : (rep.dtValiLoteEnt || null);
+
+    if (qtdReporte <= 0) {
+      alert('Informe uma quantidade a reportar maior que zero.');
+      return;
+    }
+
+    if (!codDeposEnt) {
+      alert('Informe o depósito de entrada para o produto acabado.');
+      return;
+    }
+
+    const ehLote = Number(ord.tipoConEst) === 3;
+    if (ehLote && !loteEnt) {
+      alert('Item controlado por lote (tipoConEst 3). É obrigatório informar o Lote na aba Entrada Acabado.');
+      return;
+    }
+
+    if (ehLote && !rep.loteExiste && !dtValiLoteEnt) {
+      alert('Lote novo! É obrigatório informar a data de validade na aba Entrada Acabado.');
+      return;
+    }
+
+    const payload = {
+      payload: [
+        {
+          nrOrdProdu: Number(ord.nrOrdProdu),
+          itCodigo: ord.itCodigo,
+          codEstabel: ord.codEstabel || state.session.codEstabel || '101',
+          codDepos: codDeposEnt,
+          codLocaliz: codLocalizEnt,
+          lote: loteEnt,
+          codRefer: codReferEnt,
+          dtValiLote: dtValiLoteEnt,
+          qtReporte: qtdReporte,
+          qtRefugada: qtdRefugada,
+          dtReporte: dtReporte,
+          ctRefugo: ord.ctRefugo || '',
+          scRefugo: ord.scRefugo || '',
+          nroDocto: nroDocto,
+          serie: serie,
+          codDeposSai: codDeposSai,
+          codLocalSai: codLocalSai
+        }
+      ]
+    };
+
+    // Fluxo ONLINE
+    if (isOnline()) {
+      mostrarLoading('Reportando Ordem de Produção no TOTVS...', 'Executando fcSetReporteOrdProd.p / cpapi001...');
+      try {
+        const res = await pasoeFetch('/fcSetReporteOrdProd', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        ocultarLoading();
+
+        if (data.type === 'ERROR' || data.code === '17006' || res.status >= 400) {
+          alert('❌ Erro no Reporte TOTVS:\n\n' + (data.detailedMessage || data.message || 'Falha ao reportar ordem.'));
+          return;
+        }
+
+        // Atualiza quantidade produzida e refugada na ordem
+        ord.qtProduzida = Number(ord.qtProduzida || 0) + qtdReporte;
+        ord.qtRefugada = Number(ord.qtRefugada || 0) + qtdRefugada;
+        if (ord.qtProduzida >= ord.qtOrdem) {
+          ord.estado = 7;
+          ord.dscSituacao = 'Finalizada';
+        } else if (ord.qtProduzida > 0) {
+          ord.estado = 6;
+          ord.dscSituacao = 'Iniciada';
+        }
+
+        // Salva lista atualizada no cache IndexedDB
+        await DB.putConfig('cache_ordens_prod_' + codEmpresa, rep.listaOrdens);
+
+        alert('✅ Reporte de Produção efetuado com sucesso no Datasul!\n\nOrdem: #' + ord.nrOrdProdu + '\nItem: ' + ord.itCodigo + '\nQtd Reportada: ' + qtdReporte + (qtdRefugada > 0 ? '\nQtd Refugada: ' + qtdRefugada : ''));
+
+        // Se a ordem foi totalmente produzida, volta para a lista
+        const saldoFinal = Math.max(0, Number(ord.qtOrdem || 0) - Number(ord.qtProduzida || 0));
+        if (saldoFinal <= 0) {
+          await buscarOrdensProducao(rep.termoBusca, true);
+          rep.telaSub = 'lista';
+          renderTelaReporteOrdem();
+        } else {
+          abrirDetalheReporteOrdem(ord.nrOrdProdu);
+        }
+        return;
+      } catch (err) {
+        ocultarLoading();
+        console.warn('Falha na comunicação ao reportar online:', err.message);
+        if (!confirm('Falha de conexão com o TOTVS. Deseja registrar este reporte de produção na fila OFFLINE para sincronização posterior?')) {
+          return;
+        }
+      }
+    }
+
+    // Fluxo OFFLINE
+    try {
+      await DB.adicionarFilaSync('REPORTE_ORDEM_PRODUCAO', payload, codEmpresa);
+
+      // Atualiza a ordem localmente
+      ord.qtProduzida = Number(ord.qtProduzida || 0) + qtdReporte;
+      ord.qtRefugada = Number(ord.qtRefugada || 0) + qtdRefugada;
+      if (ord.qtProduzida >= ord.qtOrdem) {
+        ord.estado = 7;
+        ord.dscSituacao = 'Finalizada';
+      } else if (ord.qtProduzida > 0) {
+        ord.estado = 6;
+        ord.dscSituacao = 'Iniciada';
+      }
+
+      await DB.putConfig('cache_ordens_prod_' + codEmpresa, rep.listaOrdens);
+
+      alert('✅ Reporte de Produção registrado com sucesso em MODO OFFLINE!\n\nOrdem: #' + ord.nrOrdProdu + '\nItem: ' + ord.itCodigo + '\nQtd Reportada: ' + qtdReporte + '\n\nO apontamento foi salvo na fila de sincronização.');
+
+      rep.telaSub = 'lista';
+      renderTelaReporteOrdem();
+    } catch (eOffline) {
+      alert('❌ Erro ao salvar reporte offline: ' + eOffline.message);
+    }
+  }
+
+
   // =========================================================================
   // HISTÓRICO DE CONTAGENS & FILA DE SINCRONIZAÇÃO OFFLINE
   // =========================================================================
@@ -6460,9 +7312,10 @@ const App = (() => {
               : (op.payload || {});
             const itCod = p.itCodigo || p.item || '-';
             const depCod = p.codDepos || p.deposito || '-';
-            const qtd = p.qtAAtender ?? p.qtADevolver ?? p.qtApurada ?? p.quantidade ?? '-';
+            const qtd = p.qtReporte ?? p.qtAAtender ?? p.qtADevolver ?? p.qtApurada ?? p.quantidade ?? '-';
             const reqNum = p.nrRequisicao ? ` • Req: <strong>#${p.nrRequisicao}</strong>` : '';
-            return `Item: <strong>${escapeHtml(itCod)}</strong> • Dep: <strong>${escapeHtml(depCod)}</strong> • Qtd: <strong>${qtd}</strong>${reqNum}`;
+            const opNum = p.nrOrdProdu ? ` • OP: <strong>#${p.nrOrdProdu}</strong>` : '';
+            return `Item: <strong>${escapeHtml(itCod)}</strong> • Dep: <strong>${escapeHtml(depCod)}</strong> • Qtd: <strong>${qtd}</strong>${reqNum}${opNum}`;
           })()}
         </div>
         ${op.ultimoErro ? `<div style="font-size:10.5px; color:#dc2626; margin-top:3px;">Erro: ${escapeHtml(op.ultimoErro)}</div>` : ''}
@@ -7251,7 +8104,20 @@ const App = (() => {
     onSelecionarMovimentoDevolucao,
     onAlterarQtdDevolucao,
     preencherDevolucaoTudo,
-    executarDevolucaoRequisicao
+    executarDevolucaoRequisicao,
+    temPermissaoProducao,
+    temPermissaoReporteOrdem,
+    renderTelaProducaoMenu,
+    renderTelaReporteOrdem,
+    buscarOrdensProducao,
+    onAlterarItensPorPaginaReporte,
+    mudarPaginaReporte,
+    abrirDetalheReporteOrdem,
+    voltarListaOrdensReporte,
+    alternarAbaReporte,
+    onLoteReporteAlterado,
+    preencherReporteTudo,
+    executarReporteOrdemProducao
   };
 })();
 

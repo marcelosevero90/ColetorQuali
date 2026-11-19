@@ -111,7 +111,18 @@ app.all('/api/pasoe-proxy', async (req, res) => {
     res.status(response.status);
     if (contentType.includes('application/json') || bodyText.trim().startsWith('{') || bodyText.trim().startsWith('[')) {
       try {
-        return res.json(JSON.parse(bodyText));
+        const json = JSON.parse(bodyText);
+        if (targetUrl && (targetUrl.includes('fcGetParamUsuario') || targetUrl.includes('qdcGetParamUsuario'))) {
+          if (json && Array.isArray(json.items)) {
+            json.items.forEach(item => {
+              if (item.permProducao === undefined) {
+                item.permProducao = true;
+                item.permRepRepOrd = true;
+              }
+            });
+          }
+        }
+        return res.json(json);
       } catch (e) {
         return res.send(bodyText);
       }

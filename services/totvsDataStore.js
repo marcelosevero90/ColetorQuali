@@ -68,6 +68,7 @@ class TotvsDataStore {
           permCompras: true,
           permCredito: true,
           permProducao: true,
+          permRepRepOrd: true,
           permEstoqReqAte: true,
           permEstoqReqDev: true,
           permEstoqReqMov: true,
@@ -91,6 +92,7 @@ class TotvsDataStore {
           permCompras: true,
           permCredito: true,
           permProducao: true,
+          permRepRepOrd: true,
           permEstoqReqAte: true,
           permEstoqReqDev: true,
           permEstoqReqMov: true,
@@ -112,6 +114,7 @@ class TotvsDataStore {
           permCompras: true,
           permCredito: true,
           permProducao: true,
+          permRepRepOrd: true,
           permEstoqReqAte: true,
           permEstoqReqDev: true,
           permEstoqReqMov: true,
@@ -239,6 +242,7 @@ class TotvsDataStore {
           permCompras: true,
           permCredito: true,
           permProducao: true,
+          permRepRepOrd: true,
           permEstoqReqAte: true,
           permEstoqReqDev: true,
           permEstoqReqMov: true,
@@ -260,6 +264,7 @@ class TotvsDataStore {
           permCompras: true,
           permCredito: true,
           permProducao: true,
+          permRepRepOrd: true,
           permEstoqReqAte: true,
           permEstoqReqDev: true,
           permEstoqReqMov: true,
@@ -688,7 +693,8 @@ class TotvsDataStore {
       { itCodigo: '01010047', descItem: 'Kit Pont Prince (10) Unidades', tipoConEst: 1, locUnica: true, depositoPad: 'AL1', nomeDeposito: 'Almoxarifado 1', codLocaliz: 'BRANCO', descricaoLocaliz: 'BRANCO', un: 'UN', codBarras: '7890101004700', requerValorFicha: false },
       { itCodigo: '07060334', descItem: 'Correia Der', tipoConEst: 1, locUnica: false, depositoPad: 'MAN', nomeDeposito: 'MANUTENÇÃO', codLocaliz: '', descricaoLocaliz: '', un: 'PC', codBarras: '7890706033400', requerValorFicha: false },
       { itCodigo: '06020095', descItem: 'Luva Multitato Preta PU', tipoConEst: 1, locUnica: false, depositoPad: 'AL1', nomeDeposito: 'Almoxarifado 1', codLocaliz: '', descricaoLocaliz: '', un: 'PAR', codBarras: '7890602009500', requerValorFicha: false },
-      { itCodigo: 'D352-221/1', descItem: 'Roupeiro Lumiere 6Pts 6Gav Cinamomo/Off White Vol 1/5', tipoConEst: 3, locUnica: false, depositoPad: 'AST', nomeDeposito: 'ASSISTENCIA TECNICA', codLocaliz: '', descricaoLocaliz: 'BRANCO', un: 'UN', codBarras: '7890000352221', requerValorFicha: false }
+      { itCodigo: 'D352-221/1', descItem: 'Roupeiro Lumiere 6Pts 6Gav Cinamomo/Off White Vol 1/5', tipoConEst: 3, locUnica: false, depositoPad: 'AST', nomeDeposito: 'ASSISTENCIA TECNICA', codLocaliz: '', descricaoLocaliz: 'BRANCO', un: 'UN', codBarras: '7890000352221', requerValorFicha: false },
+      { itCodigo: 'D352-221/3', descItem: 'Roupeiro Lumiere 6Pts 6Gav Cinamomo/Off White Vol 3/5', tipoConEst: 3, locUnica: false, depositoPad: 'ACA', nomeDeposito: 'DEPOSITO ACABADO', codLocaliz: '', descricaoLocaliz: '', un: 'UN', codBarras: '7890000352223', requerValorFicha: false }
     ].map(it => ({ codEmpresa: '001', ...it, dataAtualiz: '2026-11-16T08:00:00Z' }));
 
     // Adiciona mais 40 itens gerados para validar carga progressiva em chunks na Empresa 001

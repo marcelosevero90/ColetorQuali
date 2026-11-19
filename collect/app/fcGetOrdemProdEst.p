@@ -20,6 +20,8 @@ PROCEDURE pi-find:
     DEFINE VAR iPrimOrdManut        AS INTEGER      NO-UNDO.
     DEFINE VAR c-CodEstabel         AS CHAR         NO-UNDO.
     DEFINE VAR c-dscSituacao        AS CHAR         NO-UNDO.
+    DEFINE VAR iNrOrdProdu          AS INTEGER      NO-UNDO.
+    DEFINE VAR cItCodigo            AS CHAR         NO-UNDO.
 
     // Criacao do Retorno 
     DEFINE VAR oJsonArray   AS JsonArray  NO-UNDO.
@@ -48,6 +50,8 @@ PROCEDURE pi-find:
             oJsonPayloadObject = aJsonPayloadArray:GetJsonObject(iContPayload).
     
             ASSIGN c-CodEstabel = oJsonPayloadObject:GetCharacter("codEstabel").
+            ASSIGN iNrOrdProdu  = oJsonPayloadObject:GetInteger("nrOrdProdu") NO-ERROR.
+            ASSIGN cItCodigo    = oJsonPayloadObject:GetCharacter("itCodigo") NO-ERROR.
         END.        
         
         ASSIGN iPrimOrdManut = 0.
@@ -66,13 +70,15 @@ PROCEDURE pi-find:
 
         FOR EACH ord-prod NO-LOCK
             WHERE ord-prod.estado < 7
-              AND ord-prod.qt-produzida > 0
+              AND (ord-prod.qt-ordem - ord-prod.qt-produzida) > 0
               AND ord-prod.cod-estabel  = c-CodEstabel
               AND ord-prod.rep-prod     = 1 //ordem
               AND ord-prod.tipo         = 1 //interna
               AND (IF iPrimOrdManut > 0 THEN
                       ord-prod.nr-ord-produ < iPrimOrdManut
                    ELSE TRUE),
+              AND (IF iNrOrdProdu > 0 THEN ord-prod.nr-ord-produ = iNrOrdProdu ELSE TRUE)
+              AND (IF cItCodigo <> "" AND cItCodigo <> ? THEN ord-prod.it-codigo BEGINS cItCodigo ELSE TRUE)
               FIRST ITEM OF ord-prod NO-LOCK.
 
             oJsonOutput = NEW JsonObject().
@@ -82,6 +88,7 @@ PROCEDURE pi-find:
             oJsonOutput:ADD("qtOrdem",         ord-prod.qt-ordem).
             oJsonOutput:ADD("qtProduzida",     ord-prod.qt-produzida).
             oJsonOutput:ADD("qtRefugada",      ord-prod.qt-refugada).
+            oJsonOutput:ADD("qtSaldo",         ord-prod.qt-ordem - ord-prod.qt-produzida).
             oJsonOutput:ADD("estado",          ord-prod.estado).
             oJsonOutput:ADD("codUnidNegoc",    ord-prod.cod-unid-negoc).
             oJsonOutput:ADD("un",              ord-prod.un).

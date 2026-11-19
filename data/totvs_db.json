@@ -71,7 +71,8 @@
       "permComprMLA": true,
       "permCredAvCli": true,
       "indTipAcesUsuar": "Externo",
-      "codDominSo": "consigaznet"
+      "codDominSo": "consigaznet",
+      "permRepRepOrd": true
     },
     {
       "codEmpresa": "001",
@@ -92,7 +93,8 @@
       "permEstoqReqInv": true,
       "permEstoqReqRec": true,
       "permComprMLA": true,
-      "permCredAvCli": true
+      "permCredAvCli": true,
+      "permRepRepOrd": true
     },
     {
       "codEmpresa": "001",
@@ -113,7 +115,8 @@
       "permEstoqReqInv": true,
       "permEstoqReqRec": true,
       "permComprMLA": true,
-      "permCredAvCli": true
+      "permCredAvCli": true,
+      "permRepRepOrd": true
     },
     {
       "codEmpresa": "001",
@@ -218,7 +221,8 @@
       "permEstoqReqInv": true,
       "permEstoqReqRec": true,
       "permComprMLA": true,
-      "permCredAvCli": true
+      "permCredAvCli": true,
+      "permRepRepOrd": true
     },
     {
       "codEmpresa": "002",
@@ -239,7 +243,8 @@
       "permEstoqReqInv": true,
       "permEstoqReqRec": true,
       "permComprMLA": true,
-      "permCredAvCli": true
+      "permCredAvCli": true,
+      "permRepRepOrd": true
     },
     {
       "codEmpresa": "002",
@@ -2838,6 +2843,92 @@
       "dtLeitura": "2026-11-16 09:35:00",
       "statusEnvio": "Sincronizado",
       "origem": "Coletor Industrial"
+    }
+  ],
+  "ord_prod": [
+    {
+      "codEmpresa": "001",
+      "nrOrdProdu": 279059,
+      "itCodigo": "D352-221/3",
+      "descItem": "Roupeiro Lumiere 6Pts 6Gav Cinamomo/Off White Vol 3/5",
+      "qtOrdem": 5,
+      "qtProduzida": 0,
+      "qtRefugada": 0,
+      "qtSaldo": 5,
+      "estado": 2,
+      "dscSituacao": "Liberada",
+      "codUnidNegoc": "MOV",
+      "un": "UN",
+      "codEstabel": "101",
+      "codDepos": "ACA",
+      "nrLinha": 1,
+      "loteSerie": "6000765-2290",
+      "dtValiLote": "2026-09-17",
+      "dtEmissao": "2026-11-19",
+      "dtInicio": "2026-11-19",
+      "dtTermino": "2026-11-19",
+      "cdPlanejado": "001",
+      "codRefer": "",
+      "tipoConEst": 3,
+      "locUnica": false,
+      "ctRefugo": "42103045",
+      "scRefugo": ""
+    },
+    {
+      "codEmpresa": "001",
+      "nrOrdProdu": 277632,
+      "itCodigo": "01020317",
+      "descItem": "Fita Brilh. Branco PB-280 - 14mm",
+      "qtOrdem": 200570,
+      "qtProduzida": 50000,
+      "qtRefugada": 0,
+      "qtSaldo": 150570,
+      "estado": 6,
+      "dscSituacao": "Iniciada",
+      "codUnidNegoc": "MOV",
+      "un": "M",
+      "codEstabel": "101",
+      "codDepos": "AL1",
+      "nrLinha": 8,
+      "loteSerie": "",
+      "dtValiLote": null,
+      "dtEmissao": "2026-09-11",
+      "dtInicio": "2026-09-11",
+      "dtTermino": "2026-09-11",
+      "cdPlanejado": "001",
+      "codRefer": "",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "ctRefugo": "42103045",
+      "scRefugo": ""
+    },
+    {
+      "codEmpresa": "001",
+      "nrOrdProdu": 277333,
+      "itCodigo": "01020542",
+      "descItem": "Fita Jequitibá Brilho PB-280 - 14mm",
+      "qtOrdem": 19450,
+      "qtProduzida": 1000,
+      "qtRefugada": 0,
+      "qtSaldo": 18450,
+      "estado": 6,
+      "dscSituacao": "Iniciada",
+      "codUnidNegoc": "MOV",
+      "un": "M",
+      "codEstabel": "101",
+      "codDepos": "AL1",
+      "nrLinha": 8,
+      "loteSerie": "",
+      "dtValiLote": null,
+      "dtEmissao": "2026-09-08",
+      "dtInicio": "2026-09-08",
+      "dtTermino": "2026-09-08",
+      "cdPlanejado": "001",
+      "codRefer": "",
+      "tipoConEst": 1,
+      "locUnica": true,
+      "ctRefugo": "42103045",
+      "scRefugo": ""
     }
   ]
 }

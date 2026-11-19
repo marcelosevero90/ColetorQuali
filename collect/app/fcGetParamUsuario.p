@@ -113,6 +113,8 @@ PROCEDURE pi-find:
             oJsonOutput:ADD("permEstoqReqRec",  fmsc-usuar-mestre.l-permis-estoq[5]).
             oJsonOutput:ADD("permComprMLA",     fmsc-usuar-mestre.l-permis-compras[1]).
             oJsonOutput:ADD("permCredAvCli",    fmsc-usuar-mestre.l-permis-credito[1]).
+            oJsonOutput:ADD("permProducao",     fmsc-usuar-mestre.l-producao).
+            oJsonOutput:ADD("permRepRepOrd",    fmsc-usuar-mestre.l-permis-rep-ordem-prod[1]).
             
             oJsonArray :ADD(oJsonOutput).
         END.
@@ -134,6 +136,8 @@ PROCEDURE pi-find:
             oJsonOutput:ADD("permEstoqReqRec",  NO).
             oJsonOutput:ADD("permComprMLA",     NO).
             oJsonOutput:ADD("permCredAvCli",    NO).
+            oJsonOutput:ADD("permProducao",     NO).
+            oJsonOutput:ADD("permRepRepOrd",    NO).
             
             oJsonArray :ADD(oJsonOutput).
         END.
