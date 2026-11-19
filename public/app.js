@@ -4467,23 +4467,26 @@ const App = (() => {
     `;
   }
 
-  // =========================================================================
-  // MÓDULO: REQUISIÇÕES DE MATERIAL (CD1409 / CD1410)
+// =========================================================================
+  // MÓDULO: REQUISIÇÕES DE MATERIAL (CD1409 / CD1410) - OFFLINE-FIRST & 2 TELAS
   // =========================================================================
 
   const stateRequisicoes = {
     atendimento: {
+      telaSub: 'lista', // 'lista' | 'detalhe'
       termoBusca: '',
       carregando: false,
       listaItens: [], // itens retornados de fcGetRequisicao
-      reqSelecionada: null, // nrRequisicao selecionado
+      reqSelecionada: null, // objeto agrupado da requisição selecionada
       itemSelecionado: null, // objeto it_requisicao selecionado
-      saldosEstoque: [], // saldos de fcGetSaldoEstoqEstabItem
+      saldosEstoque: [], // saldos de fcGetSaldoEstoqEstabItem ou local IndexedDB
       carregandoSaldos: false,
-      quantidadesInformadas: {}, // chaveSaldo => number
-      dataAtend: new Date().toISOString().split('T')[0]
+      quantidadesInformadas: {}, // idxSaldo => number
+      dataAtend: new Date().toISOString().split('T')[0],
+      isOffline: false
     },
     devolucao: {
+      telaSub: 'lista', // 'lista' | 'detalhe'
       termoBusca: '',
       carregando: false,
       listaItens: [], // itens retornados de fcGetRequisDevol
@@ -4493,7 +4496,8 @@ const App = (() => {
       carregandoMovimentos: false,
       movimentoSelecionadoIdx: null,
       quantidadeDevolver: 0,
-      dataDevol: new Date().toISOString().split('T')[0]
+      dataDevol: new Date().toISOString().split('T')[0],
+      isOffline: false
     }
   };
 
@@ -4517,7 +4521,7 @@ const App = (() => {
       <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px; margin-bottom: 16px;">
         <div style="font-size: 12.5px; color: #166534; font-weight: 700; margin-bottom: 4px;">Operações de Requisição</div>
         <div style="font-size: 11.5px; color: #15803d;">
-          Gerencie atendimentos e devoluções de materiais do ERP TOTVS Datasul com baixa automática e conciliação de saldos em estoque.
+          Gerencie atendimentos e devoluções de materiais do ERP TOTVS Datasul com baixa automática, suporte offline e conciliação de saldos em estoque.
         </div>
       </div>
 
@@ -4529,7 +4533,7 @@ const App = (() => {
               <div style="text-align: left; flex: 1;">
                 <div class="home-card-title" style="font-size: 14px; color: #0369a1; font-weight: 800;">1. Atendimento de Requisição (CD1409)</div>
                 <div class="home-card-desc" style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
-                  Consultar requisições aprovadas, verificar saldos no estoque e realizar atendimento (baixa de material)
+                  Consultar requisições aprovadas em grid, verificar saldos no estoque e realizar atendimento (baixa de material)
                 </div>
               </div>
               <div style="color: #0369a1; font-weight: 800; font-size: 18px;">➔</div>
@@ -4554,7 +4558,7 @@ const App = (() => {
               <div style="text-align: left; flex: 1;">
                 <div class="home-card-title" style="font-size: 14px; color: #6d28d9; font-weight: 800;">2. Devolução de Requisição (CD1410)</div>
                 <div class="home-card-desc" style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
-                  Consultar materiais atendidos, selecionar o movimento de saída de origem e devolver ao estoque
+                  Consultar materiais atendidos em grid, selecionar o movimento de saída de origem e devolver ao estoque
                 </div>
               </div>
               <div style="color: #6d28d9; font-weight: 800; font-size: 18px;">➔</div>
@@ -4575,95 +4579,9 @@ const App = (() => {
     `;
   }
 
-  // 2. TELA ATENDIMENTO DE REQUISIÇÃO (CD1409)
-  async function renderTelaRequisicaoAtendimento(params = null) {
-    const at = stateRequisicoes.atendimento;
-    const codEstabel = state.session.codEstabel || '101';
-
-    container.innerHTML = `
-      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-        <button class="btn-topbar-action" onclick="App.navegar('requisicoes_menu')">‹ Voltar</button>
-        <div style="text-align: center;">
-          <h3 style="font-size: 14.5px; font-weight: 800; margin: 0; color: #0284c7;">Atendimento de Requisição</h3>
-          <span style="font-size: 11px; color: #64748b;">CD1409 • Filial ${escapeHtml(codEstabel)}</span>
-        </div>
-        <button class="btn-topbar-action" onclick="App.buscarRequisicoesAtendimento(document.getElementById('req-atend-input-busca')?.value || '')" title="Recarregar">🔄</button>
-      </div>
-
-      <!-- Barra de Busca -->
-      <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-        <input type="text" id="req-atend-input-busca" class="form-input" style="font-size: 12.5px; flex: 1;" placeholder="Buscar número de requisição..." value="${escapeHtml(at.termoBusca || '')}" onkeydown="if(event.key==='Enter') App.buscarRequisicoesAtendimento(this.value)">
-        <button type="button" class="btn btn-primary" style="width: auto; padding: 0 12px; font-size: 12px;" onclick="App.buscarRequisicoesAtendimento(document.getElementById('req-atend-input-busca').value)">Buscar 🔍</button>
-      </div>
-
-      <!-- Área de Conteúdo -->
-      <div id="req-atend-conteudo">
-        <div class="card" style="text-align: center; color: #94a3b8; font-size: 12.5px; padding: 24px;">
-          Carregando requisições em aberto...
-        </div>
-      </div>
-    `;
-
-    await buscarRequisicoesAtendimento(at.termoBusca);
-  }
-
-  async function buscarRequisicoesAtendimento(termo = '') {
-    const at = stateRequisicoes.atendimento;
-    at.termoBusca = termo || '';
-    const codEstabel = (state.session.codEstabel || '101').trim();
-
-    const cont = document.getElementById('req-atend-conteudo');
-    if (cont) {
-      cont.innerHTML = `
-        <div style="text-align:center; padding: 30px; color: #64748b;">
-          <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
-          <div style="font-size: 13px; font-weight: 600;">Consultando requisições no ERP TOTVS (fcGetRequisicao)...</div>
-        </div>
-      `;
-    }
-
-    const termoLimpo = (at.termoBusca || '').trim();
-    const nrBusca = termoLimpo && /^\d+$/.test(termoLimpo.replace(/\D/g, '')) ? Number(termoLimpo.replace(/\D/g, '')) : null;
-
-    const payloadItem = {
-      nrReqIni: nrBusca !== null ? nrBusca : 0,
-      nrReqFim: nrBusca !== null ? nrBusca : 0,
-      estabIni: '',
-      estabFim: '',
-      requisitanteIni: '',
-      requisitanteFim: ''
-    };
-
-    const payload = {
-      payload: [payloadItem]
-    };
-
-    try {
-      const res = await pasoeFetch('/fcGetRequisicao', {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      at.listaItens = extrairLista(data);
-    } catch (err) {
-      console.warn('Erro ao consultar fcGetRequisicao via PASOE:', err.message);
-      at.listaItens = [];
-    }
-
-    // Filtro no client-side se termo foi informado
-    if (termoLimpo) {
-      const t = termoLimpo.toLowerCase();
-      const tDig = termoLimpo.replace(/\D/g, '');
-      at.listaItens = (at.listaItens || []).filter(it =>
-        (tDig && String(it.nrRequisicao).includes(tDig)) ||
-        String(it.itCodigo).toLowerCase().includes(t) ||
-        String(it.descItem || '').toLowerCase().includes(t) ||
-        String(it.nomeAbrev || '').toLowerCase().includes(t)
-      );
-    }
-
-    renderizarPainelAtendimento();
-  }
+  // =========================================================================
+  // 2. ATENDIMENTO DE REQUISIÇÃO (CD1409) - FLUXO EM 2 TELAS
+  // =========================================================================
 
   function agruparRequisicoes(listaItens) {
     const mapa = new Map();
@@ -4682,65 +4600,298 @@ const App = (() => {
     return Array.from(mapa.values());
   }
 
-  function renderizarPainelAtendimento() {
+  async function renderTelaRequisicaoAtendimento(params = null) {
+    const at = stateRequisicoes.atendimento;
+    const codEstabel = state.session.codEstabel || '101';
+
+    // Se estiver no modo detalhe com requisição selecionada, renderiza Tela 2
+    if (at.telaSub === 'detalhe' && at.reqSelecionada) {
+      renderizarTela2DetalheAtendimento();
+      return;
+    }
+
+    // Tela 1: Grid de Requisições Abertas
+    at.telaSub = 'lista';
+
+    container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <button class="btn-topbar-action" onclick="App.navegar('requisicoes_menu')">‹ Início</button>
+        <div style="text-align: center;">
+          <h3 style="font-size: 14.5px; font-weight: 800; margin: 0; color: #0284c7;">Atendimento de Requisição</h3>
+          <span style="font-size: 11px; color: #64748b;">CD1409 • Filial ${escapeHtml(codEstabel)}</span>
+        </div>
+        <button class="btn-topbar-action" onclick="App.buscarRequisicoesAtendimento(document.getElementById('req-atend-input-busca')?.value || '', true)" title="Recarregar">🔄</button>
+      </div>
+
+      <!-- Barra de Busca Rápida -->
+      <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+        <input type="text" id="req-atend-input-busca" class="form-input" style="font-size: 12.5px; flex: 1;"
+               placeholder="Buscar por requisição, requisitante ou item..."
+               value="${escapeHtml(at.termoBusca || '')}"
+               onkeydown="if(event.key==='Enter') App.buscarRequisicoesAtendimento(this.value)">
+        <button type="button" class="btn btn-primary" style="width: auto; padding: 0 12px; font-size: 12px; background: #0284c7; border-color: #0369a1;"
+                onclick="App.buscarRequisicoesAtendimento(document.getElementById('req-atend-input-busca').value)">
+          Buscar 🔍
+        </button>
+      </div>
+
+      <!-- Status Offline se aplicável -->
+      ${at.isOffline ? `
+        <div style="background: #fefce8; border: 1px solid #fde047; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; font-size: 11.5px; color: #854d0e; display: flex; align-items: center; gap: 6px;">
+          <span>📴</span>
+          <span><strong>Modo Offline:</strong> Exibindo requisições armazenadas localmente em cache.</span>
+        </div>
+      ` : ''}
+
+      <!-- Grid de Cards de Requisições Abertas -->
+      <div id="req-atend-conteudo">
+        <div class="card" style="text-align: center; color: #94a3b8; font-size: 12.5px; padding: 24px;">
+          <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
+          Consultando requisições em aberto...
+        </div>
+      </div>
+    `;
+
+    // Carrega dados se lista estiver vazia ou força busca
+    if (!at.listaItens || at.listaItens.length === 0) {
+      await buscarRequisicoesAtendimento(at.termoBusca);
+    } else {
+      renderizarGridListaAtendimento();
+    }
+  }
+
+  async function buscarRequisicoesAtendimento(termo = '', forcarOnline = false) {
+    const at = stateRequisicoes.atendimento;
+    at.termoBusca = termo || '';
+    const codEstabel = (state.session.codEstabel || '101').trim();
+    const codEmpresa = state.session.codEmpresa || '001';
+
+    const cont = document.getElementById('req-atend-conteudo');
+    if (cont) {
+      cont.innerHTML = `
+        <div style="text-align:center; padding: 30px; color: #64748b;">
+          <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
+          <div style="font-size: 13px; font-weight: 600;">Consultando requisições no ERP TOTVS (fcGetRequisicao)...</div>
+        </div>
+      `;
+    }
+
+    const termoLimpo = (at.termoBusca || '').trim();
+    const nrBusca = termoLimpo && /^\d+$/.test(termoLimpo.replace(/\D/g, '')) ? Number(termoLimpo.replace(/\D/g, '')) : null;
+
+    let dadosCarregados = null;
+    let offline = false;
+
+    // Tentar consulta online se dispositivo conectado
+    if (navigator.onLine) {
+      const payloadItem = {
+        nrReqIni: nrBusca !== null ? nrBusca : 0,
+        nrReqFim: nrBusca !== null ? nrBusca : 0,
+        estabIni: '',
+        estabFim: '',
+        requisitanteIni: '',
+        requisitanteFim: ''
+      };
+
+      try {
+        const res = await pasoeFetch('/fcGetRequisicao', {
+          method: 'PUT',
+          body: JSON.stringify({ payload: [payloadItem] })
+        });
+        const data = await res.json();
+        dadosCarregados = extrairLista(data);
+        // Salva cache local no IndexedDB para uso offline
+        if (dadosCarregados && dadosCarregados.length > 0) {
+          await DB.putConfig('cache_requisicoes_atend_' + codEmpresa, dadosCarregados);
+        }
+      } catch (err) {
+        console.warn('Falha na consulta online de fcGetRequisicao. Tentando cache offline:', err.message);
+      }
+    }
+
+    // Se falhou online ou dispositivo offline, recupera do cache local
+    if (!dadosCarregados) {
+      const emCache = await DB.getConfig('cache_requisicoes_atend_' + codEmpresa);
+      if (emCache && emCache.length > 0) {
+        dadosCarregados = emCache;
+        offline = true;
+      } else {
+        dadosCarregados = [];
+      }
+    }
+
+    at.listaItens = dadosCarregados;
+    at.isOffline = offline;
+
+    renderizarGridListaAtendimento();
+  }
+
+  function renderizarGridListaAtendimento() {
     const at = stateRequisicoes.atendimento;
     const cont = document.getElementById('req-atend-conteudo');
     if (!cont) return;
 
-    if (!at.listaItens || at.listaItens.length === 0) {
+    let lista = at.listaItens || [];
+
+    // Filtro client-side se termo foi digitado
+    if (at.termoBusca) {
+      const t = at.termoBusca.trim().toLowerCase();
+      const tDig = at.termoBusca.replace(/\D/g, '');
+      lista = lista.filter(it =>
+        (tDig && String(it.nrRequisicao).includes(tDig)) ||
+        String(it.itCodigo).toLowerCase().includes(t) ||
+        String(it.descItem || '').toLowerCase().includes(t) ||
+        String(it.nomeAbrev || '').toLowerCase().includes(t)
+      );
+    }
+
+    if (lista.length === 0) {
       cont.innerHTML = `
         <div class="card" style="text-align: center; color: #64748b; padding: 24px;">
           <div style="font-size: 26px; margin-bottom: 8px;">📭</div>
           <div style="font-weight: 700; color: #1e293b; margin-bottom: 4px;">Nenhuma requisição aberta encontrada</div>
           <div style="font-size: 12px; color: #64748b;">
-            Verifique o número informado ou certifique-se de que a requisição está aprovada no TOTVS para a filial ativa.
+            ${at.termoBusca ? 'Nenhum resultado para o filtro informado.' : 'Não há requisições de estoque aprovadas com saldo a atender nesta filial.'}
           </div>
         </div>
       `;
       return;
     }
 
-    const listaReqs = agruparRequisicoes(at.listaItens);
-    const mapaReqs = new Map(listaReqs.map(r => [Number(r.nrRequisicao), r]));
-
-    // Se nenhuma requisição foi selecionada ainda, seleciona a primeira
-    if (!at.reqSelecionada || !mapaReqs.has(Number(at.reqSelecionada.nrRequisicao))) {
-      at.reqSelecionada = listaReqs[0];
-      at.itemSelecionado = (at.reqSelecionada && at.reqSelecionada.itens) ? at.reqSelecionada.itens[0] : null;
-      at.saldosEstoque = [];
-      at.quantidadesInformadas = {};
-      if (at.itemSelecionado) {
-        consultarSaldosItemAtendimento(at.itemSelecionado.itCodigo);
-      }
-    } else {
-      at.reqSelecionada = mapaReqs.get(Number(at.reqSelecionada.nrRequisicao));
-    }
-
-    const reqAtual = at.reqSelecionada || { nrRequisicao: '', dtRequisicao: '', nomeAbrev: '', itens: [] };
-    const itemAtual = at.itemSelecionado;
-    const itensReq = reqAtual.itens || [];
+    const reqsAgrupadas = agruparRequisicoes(lista);
 
     cont.innerHTML = `
-      <!-- Seletor de Requisições -->
-      ${listaReqs.length > 1 ? `
-        <div style="margin-bottom: 12px;">
-          <label class="form-label" style="font-size: 11.5px;">Selecionar Requisição:</label>
-          <select class="form-input" style="font-size: 13px;" onchange="App.onTrocarRequisicaoAtendimento(this.value)">
-            ${listaReqs.map(r => `
-              <option value="${r.nrRequisicao}" ${Number(r.nrRequisicao) === Number(reqAtual.nrRequisicao) ? 'selected' : ''}>
-                Req. ${r.nrRequisicao} • ${escapeHtml(r.nomeAbrev)} (${(r.itens || []).length} item(ns))
-              </option>
-            `).join('')}
-          </select>
-        </div>
-      ` : ''}
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: 700; color: #475569;">
+          ${reqsAgrupadas.length} requisição(ões) encontrada(s):
+        </span>
+        <span style="font-size: 11px; color: #64748b;">Toque para atender</span>
+      </div>
 
-      <!-- Cabeçalho Fiel ao CD1409 -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        ${reqsAgrupadas.map(r => {
+          let saldoTotalReq = 0;
+          r.itens.forEach(it => { saldoTotalReq += Number(it.qtAAtender || 0); });
+
+          return `
+            <div class="card" style="margin: 0; padding: 12px; border-left: 4px solid #0284c7; cursor: pointer; transition: all 0.15s; background: #ffffff;"
+                 onclick="App.abrirDetalheRequisicaoAtendimento(${r.nrRequisicao})">
+              <!-- Header do Card -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 17px;">📥</span>
+                  <strong style="color: #0284c7; font-size: 15px; font-weight: 800;">
+                    Req. #${r.nrRequisicao}
+                  </strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 11.5px; color: #64748b;">${formatarDataBr(r.dtRequisicao)}</span>
+                  <span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700; font-size: 10px;">Aberta</span>
+                </div>
+              </div>
+
+              <!-- Requisitante -->
+              <div style="font-size: 12px; color: #334155; margin-bottom: 6px;">
+                <span style="color: #64748b;">Requisitante:</span>
+                <strong>${escapeHtml(r.nomeAbrev || '-')}</strong>
+              </div>
+
+              <!-- Prévia dos Itens -->
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 700;">
+                  <span>Itens da Requisição (${r.itens.length}):</span>
+                  <span>Saldo a Atender</span>
+                </div>
+                ${r.itens.slice(0, 3).map(it => `
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; padding: 2px 0;">
+                    <div style="flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px;">
+                      <strong style="color: #0f172a;">${escapeHtml(it.itCodigo)}</strong>
+                      <span style="color: #64748b;"> - ${escapeHtml(it.descItem || '')}</span>
+                    </div>
+                    <strong style="color: #d97706; font-size: 12px;">${Number(it.qtAAtender).toFixed(4)}</strong>
+                  </div>
+                `).join('')}
+                ${r.itens.length > 3 ? `
+                  <div style="font-size: 10.5px; color: #0284c7; text-align: center; margin-top: 4px; font-weight: 600;">
+                    + ${r.itens.length - 3} outro(s) item(ns)...
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Rodapé do Card com Ação -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px;">
+                <div style="font-size: 11px; color: #64748b;">
+                  Saldo Total: <strong style="color: #0284c7; font-size: 12.5px;">${saldoTotalReq.toFixed(4)}</strong>
+                </div>
+                <button type="button" class="btn btn-primary"
+                        style="width: auto; padding: 6px 14px; font-size: 12px; font-weight: 800; background: #0284c7; border-color: #0369a1;"
+                        onclick="event.stopPropagation(); App.abrirDetalheRequisicaoAtendimento(${r.nrRequisicao})">
+                  Atender ➔
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  // Abertura da Tela 2 de Detalhes
+  function abrirDetalheRequisicaoAtendimento(nrRequisicao) {
+    const at = stateRequisicoes.atendimento;
+    const reqsAgrupadas = agruparRequisicoes(at.listaItens);
+    const req = reqsAgrupadas.find(r => Number(r.nrRequisicao) === Number(nrRequisicao));
+    if (!req) return;
+
+    at.reqSelecionada = req;
+    // Seleciona o primeiro item com saldo a atender ou o primeiro
+    at.itemSelecionado = (req.itens && req.itens.length > 0)
+      ? (req.itens.find(i => Number(i.qtAAtender) > 0) || req.itens[0])
+      : null;
+    at.saldosEstoque = [];
+    at.quantidadesInformadas = {};
+    at.telaSub = 'detalhe';
+
+    renderTelaRequisicaoAtendimento();
+
+    if (at.itemSelecionado) {
+      consultarSaldosItemAtendimento(at.itemSelecionado.itCodigo);
+    }
+  }
+
+  function voltarListaRequisicoesAtendimento() {
+    const at = stateRequisicoes.atendimento;
+    at.telaSub = 'lista';
+    renderTelaRequisicaoAtendimento();
+  }
+
+  // TELA 2: DETALHES DA REQUISIÇÃO, ITENS E SALDOS EM ESTOQUE
+  function renderizarTela2DetalheAtendimento() {
+    const at = stateRequisicoes.atendimento;
+    const reqAtual = at.reqSelecionada;
+    const itemAtual = at.itemSelecionado;
+    const itensReq = reqAtual.itens || [];
+    const codEstabel = state.session.codEstabel || '101';
+
+    container.innerHTML = `
+      <!-- Topbar com botão voltar para a lista de requisições -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <button class="btn-topbar-action" onclick="App.voltarListaRequisicoesAtendimento()" style="color: #0284c7; font-weight: 700;">
+          ‹ Lista de Requisições
+        </button>
+        <div style="text-align: center;">
+          <h3 style="font-size: 14.5px; font-weight: 800; margin: 0; color: #0284c7;">Req. #${reqAtual.nrRequisicao}</h3>
+          <span style="font-size: 11px; color: #64748b;">CD1409 • Filial ${escapeHtml(codEstabel)}</span>
+        </div>
+        <button class="btn-topbar-action" onclick="App.recarregarSaldosItemAtendimento()" title="Recarregar Saldos">🔄</button>
+      </div>
+
+      <!-- Cabeçalho Oficial CD1409 -->
       <div class="card" style="margin-bottom: 12px; border-left: 4px solid #0284c7; padding: 12px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
           <div>
             <span style="color: #64748b;">Requisição:</span>
-            <strong style="color: #0284c7; font-size: 14px; margin-left: 4px;">${escapeHtml(String(reqAtual.nrRequisicao))}</strong>
+            <strong style="color: #0284c7; font-size: 14.5px; margin-left: 4px;">${escapeHtml(String(reqAtual.nrRequisicao))}</strong>
           </div>
           <div>
             <span style="color: #64748b;">Data Req:</span>
@@ -4760,7 +4911,7 @@ const App = (() => {
       <!-- Grid Superior: Itens da Requisição -->
       <div style="margin-bottom: 14px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">1. Itens da Requisição (Selecione um item):</span>
+          <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">1. Itens da Requisição (Selecione para ver saldos):</span>
           <span style="font-size: 11px; color: #64748b;">${itensReq.length} item(ns)</span>
         </div>
 
@@ -4783,9 +4934,9 @@ const App = (() => {
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; font-size: 11px; margin-top: 8px; background: ${isSel ? '#e0f2fe' : '#f8fafc'}; padding: 6px; border-radius: 6px;">
-                  <div>Requisitado: <strong>${it.qtRequisitada}</strong></div>
-                  <div>Atendido: <strong>${it.qtAtendida}</strong></div>
-                  <div>Saldo a Atender: <strong style="color: #d97706; font-size: 12px;">${it.qtAAtender}</strong></div>
+                  <div>Requisitado: <strong>${Number(it.qtRequisitada).toFixed(4)}</strong></div>
+                  <div>Atendido: <strong>${Number(it.qtAtendida).toFixed(4)}</strong></div>
+                  <div>Saldo a Atender: <strong style="color: #d97706; font-size: 12px;">${Number(it.qtAAtender).toFixed(4)}</strong></div>
                 </div>
               </div>
             `;
@@ -4809,7 +4960,7 @@ const App = (() => {
       return `
         <div class="card" style="text-align: center; padding: 20px; color: #64748b;">
           <div class="loading-spinner" style="margin: 0 auto 8px;"></div>
-          <div style="font-size: 12.5px;">Consultando saldos do item no estoque (fcGetSaldoEstoqEstabItem)...</div>
+          <div style="font-size: 12.5px;">Consultando saldos em estoque do item...</div>
         </div>
       `;
     }
@@ -4827,7 +4978,7 @@ const App = (() => {
             2. Saldos em Estoque (Item: ${escapeHtml(itemAtual.itCodigo)}):
           </span>
           <span style="font-size: 11px; color: #0284c7; font-weight: 700;">
-            Saldo a Atender: ${itemAtual.qtAAtender}
+            Saldo a Atender: ${Number(itemAtual.qtAAtender).toFixed(4)}
           </span>
         </div>
 
@@ -4847,14 +4998,14 @@ const App = (() => {
                       ${s.codLocaliz ? ` • Local: <strong>${escapeHtml(s.codLocaliz)}</strong>` : ''}
                     </div>
                     <div>
-                      Saldo Disp: <strong style="color: #15803d; font-size: 13.5px;">${s.qtDisponivel}</strong>
+                      Saldo Disp: <strong style="color: #15803d; font-size: 13.5px;">${Number(s.qtDisponivel).toFixed(4)}</strong>
                     </div>
                   </div>
 
                   ${(s.lote || s.codRefer) ? `
                     <div style="font-size: 11px; color: #64748b; margin-bottom: 8px;">
-                      ${s.lote ? `Lote: <strong>${escapeHtml(s.lote)}</strong> (Val: ${s.dtValiLote ? formatarDataBr(s.dtValiLote) : '-'}) ` : ''}
-                      ${s.codRefer ? `• Ref: <strong>${escapeHtml(s.codRefer)}</strong>` : ''}
+                      ${s.lote ? `Lote: <strong>${escapeHtml(s.lote)}</strong> (Val: ${s.dtValiLote ? formatarDataBr(s.dtValiLote) : '-'})` : ''}
+                      ${s.codRefer ? ` • Ref: <strong>${escapeHtml(s.codRefer)}</strong>` : ''}
                     </div>
                   ` : ''}
 
@@ -4882,7 +5033,7 @@ const App = (() => {
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; margin-bottom: 10px;">
           <div>
             <span style="color: #64748b;">Saldo a Atender:</span>
-            <strong style="color: #0f172a; margin-left: 4px;">${itemAtual.qtAAtender}</strong>
+            <strong style="color: #0f172a; margin-left: 4px;">${Number(itemAtual.qtAAtender).toFixed(4)}</strong>
           </div>
           <div>
             <span style="color: #64748b;">Total Informado:</span>
@@ -4897,7 +5048,8 @@ const App = (() => {
           <input type="date" id="input-dt-atend" class="form-input" style="font-size: 12.5px;" value="${at.dataAtend}">
         </div>
 
-        <button type="button" class="btn btn-primary" onclick="App.executarAtendimentoRequisicao()" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 800;">
+        <button type="button" class="btn btn-primary" onclick="App.executarAtendimentoRequisicao()"
+                style="width: 100%; padding: 12px; font-size: 14px; font-weight: 800; background: #0284c7; border-color: #0369a1;">
           Atende (Efetivar CD1409) ➔
         </button>
       </div>
@@ -4905,25 +5057,12 @@ const App = (() => {
   }
 
   function onTrocarRequisicaoAtendimento(nrRequisicao) {
-    const at = stateRequisicoes.atendimento;
-    const listaReqs = agruparRequisicoes(at.listaItens);
-    const req = listaReqs.find(r => Number(r.nrRequisicao) === Number(nrRequisicao));
-    if (req) {
-      at.reqSelecionada = req;
-      at.itemSelecionado = (req.itens && req.itens.length > 0) ? req.itens[0] : null;
-      at.saldosEstoque = [];
-      at.quantidadesInformadas = {};
-      if (at.itemSelecionado) {
-        consultarSaldosItemAtendimento(at.itemSelecionado.itCodigo);
-      }
-      renderizarPainelAtendimento();
-    }
+    abrirDetalheRequisicaoAtendimento(nrRequisicao);
   }
 
   function onSelecionarItemAtendimento(sequencia, itCodigo) {
     const at = stateRequisicoes.atendimento;
-    const item = (at.listaItens || []).find(it =>
-      Number(it.nrRequisicao) === Number(at.reqSelecionada.nrRequisicao) &&
+    const item = (at.reqSelecionada?.itens || []).find(it =>
       Number(it.Sequencia) === Number(sequencia) &&
       it.itCodigo === itCodigo
     );
@@ -4931,8 +5070,15 @@ const App = (() => {
       at.itemSelecionado = item;
       at.saldosEstoque = [];
       at.quantidadesInformadas = {};
+      renderizarTela2DetalheAtendimento();
       consultarSaldosItemAtendimento(item.itCodigo);
-      renderizarPainelAtendimento();
+    }
+  }
+
+  function recarregarSaldosItemAtendimento() {
+    const at = stateRequisicoes.atendimento;
+    if (at.itemSelecionado) {
+      consultarSaldosItemAtendimento(at.itemSelecionado.itCodigo);
     }
   }
 
@@ -4943,27 +5089,40 @@ const App = (() => {
     if (contSaldos) contSaldos.innerHTML = renderizarGridSaldosEstoque();
 
     const codEstabel = (state.session.codEstabel || '101').trim();
-    const payload = {
-      payload: [
-        {
-          codEstabel,
-          itCodigo
-        }
-      ]
-    };
+    const codEmpresa = state.session.codEmpresa || '001';
 
-    try {
-      const res = await pasoeFetch('/fcGetSaldoEstoqEstabItem', {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      at.saldosEstoque = extrairLista(data);
-    } catch (err) {
-      console.warn('Erro ao consultar fcGetSaldoEstoqEstabItem via PASOE:', err.message);
-      at.saldosEstoque = [];
+    let saldosEncontrados = null;
+
+    // Se online, tenta buscar do ERP
+    if (navigator.onLine) {
+      const payload = {
+        payload: [{ codEstabel, itCodigo }]
+      };
+      try {
+        const res = await pasoeFetch('/fcGetSaldoEstoqEstabItem', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        saldosEncontrados = extrairLista(data);
+      } catch (err) {
+        console.warn('Falha na consulta online de saldos. Tentando base local:', err.message);
+      }
     }
 
+    // Se offline ou consulta vazia/falha, busca da store local 'saldo_estoq' do IndexedDB
+    if (!saldosEncontrados || saldosEncontrados.length === 0) {
+      try {
+        const saldosLocais = await DB.consultarSaldoEstoqueItem(codEmpresa, codEstabel, itCodigo);
+        if (saldosLocais && saldosLocais.length > 0) {
+          saldosEncontrados = saldosLocais;
+        }
+      } catch (eLocal) {
+        console.warn('Erro ao consultar saldos no IndexedDB local:', eLocal.message);
+      }
+    }
+
+    at.saldosEstoque = saldosEncontrados || [];
     at.carregandoSaldos = false;
     if (contSaldos) contSaldos.innerHTML = renderizarGridSaldosEstoque();
   }
@@ -4972,7 +5131,6 @@ const App = (() => {
     const at = stateRequisicoes.atendimento;
     const val = parseFloat(valor) || 0;
     at.quantidadesInformadas[idx] = val;
-    // Atualiza apenas o painel de saldos para manter foco
     const contSaldos = document.getElementById('painel-saldos-estoque');
     if (contSaldos) contSaldos.innerHTML = renderizarGridSaldosEstoque();
   }
@@ -4983,7 +5141,6 @@ const App = (() => {
     const item = at.itemSelecionado;
     if (!saldo || !item) return;
 
-    // Calcula quanto ainda falta preencher
     let outros = 0;
     Object.keys(at.quantidadesInformadas).forEach(k => {
       if (Number(k) !== idx) outros += Number(at.quantidadesInformadas[k] || 0);
@@ -5001,6 +5158,8 @@ const App = (() => {
     const at = stateRequisicoes.atendimento;
     const req = at.reqSelecionada;
     const it = at.itemSelecionado;
+    const codEmpresa = state.session.codEmpresa || '001';
+
     if (!req || !it) {
       alert('Selecione uma requisição e um item para atender.');
       return;
@@ -5020,7 +5179,7 @@ const App = (() => {
         }
         totalInformado += val;
         linhasEstoque.push({
-          codEstabel: saldo.codEstabel,
+          codEstabel: saldo.codEstabel || state.session.codEstabel || '101',
           codDepos: saldo.codDepos,
           codLocaliz: saldo.codLocaliz || '',
           lote: saldo.lote || '',
@@ -5053,66 +5212,158 @@ const App = (() => {
       ]
     };
 
-    mostrarLoading('Atendendo Requisição no TOTVS...', 'Executando fcSetRequisicao.p / ceapi001k...');
+    // Fluxo ONLINE
+    if (navigator.onLine) {
+      mostrarLoading('Atendendo Requisição no TOTVS...', 'Executando fcSetRequisicao.p / ceapi001k...');
+      try {
+        const res = await pasoeFetch('/fcSetRequisicao', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        ocultarLoading();
 
-    try {
-      const res = await pasoeFetch('/fcSetRequisicao', {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      ocultarLoading();
+        if (data.type === 'ERROR' || data.code === '17006' || res.status >= 400) {
+          alert('❌ Erro no Atendimento TOTVS:\n\n' + (data.detailedMessage || data.message || 'Falha ao atender requisição.'));
+          return;
+        }
 
-      if (data.type === 'ERROR' || data.code === '17006' || res.status >= 400) {
-        alert('❌ Erro no Atendimento TOTVS:\n\n' + (data.detailedMessage || data.message || 'Falha ao atender requisição.'));
+        // Abate o saldo no IndexedDB local para manter consistência
+        for (const linha of linhasEstoque) {
+          await DB.abaterSaldoEstoqueLocal(codEmpresa, {
+            codEstabel: linha.codEstabel,
+            codDepos: linha.codDepos,
+            codLocaliz: linha.codLocaliz,
+            lote: linha.lote,
+            codRefer: linha.codRefer,
+            itCodigo: linha.itCodigo,
+            quantidade: linha.qtAAtender
+          });
+        }
+
+        // Atualiza quantidades locais da requisição
+        it.qtAAtender = Math.max(0, it.qtAAtender - totalInformado);
+        it.qtAtendida = Number(it.qtAtendida || 0) + totalInformado;
+
+        alert('✅ Atendimento efetuado com sucesso no Datasul!\n\nRequisição: ' + req.nrRequisicao + '\nItem: ' + it.itCodigo + '\nQuantidade atendida: ' + totalInformado);
+
+        // Se o item foi atendido por completo, volta para a lista
+        if (it.qtAAtender <= 0) {
+          await buscarRequisicoesAtendimento(at.termoBusca, true);
+          at.telaSub = 'lista';
+          renderTelaRequisicaoAtendimento();
+        } else {
+          at.quantidadesInformadas = {};
+          consultarSaldosItemAtendimento(it.itCodigo);
+        }
         return;
+      } catch (err) {
+        ocultarLoading();
+        console.warn('Falha na comunicação ao tentar atender online:', err.message);
+        if (!confirm('Falha de conexão com o TOTVS. Deseja registrar este atendimento na fila OFFLINE para sincronização posterior?')) {
+          return;
+        }
+      }
+    }
+
+    // Fluxo OFFLINE
+    try {
+      await DB.adicionarFilaSync('ATENDIMENTO_REQUISICAO', payload, codEmpresa);
+
+      // Abate do saldo local no IndexedDB
+      for (const linha of linhasEstoque) {
+        await DB.abaterSaldoEstoqueLocal(codEmpresa, {
+          codEstabel: linha.codEstabel,
+          codDepos: linha.codDepos,
+          codLocaliz: linha.codLocaliz,
+          lote: linha.lote,
+          codRefer: linha.codRefer,
+          itCodigo: linha.itCodigo,
+          quantidade: linha.qtAAtender
+        });
       }
 
-      alert('✅ Atendimento efetuado com sucesso no Datasul!\n\nRequisição: ' + req.nrRequisicao + '\nItem: ' + it.itCodigo + '\nQuantidade atendida: ' + totalInformado);
+      // Atualiza o item localmente em cache
+      it.qtAAtender = Math.max(0, it.qtAAtender - totalInformado);
+      it.qtAtendida = Number(it.qtAtendida || 0) + totalInformado;
+      await DB.putConfig('cache_requisicoes_atend_' + codEmpresa, at.listaItens);
 
-      // Recarrega a busca de requisições
-      await buscarRequisicoesAtendimento(at.termoBusca);
-    } catch (err) {
-      ocultarLoading();
-      alert('❌ Erro de comunicação com o servidor:\n\n' + err.message);
+      alert('✅ Atendimento registrado com sucesso em MODO OFFLINE!\n\nRequisição: ' + req.nrRequisicao + '\nItem: ' + it.itCodigo + '\nQuantidade: ' + totalInformado + '\n\nO movimento foi salvo na fila de sincronização e o saldo local já foi abatido.');
+
+      at.telaSub = 'lista';
+      renderTelaRequisicaoAtendimento();
+    } catch (eOffline) {
+      alert('❌ Erro ao salvar atendimento offline: ' + eOffline.message);
     }
   }
 
-  // 3. TELA DEVOLUÇÃO DE REQUISIÇÃO (CD1410)
+  // =========================================================================
+  // 3. DEVOLUÇÃO DE REQUISIÇÃO (CD1410) - FLUXO EM 2 TELAS
+  // =========================================================================
+
   async function renderTelaRequisicaoDevolucao(params = null) {
     const dev = stateRequisicoes.devolucao;
     const codEstabel = state.session.codEstabel || '101';
 
+    // Se estiver no modo detalhe com requisição selecionada, renderiza Tela 2
+    if (dev.telaSub === 'detalhe' && dev.reqSelecionada) {
+      renderizarTela2DetalheDevolucao();
+      return;
+    }
+
+    // Tela 1: Grid de Requisições com Saldo a Devolver
+    dev.telaSub = 'lista';
+
     container.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-        <button class="btn-topbar-action" onclick="App.navegar('requisicoes_menu')">‹ Voltar</button>
+        <button class="btn-topbar-action" onclick="App.navegar('requisicoes_menu')">‹ Início</button>
         <div style="text-align: center;">
           <h3 style="font-size: 14.5px; font-weight: 800; margin: 0; color: #7c3aed;">Devolução de Requisição</h3>
           <span style="font-size: 11px; color: #64748b;">CD1410 • Filial ${escapeHtml(codEstabel)}</span>
         </div>
-        <button class="btn-topbar-action" onclick="App.buscarRequisicoesDevolucao(document.getElementById('req-devol-input-busca')?.value || '')" title="Recarregar">🔄</button>
+        <button class="btn-topbar-action" onclick="App.buscarRequisicoesDevolucao(document.getElementById('req-devol-input-busca')?.value || '', true)" title="Recarregar">🔄</button>
       </div>
 
       <!-- Barra de Busca -->
-      <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-        <input type="text" id="req-devol-input-busca" class="form-input" style="font-size: 12.5px; flex: 1;" placeholder="Buscar número de requisição..." value="${escapeHtml(dev.termoBusca || '')}" onkeydown="if(event.key==='Enter') App.buscarRequisicoesDevolucao(this.value)">
-        <button type="button" class="btn btn-primary" style="width: auto; padding: 0 12px; font-size: 12px; background: #7c3aed; border-color: #6d28d9;" onclick="App.buscarRequisicoesDevolucao(document.getElementById('req-devol-input-busca').value)">Buscar 🔍</button>
+      <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+        <input type="text" id="req-devol-input-busca" class="form-input" style="font-size: 12.5px; flex: 1;"
+               placeholder="Buscar por requisição, requisitante ou item..."
+               value="${escapeHtml(dev.termoBusca || '')}"
+               onkeydown="if(event.key==='Enter') App.buscarRequisicoesDevolucao(this.value)">
+        <button type="button" class="btn btn-primary" style="width: auto; padding: 0 12px; font-size: 12px; background: #7c3aed; border-color: #6d28d9;"
+                onclick="App.buscarRequisicoesDevolucao(document.getElementById('req-devol-input-busca').value)">
+          Buscar 🔍
+        </button>
       </div>
 
-      <!-- Área de Conteúdo -->
+      <!-- Status Offline se aplicável -->
+      ${dev.isOffline ? `
+        <div style="background: #fefce8; border: 1px solid #fde047; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; font-size: 11.5px; color: #854d0e; display: flex; align-items: center; gap: 6px;">
+          <span>📴</span>
+          <span><strong>Modo Offline:</strong> Exibindo devoluções pendentes em cache local.</span>
+        </div>
+      ` : ''}
+
+      <!-- Grid de Cards de Requisições para Devolução -->
       <div id="req-devol-conteudo">
         <div class="card" style="text-align: center; color: #94a3b8; font-size: 12.5px; padding: 24px;">
-          Carregando requisições com saldo a devolver...
+          <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
+          Consultando requisições com saldo a devolver...
         </div>
       </div>
     `;
 
-    await buscarRequisicoesDevolucao(dev.termoBusca);
+    if (!dev.listaItens || dev.listaItens.length === 0) {
+      await buscarRequisicoesDevolucao(dev.termoBusca);
+    } else {
+      renderizarGridListaDevolucao();
+    }
   }
 
-  async function buscarRequisicoesDevolucao(termo = '') {
+  async function buscarRequisicoesDevolucao(termo = '', forcarOnline = false) {
     const dev = stateRequisicoes.devolucao;
     dev.termoBusca = termo || '';
+    const codEmpresa = state.session.codEmpresa || '001';
 
     const cont = document.getElementById('req-devol-conteudo');
     if (cont) {
@@ -5124,29 +5375,54 @@ const App = (() => {
       `;
     }
 
-    const payload = {
-      payload: [
-        {
-          dtCorte: '2000-01-01'
-        }
-      ]
-    };
+    let dadosCarregados = null;
+    let offline = false;
 
-    try {
-      const res = await pasoeFetch('/fcGetRequisDevol', {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      dev.listaItens = extrairLista(data);
-    } catch (err) {
-      console.warn('Erro ao consultar fcGetRequisDevol via PASOE:', err.message);
-      dev.listaItens = [];
+    if (navigator.onLine) {
+      const payload = {
+        payload: [{ dtCorte: '2000-01-01' }]
+      };
+      try {
+        const res = await pasoeFetch('/fcGetRequisDevol', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        dadosCarregados = extrairLista(data);
+        if (dadosCarregados && dadosCarregados.length > 0) {
+          await DB.putConfig('cache_requisicoes_devol_' + codEmpresa, dadosCarregados);
+        }
+      } catch (err) {
+        console.warn('Falha na consulta online de fcGetRequisDevol. Tentando cache offline:', err.message);
+      }
     }
+
+    if (!dadosCarregados) {
+      const emCache = await DB.getConfig('cache_requisicoes_devol_' + codEmpresa);
+      if (emCache && emCache.length > 0) {
+        dadosCarregados = emCache;
+        offline = true;
+      } else {
+        dadosCarregados = [];
+      }
+    }
+
+    dev.listaItens = dadosCarregados;
+    dev.isOffline = offline;
+
+    renderizarGridListaDevolucao();
+  }
+
+  function renderizarGridListaDevolucao() {
+    const dev = stateRequisicoes.devolucao;
+    const cont = document.getElementById('req-devol-conteudo');
+    if (!cont) return;
+
+    let lista = dev.listaItens || [];
 
     if (dev.termoBusca) {
       const t = dev.termoBusca.trim().toLowerCase();
-      dev.listaItens = dev.listaItens.filter(it =>
+      lista = lista.filter(it =>
         String(it.nrRequisicao).includes(t) ||
         String(it.itCodigo).toLowerCase().includes(t) ||
         String(it.descItem || '').toLowerCase().includes(t) ||
@@ -5154,15 +5430,7 @@ const App = (() => {
       );
     }
 
-    renderizarPainelDevolucao();
-  }
-
-  function renderizarPainelDevolucao() {
-    const dev = stateRequisicoes.devolucao;
-    const cont = document.getElementById('req-devol-conteudo');
-    if (!cont) return;
-
-    if (!dev.listaItens || dev.listaItens.length === 0) {
+    if (lista.length === 0) {
       cont.innerHTML = `
         <div class="card" style="text-align: center; color: #64748b; padding: 24px;">
           <div style="font-size: 26px; margin-bottom: 8px;">📭</div>
@@ -5175,47 +5443,139 @@ const App = (() => {
       return;
     }
 
-    const listaReqs = agruparRequisicoes(dev.listaItens);
-    const mapaReqs = new Map(listaReqs.map(r => [Number(r.nrRequisicao), r]));
-
-    if (!dev.reqSelecionada || !mapaReqs.has(Number(dev.reqSelecionada.nrRequisicao))) {
-      dev.reqSelecionada = listaReqs[0];
-      dev.itemSelecionado = (dev.reqSelecionada && dev.reqSelecionada.itens) ? dev.reqSelecionada.itens[0] : null;
-      dev.movimentos = [];
-      dev.movimentoSelecionadoIdx = null;
-      dev.quantidadeDevolver = 0;
-      if (dev.itemSelecionado) {
-        consultarMovimentosDevolucao(dev.reqSelecionada.nrRequisicao, dev.itemSelecionado.itCodigo);
-      }
-    } else {
-      dev.reqSelecionada = mapaReqs.get(Number(dev.reqSelecionada.nrRequisicao));
-    }
-
-    const reqAtual = dev.reqSelecionada || { nrRequisicao: '', dtRequisicao: '', nomeAbrev: '', itens: [] };
-    const itemAtual = dev.itemSelecionado;
-    const itensReq = reqAtual.itens || [];
+    const reqsAgrupadas = agruparRequisicoes(lista);
 
     cont.innerHTML = `
-      <!-- Seletor de Requisição -->
-      ${listaReqs.length > 1 ? `
-        <div style="margin-bottom: 12px;">
-          <label class="form-label" style="font-size: 11.5px;">Selecionar Requisição:</label>
-          <select class="form-input" style="font-size: 13px;" onchange="App.onTrocarRequisicaoDevolucao(this.value)">
-            ${listaReqs.map(r => `
-              <option value="${r.nrRequisicao}" ${Number(r.nrRequisicao) === Number(reqAtual.nrRequisicao) ? 'selected' : ''}>
-                Req. ${r.nrRequisicao} • ${escapeHtml(r.nomeAbrev)} (${(r.itens || []).length} item(ns))
-              </option>
-            `).join('')}
-          </select>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: 700; color: #475569;">
+          ${reqsAgrupadas.length} requisição(ões) com devolução pendente:
+        </span>
+        <span style="font-size: 11px; color: #64748b;">Toque para devolver</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        ${reqsAgrupadas.map(r => {
+          let saldoTotalDevol = 0;
+          r.itens.forEach(it => { saldoTotalDevol += Number(it.qtADevolver || 0); });
+
+          return `
+            <div class="card" style="margin: 0; padding: 12px; border-left: 4px solid #7c3aed; cursor: pointer; transition: all 0.15s; background: #ffffff;"
+                 onclick="App.abrirDetalheRequisicaoDevolucao(${r.nrRequisicao})">
+              <!-- Header do Card -->
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 17px;">↩️</span>
+                  <strong style="color: #6d28d9; font-size: 15px; font-weight: 800;">
+                    Req. #${r.nrRequisicao}
+                  </strong>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 11.5px; color: #64748b;">${formatarDataBr(r.dtRequisicao)}</span>
+                  <span class="badge" style="background:#ede9fe; color:#6d28d9; border:1px solid #ddd6fe; font-weight:700; font-size: 10px;">Atendida</span>
+                </div>
+              </div>
+
+              <!-- Requisitante -->
+              <div style="font-size: 12px; color: #334155; margin-bottom: 6px;">
+                <span style="color: #64748b;">Requisitante:</span>
+                <strong>${escapeHtml(r.nomeAbrev || '-')}</strong>
+              </div>
+
+              <!-- Prévia dos Itens -->
+              <div style="background: #faf5ff; border: 1px solid #f3e8ff; border-radius: 6px; padding: 8px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; font-size: 11px; color: #64748b; margin-bottom: 4px; font-weight: 700;">
+                  <span>Itens com Saldo a Devolver (${r.itens.length}):</span>
+                  <span>A Devolver</span>
+                </div>
+                ${r.itens.slice(0, 3).map(it => `
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; padding: 2px 0;">
+                    <div style="flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 8px;">
+                      <strong style="color: #0f172a;">${escapeHtml(it.itCodigo)}</strong>
+                      <span style="color: #64748b;"> - ${escapeHtml(it.descItem || '')}</span>
+                    </div>
+                    <strong style="color: #7c3aed; font-size: 12px;">${Number(it.qtADevolver).toFixed(4)}</strong>
+                  </div>
+                `).join('')}
+                ${r.itens.length > 3 ? `
+                  <div style="font-size: 10.5px; color: #7c3aed; text-align: center; margin-top: 4px; font-weight: 600;">
+                    + ${r.itens.length - 3} outro(s) item(ns)...
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- Rodapé do Card com Ação -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px;">
+                <div style="font-size: 11px; color: #64748b;">
+                  Saldo a Devolver: <strong style="color: #7c3aed; font-size: 12.5px;">${saldoTotalDevol.toFixed(4)}</strong>
+                </div>
+                <button type="button" class="btn btn-primary"
+                        style="width: auto; padding: 6px 14px; font-size: 12px; font-weight: 800; background: #7c3aed; border-color: #6d28d9;"
+                        onclick="event.stopPropagation(); App.abrirDetalheRequisicaoDevolucao(${r.nrRequisicao})">
+                  Devolver ➔
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function abrirDetalheRequisicaoDevolucao(nrRequisicao) {
+    const dev = stateRequisicoes.devolucao;
+    const reqsAgrupadas = agruparRequisicoes(dev.listaItens);
+    const req = reqsAgrupadas.find(r => Number(r.nrRequisicao) === Number(nrRequisicao));
+    if (!req) return;
+
+    dev.reqSelecionada = req;
+    dev.itemSelecionado = (req.itens && req.itens.length > 0)
+      ? (req.itens.find(i => Number(i.qtADevolver) > 0) || req.itens[0])
+      : null;
+    dev.movimentos = [];
+    dev.movimentoSelecionadoIdx = null;
+    dev.quantidadeDevolver = 0;
+    dev.telaSub = 'detalhe';
+
+    renderTelaRequisicaoDevolucao();
+
+    if (dev.itemSelecionado) {
+      consultarMovimentosDevolucao(req.nrRequisicao, dev.itemSelecionado.itCodigo);
+    }
+  }
+
+  function voltarListaRequisicoesDevolucao() {
+    const dev = stateRequisicoes.devolucao;
+    dev.telaSub = 'lista';
+    renderTelaRequisicaoDevolucao();
+  }
+
+  // TELA 2: DETALHES DA DEVOLUÇÃO CD1410, ITENS E MOVIMENTOS DE ORIGEM
+  function renderizarTela2DetalheDevolucao() {
+    const dev = stateRequisicoes.devolucao;
+    const reqAtual = dev.reqSelecionada;
+    const itemAtual = dev.itemSelecionado;
+    const itensReq = reqAtual.itens || [];
+    const codEstabel = state.session.codEstabel || '101';
+
+    container.innerHTML = `
+      <!-- Topbar com botão voltar para a lista de devoluções -->
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <button class="btn-topbar-action" onclick="App.voltarListaRequisicoesDevolucao()" style="color: #7c3aed; font-weight: 700;">
+          ‹ Lista de Devoluções
+        </button>
+        <div style="text-align: center;">
+          <h3 style="font-size: 14.5px; font-weight: 800; margin: 0; color: #7c3aed;">Req. #${reqAtual.nrRequisicao}</h3>
+          <span style="font-size: 11px; color: #64748b;">CD1410 • Filial ${escapeHtml(codEstabel)}</span>
         </div>
-      ` : ''}
+        <button class="btn-topbar-action" onclick="App.recarregarMovimentosDevolucao()" title="Recarregar Movimentos">🔄</button>
+      </div>
 
       <!-- Header Fiel ao CD1410 -->
       <div class="card" style="margin-bottom: 12px; border-left: 4px solid #7c3aed; padding: 12px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
           <div>
             <span style="color: #64748b;">Requisição:</span>
-            <strong style="color: #6d28d9; font-size: 14px; margin-left: 4px;">${escapeHtml(String(reqAtual.nrRequisicao))}</strong>
+            <strong style="color: #6d28d9; font-size: 14.5px; margin-left: 4px;">${escapeHtml(String(reqAtual.nrRequisicao))}</strong>
           </div>
           <div>
             <span style="color: #64748b;">Requisitante:</span>
@@ -5250,9 +5610,9 @@ const App = (() => {
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; font-size: 11px; margin-top: 8px; background: ${isSel ? '#f3e8ff' : '#f8fafc'}; padding: 6px; border-radius: 6px;">
-                  <div>Atendida: <strong>${it.qtAtendida}</strong></div>
-                  <div>Devolvida: <strong>${it.qtDevolvida || 0}</strong></div>
-                  <div>A Devolver: <strong style="color: #7c3aed; font-size: 12px;">${it.qtADevolver}</strong></div>
+                  <div>Atendida: <strong>${Number(it.qtAtendida).toFixed(4)}</strong></div>
+                  <div>Devolvida: <strong>${Number(it.qtDevolvida || 0).toFixed(4)}</strong></div>
+                  <div>A Devolver: <strong style="color: #7c3aed; font-size: 12px;">${Number(it.qtADevolver).toFixed(4)}</strong></div>
                 </div>
               </div>
             `;
@@ -5288,10 +5648,10 @@ const App = (() => {
       <div style="margin-bottom: 14px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">
-            2. Movimentos de Atendimento (Selecione a retirada de origem):
+            2. Movimentos de Saída (Selecione a retirada de origem):
           </span>
           <span style="font-size: 11px; color: #7c3aed; font-weight: 700;">
-            Saldo a Devolver: ${itemAtual.qtADevolver}
+            Saldo a Devolver: ${Number(itemAtual.qtADevolver).toFixed(4)}
           </span>
         </div>
 
@@ -5312,7 +5672,7 @@ const App = (() => {
                       ${m.codLocaliz ? ` • Local: <strong>${escapeHtml(m.codLocaliz)}</strong>` : ''}
                     </div>
                     <div>
-                      Qtd Atendida: <strong style="color: #0369a1; font-size: 13.5px;">${m.qtDisponivel}</strong>
+                      Qtd Atendida: <strong style="color: #0369a1; font-size: 13.5px;">${Number(m.qtDisponivel).toFixed(4)}</strong>
                     </div>
                   </div>
 
@@ -5331,7 +5691,7 @@ const App = (() => {
       <div class="card" style="margin-top: 14px; background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px;">
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 8px;">
           <span style="color: #64748b;">Saldo Total a Devolver:</span>
-          <strong style="color: #6d28d9; font-size: 13.5px;">${itemAtual.qtADevolver}</strong>
+          <strong style="color: #6d28d9; font-size: 13.5px;">${Number(itemAtual.qtADevolver).toFixed(4)}</strong>
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
@@ -5362,26 +5722,12 @@ const App = (() => {
   }
 
   function onTrocarRequisicaoDevolucao(nrRequisicao) {
-    const dev = stateRequisicoes.devolucao;
-    const listaReqs = agruparRequisicoes(dev.listaItens);
-    const req = listaReqs.find(r => Number(r.nrRequisicao) === Number(nrRequisicao));
-    if (req) {
-      dev.reqSelecionada = req;
-      dev.itemSelecionado = (req.itens && req.itens.length > 0) ? req.itens[0] : null;
-      dev.movimentos = [];
-      dev.movimentoSelecionadoIdx = null;
-      dev.quantidadeDevolver = 0;
-      if (dev.itemSelecionado) {
-        consultarMovimentosDevolucao(req.nrRequisicao, dev.itemSelecionado.itCodigo);
-      }
-      renderizarPainelDevolucao();
-    }
+    abrirDetalheRequisicaoDevolucao(nrRequisicao);
   }
 
   function onSelecionarItemDevolucao(sequencia, itCodigo) {
     const dev = stateRequisicoes.devolucao;
-    const item = (dev.listaItens || []).find(it =>
-      Number(it.nrRequisicao) === Number(dev.reqSelecionada.nrRequisicao) &&
+    const item = (dev.reqSelecionada?.itens || []).find(it =>
       Number(it.Sequencia) === Number(sequencia) &&
       it.itCodigo === itCodigo
     );
@@ -5390,8 +5736,15 @@ const App = (() => {
       dev.movimentos = [];
       dev.movimentoSelecionadoIdx = null;
       dev.quantidadeDevolver = 0;
+      renderizarTela2DetalheDevolucao();
       consultarMovimentosDevolucao(dev.reqSelecionada.nrRequisicao, item.itCodigo);
-      renderizarPainelDevolucao();
+    }
+  }
+
+  function recarregarMovimentosDevolucao() {
+    const dev = stateRequisicoes.devolucao;
+    if (dev.reqSelecionada && dev.itemSelecionado) {
+      consultarMovimentosDevolucao(dev.reqSelecionada.nrRequisicao, dev.itemSelecionado.itCodigo);
     }
   }
 
@@ -5467,6 +5820,7 @@ const App = (() => {
     const req = dev.reqSelecionada;
     const it = dev.itemSelecionado;
     const movIdx = dev.movimentoSelecionadoIdx;
+    const codEmpresa = state.session.codEmpresa || '001';
 
     if (!req || !it) {
       alert('Selecione uma requisição e um item para devolução.');
@@ -5518,28 +5872,84 @@ const App = (() => {
       ]
     };
 
-    mostrarLoading('Devolvendo Material no TOTVS...', 'Executando fcSetRequisDevol.p / ceapi001k...');
+    // Fluxo ONLINE
+    if (navigator.onLine) {
+      mostrarLoading('Devolvendo Material no TOTVS...', 'Executando fcSetRequisDevol.p / ceapi001k...');
+      try {
+        const res = await pasoeFetch('/fcSetRequisDevol', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        ocultarLoading();
 
-    try {
-      const res = await pasoeFetch('/fcSetRequisDevol', {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      ocultarLoading();
+        if (data.type === 'ERROR' || data.code === '17006' || res.status >= 400) {
+          alert('❌ Erro na Devolução TOTVS:\n\n' + (data.detailedMessage || data.message || 'Falha ao devolver requisição.'));
+          return;
+        }
 
-      if (data.type === 'ERROR' || data.code === '17006' || res.status >= 400) {
-        alert('❌ Erro na Devolução TOTVS:\n\n' + (data.detailedMessage || data.message || 'Falha ao devolver requisição.'));
+        // Restaura o saldo no IndexedDB local para manter estoque atualizado
+        await DB.restaurarSaldoEstoqueLocal(codEmpresa, {
+          codEstabel: mov.codEstabel || state.session.codEstabel || '101',
+          codDepos: mov.codDepos,
+          codLocaliz: mov.codLocaliz || '',
+          lote: mov.lote || '',
+          codRefer: mov.codRefer || '',
+          itCodigo: it.itCodigo,
+          quantidade: qtdDevol
+        });
+
+        // Atualiza quantidades locais
+        it.qtADevolver = Math.max(0, it.qtADevolver - qtdDevol);
+        it.qtDevolvida = Number(it.qtDevolvida || 0) + qtdDevol;
+        mov.qtDisponivel = Math.max(0, mov.qtDisponivel - qtdDevol);
+
+        alert('✅ Devolução efetuada com sucesso no Datasul!\n\nRequisição: ' + req.nrRequisicao + '\nItem: ' + it.itCodigo + '\nQuantidade devolvida: ' + qtdDevol);
+
+        // Se todo o saldo do item foi devolvido, recarrega e volta para a lista
+        if (it.qtADevolver <= 0) {
+          await buscarRequisicoesDevolucao(dev.termoBusca, true);
+          dev.telaSub = 'lista';
+          renderTelaRequisicaoDevolucao();
+        } else {
+          consultarMovimentosDevolucao(req.nrRequisicao, it.itCodigo);
+        }
         return;
+      } catch (err) {
+        ocultarLoading();
+        console.warn('Falha na comunicação ao tentar devolver online:', err.message);
+        if (!confirm('Falha de conexão com o TOTVS. Deseja registrar esta devolução na fila OFFLINE para sincronização posterior?')) {
+          return;
+        }
       }
+    }
 
-      alert('✅ Devolução efetuada com sucesso no Datasul!\n\nRequisição: ' + req.nrRequisicao + '\nItem: ' + it.itCodigo + '\nQuantidade devolvida: ' + qtdDevol);
+    // Fluxo OFFLINE
+    try {
+      await DB.adicionarFilaSync('DEVOLUCAO_REQUISICAO', payload, codEmpresa);
 
-      // Recarrega a lista de devoluções
-      await buscarRequisicoesDevolucao(dev.termoBusca);
-    } catch (err) {
-      ocultarLoading();
-      alert('❌ Erro de comunicação com o servidor:\n\n' + err.message);
+      // Restaura o saldo no IndexedDB local
+      await DB.restaurarSaldoEstoqueLocal(codEmpresa, {
+        codEstabel: mov.codEstabel || state.session.codEstabel || '101',
+        codDepos: mov.codDepos,
+        codLocaliz: mov.codLocaliz || '',
+        lote: mov.lote || '',
+        codRefer: mov.codRefer || '',
+        itCodigo: it.itCodigo,
+        quantidade: qtdDevol
+      });
+
+      // Atualiza o item localmente em cache
+      it.qtADevolver = Math.max(0, it.qtADevolver - qtdDevol);
+      it.qtDevolvida = Number(it.qtDevolvida || 0) + qtdDevol;
+      await DB.putConfig('cache_requisicoes_devol_' + codEmpresa, dev.listaItens);
+
+      alert('✅ Devolução registrada com sucesso em MODO OFFLINE!\n\nRequisição: ' + req.nrRequisicao + '\nItem: ' + it.itCodigo + '\nQuantidade devolvida: ' + qtdDevol + '\n\nO movimento foi salvo na fila de sincronização e o saldo local já foi restaurado.');
+
+      dev.telaSub = 'lista';
+      renderTelaRequisicaoDevolucao();
+    } catch (eOffline) {
+      alert('❌ Erro ao salvar devolução offline: ' + eOffline.message);
     }
   }
 
@@ -6388,6 +6798,8 @@ const App = (() => {
     renderTelaEstoqueMenu,
     renderTelaRequisicoesMenu,
     renderTelaRequisicaoAtendimento,
+    abrirDetalheRequisicaoAtendimento,
+    voltarListaRequisicoesAtendimento,
     buscarRequisicoesAtendimento,
     onTrocarRequisicaoAtendimento,
     onSelecionarItemAtendimento,
@@ -6395,6 +6807,8 @@ const App = (() => {
     preencherAtendimentoTudo,
     executarAtendimentoRequisicao,
     renderTelaRequisicaoDevolucao,
+    abrirDetalheRequisicaoDevolucao,
+    voltarListaRequisicoesDevolucao,
     buscarRequisicoesDevolucao,
     onTrocarRequisicaoDevolucao,
     onSelecionarItemDevolucao,

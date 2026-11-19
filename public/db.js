@@ -844,7 +844,7 @@ const DB = (() => {
     }
 
     // FASE 2: Processa Apurações de Fichas do CE0712
-    const pendentesApuracao = pendentes.filter(p => p.tipo !== 'INVENTARIO_AVULSA');
+    const pendentesApuracao = pendentes.filter(p => p.tipo === 'INVENTARIO_APURACAO' || (!p.tipo && p.payload && p.payload.nrFicha));
     for (const p of pendentesApuracao) {
       try {
         const payloadEnvio = { ...p.payload, codEmpresa: emp };
@@ -876,6 +876,86 @@ const DB = (() => {
         } else {
           erros++;
           const msgErro = data.detailedMessage || data.message || 'Erro ao apurar ficha';
+          p.ultimoErro = msgErro;
+          await put('fila_sync', p, emp);
+          relatorio.push({
+            id_uuid: p.id_uuid,
+            tipo: p.tipo,
+            status: 'ERROR',
+            mensagem: msgErro
+          });
+        }
+      } catch (err) {
+        erros++;
+        p.ultimoErro = err.message;
+        await put('fila_sync', p, emp);
+        relatorio.push({
+          id_uuid: p.id_uuid,
+          tipo: p.tipo,
+          status: 'ERROR',
+          mensagem: err.message
+        });
+      }
+    }
+
+    // FASE 3: Processa Atendimentos de Requisição (CD1409)
+    const pendentesAtend = pendentes.filter(p => p.tipo === 'ATENDIMENTO_REQUISICAO');
+    for (const p of pendentesAtend) {
+      try {
+        const payloadEnvio = { ...p.payload, codEmpresa: emp };
+        const data = await dispararApi('/fcSetRequisicao', payloadEnvio);
+        if (data.type === 'OK' || data.code === '0' || (data.detailedMessage && !data.detailedMessage.toLowerCase().includes('erro'))) {
+          await remove('fila_sync', p.id_uuid);
+          processados++;
+          relatorio.push({
+            id_uuid: p.id_uuid,
+            tipo: p.tipo,
+            status: 'OK',
+            mensagem: `Atendimento Req #${p.payload?.payload?.[0]?.nrRequisicao || ''} sincronizado com sucesso no ERP!`
+          });
+        } else {
+          erros++;
+          const msgErro = data.detailedMessage || data.message || 'Erro ao efetivar atendimento no Datasul';
+          p.ultimoErro = msgErro;
+          await put('fila_sync', p, emp);
+          relatorio.push({
+            id_uuid: p.id_uuid,
+            tipo: p.tipo,
+            status: 'ERROR',
+            mensagem: msgErro
+          });
+        }
+      } catch (err) {
+        erros++;
+        p.ultimoErro = err.message;
+        await put('fila_sync', p, emp);
+        relatorio.push({
+          id_uuid: p.id_uuid,
+          tipo: p.tipo,
+          status: 'ERROR',
+          mensagem: err.message
+        });
+      }
+    }
+
+    // FASE 4: Processa Devoluções de Requisição (CD1410)
+    const pendentesDevol = pendentes.filter(p => p.tipo === 'DEVOLUCAO_REQUISICAO');
+    for (const p of pendentesDevol) {
+      try {
+        const payloadEnvio = { ...p.payload, codEmpresa: emp };
+        const data = await dispararApi('/fcSetRequisDevol', payloadEnvio);
+        if (data.type === 'OK' || data.code === '0' || (data.detailedMessage && !data.detailedMessage.toLowerCase().includes('erro'))) {
+          await remove('fila_sync', p.id_uuid);
+          processados++;
+          relatorio.push({
+            id_uuid: p.id_uuid,
+            tipo: p.tipo,
+            status: 'OK',
+            mensagem: `Devolução Req #${p.payload?.payload?.[0]?.nrRequisicao || ''} sincronizada com sucesso no ERP!`
+          });
+        } else {
+          erros++;
+          const msgErro = data.detailedMessage || data.message || 'Erro ao efetivar devolução no Datasul';
           p.ultimoErro = msgErro;
           await put('fila_sync', p, emp);
           relatorio.push({
@@ -1025,6 +1105,86 @@ const DB = (() => {
     return { existe: false, dtValiLote: '' };
   }
 
+  async function consultarSaldoEstoqueItem(codEmpresa, codEstabel, itCodigo) {
+    const emp = normalizarEmpresa(codEmpresa);
+    const itNorm = String(itCodigo || '').trim().toUpperCase();
+    const estNorm = String(codEstabel || '').trim();
+
+    const todos = await getAllByEmpresa('saldo_estoq', emp);
+    const filtrados = todos.filter(s => {
+      const matchIt = String(s.itCodigo || '').trim().toUpperCase() === itNorm;
+      const matchEst = !estNorm || String(s.codEstab || s.codEstabel || '').trim() === estNorm;
+      return matchIt && matchEst;
+    });
+
+    return filtrados.map(s => ({
+      codEstabel: s.codEstab || s.codEstabel || estNorm,
+      codDepos: s.codDep || s.codDepos || '',
+      codLocaliz: s.codLocal || s.codLocaliz || '',
+      lote: s.lote || '',
+      codRefer: s.codRefer || '',
+      itCodigo: s.itCodigo,
+      qtDisponivel: Number(s.qtdeDisponivel ?? s.qtDisponivel ?? s.quantidade ?? 0),
+      dtValiLote: s.dtValiLote || ''
+    })).filter(s => s.qtDisponivel > 0);
+  }
+
+  async function abaterSaldoEstoqueLocal(codEmpresa, { codEstabel, codDepos, codLocaliz, lote, codRefer, itCodigo, quantidade }) {
+    const emp = normalizarEmpresa(codEmpresa);
+    const est = String(codEstabel || '').trim();
+    const dep = String(codDepos || '').trim();
+    const loc = String(codLocaliz || '').trim();
+    const lot = String(lote || '').trim();
+    const ref = String(codRefer || '').trim();
+    const it = String(itCodigo || '').trim();
+    const qtdAbater = Number(quantidade || 0);
+
+    const reg = await get('saldo_estoq', [emp, est, dep, loc, it, lot, ref]);
+    if (reg) {
+      const atual = Number(reg.qtdeDisponivel ?? reg.qtDisponivel ?? reg.quantidade ?? 0);
+      const novo = Math.max(0, atual - qtdAbater);
+      reg.qtdeDisponivel = novo;
+      reg.qtDisponivel = novo;
+      reg.quantidade = novo;
+      await put('saldo_estoq', reg, emp);
+    }
+  }
+
+  async function restaurarSaldoEstoqueLocal(codEmpresa, { codEstabel, codDepos, codLocaliz, lote, codRefer, itCodigo, quantidade }) {
+    const emp = normalizarEmpresa(codEmpresa);
+    const est = String(codEstabel || '').trim();
+    const dep = String(codDepos || '').trim();
+    const loc = String(codLocaliz || '').trim();
+    const lot = String(lote || '').trim();
+    const ref = String(codRefer || '').trim();
+    const it = String(itCodigo || '').trim();
+    const qtdRestaurar = Number(quantidade || 0);
+
+    let reg = await get('saldo_estoq', [emp, est, dep, loc, it, lot, ref]);
+    if (reg) {
+      const atual = Number(reg.qtdeDisponivel ?? reg.qtDisponivel ?? reg.quantidade ?? 0);
+      const novo = atual + qtdRestaurar;
+      reg.qtdeDisponivel = novo;
+      reg.qtDisponivel = novo;
+      reg.quantidade = novo;
+      await put('saldo_estoq', reg, emp);
+    } else {
+      reg = {
+        codEmpresa: emp,
+        codEstab: est,
+        codDep: dep,
+        codLocal: loc,
+        itCodigo: it,
+        lote: lot,
+        codRefer: ref,
+        qtdeDisponivel: qtdRestaurar,
+        qtDisponivel: qtdRestaurar,
+        quantidade: qtdRestaurar
+      };
+      await put('saldo_estoq', reg, emp);
+    }
+  }
+
   return {
     normalizarEmpresa,
     normalizarDataIso,
@@ -1058,6 +1218,9 @@ const DB = (() => {
     obterTransferencia,
     excluirTransferencia,
     listarTransferencias,
-    obterDataValidadeLote
+    obterDataValidadeLote,
+    consultarSaldoEstoqueItem,
+    abaterSaldoEstoqueLocal,
+    restaurarSaldoEstoqueLocal
   };
 })();
