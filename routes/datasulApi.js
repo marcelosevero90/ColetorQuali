@@ -1486,10 +1486,19 @@ async function proxyPasoeOuFallback(endpoint, req, res, fallbackFn) {
       headers['Authorization'] = 'Basic ' + Buffer.from('matheus.st:qwe8451').toString('base64');
     }
 
+    const bodyEnvio = req.body && typeof req.body === 'object' ? { ...req.body } : req.body;
+    if (bodyEnvio && Array.isArray(bodyEnvio.payload) && bodyEnvio.payload.length > 0 && typeof bodyEnvio.payload[0] === 'object' && bodyEnvio.payload[0] !== null) {
+      Object.keys(bodyEnvio.payload[0]).forEach(k => {
+        if (bodyEnvio[k] === undefined) {
+          bodyEnvio[k] = bodyEnvio.payload[0][k];
+        }
+      });
+    }
+
     const pasoeRes = await fetch(realPasoeUrl, {
       method: req.method || 'PUT',
       headers,
-      body: req.body && Object.keys(req.body).length > 0 ? JSON.stringify(req.body) : undefined,
+      body: bodyEnvio && Object.keys(bodyEnvio).length > 0 ? JSON.stringify(bodyEnvio) : undefined,
       signal: controller.signal
     });
 

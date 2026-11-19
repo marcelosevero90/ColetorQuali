@@ -80,7 +80,16 @@ app.all('/api/pasoe-proxy', async (req, res) => {
     };
 
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.body && Object.keys(req.body).length > 0) {
-      fetchOptions.body = JSON.stringify(req.body);
+      const bodyEnvio = { ...req.body };
+      // Compatibilidade Progress ABL: se payload for array com objeto, espelha propriedades na raiz para programas legados que leem do root
+      if (Array.isArray(bodyEnvio.payload) && bodyEnvio.payload.length > 0 && typeof bodyEnvio.payload[0] === 'object' && bodyEnvio.payload[0] !== null) {
+        Object.keys(bodyEnvio.payload[0]).forEach(k => {
+          if (bodyEnvio[k] === undefined) {
+            bodyEnvio[k] = bodyEnvio.payload[0][k];
+          }
+        });
+      }
+      fetchOptions.body = JSON.stringify(bodyEnvio);
     }
 
     const response = await fetch(targetUrl, fetchOptions);

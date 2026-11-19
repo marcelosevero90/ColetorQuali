@@ -5096,6 +5096,8 @@ const App = (() => {
     // Se online, tenta buscar do ERP
     if (navigator.onLine) {
       const payload = {
+        codEstabel,
+        itCodigo,
         payload: [{ codEstabel, itCodigo }]
       };
       try {
@@ -5756,6 +5758,9 @@ const App = (() => {
 
     const codEstabel = (state.session.codEstabel || '101').trim();
     const payload = {
+      nrRequis: Number(nrRequis),
+      codEstabel,
+      itCodigo,
       payload: [
         {
           nrRequis: Number(nrRequis),
