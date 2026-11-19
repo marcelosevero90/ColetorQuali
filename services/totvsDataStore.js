@@ -460,56 +460,66 @@ class TotvsDataStore {
         }
       ],
 
+      // requisicao (Cabeçalho da requisição)
+      requisicao: [
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319496, dtRequisicao: '2026-11-18', nomeAbrev: 'msevero', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319505, dtRequisicao: '2026-11-18', nomeAbrev: 'marcia.b', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319524, dtRequisicao: '2026-11-18', nomeAbrev: 'fur186', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319610, dtRequisicao: '2026-11-18', nomeAbrev: 'msevero', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319706, dtRequisicao: '2026-11-18', nomeAbrev: 'aamaral', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319727, dtRequisicao: '2026-11-18', nomeAbrev: 'fur186', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319813, dtRequisicao: '2026-11-18', nomeAbrev: 'msevero', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319824, dtRequisicao: '2026-11-18', nomeAbrev: 'fur186', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319835, dtRequisicao: '2026-11-18', nomeAbrev: 'aamaral', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319850, dtRequisicao: '2026-11-18', nomeAbrev: 'msevero', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319855, dtRequisicao: '2026-11-18', nomeAbrev: 'marcia.b', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319877, dtRequisicao: '2026-11-18', nomeAbrev: 'fur186', tpRequis: 1, situacao: 1, estado: 1, dtAtend: null, dtDevol: null },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 111, dtRequisicao: '2012-04-13', nomeAbrev: 'marcia.b', tpRequis: 1, situacao: 2, estado: 1, dtAtend: '2012-04-13', dtDevol: null }
+      ],
+
       // it_requisicao (Itens da requisição)
       it_requisicao: [
-        {
-          codEmpresa: '001',
-          codEstabel: '101',
-          nrRequisicao: 319877,
-          Sequencia: 1,
-          itCodigo: '07060334',
-          descItem: 'Correia Der',
-          codRefer: '',
-          codUnidNegoc: 'MOV',
-          qtRequisitada: 1.0,
-          qtSaldo: 1.0,
-          qtAtendida: 0.0,
-          qtAAtender: 1.0,
-          qtDevolvida: 0.0,
-          qtADevolver: 0.0,
-          situacao: 1,
-          estado: 1,
-          tpRequis: 1,
-          nomeAbrev: 'fur186',
-          dtRequisicao: '2026-11-18',
-          dtAtend: null,
-          ctCodigo: '9.1.1.01.008',
-          scCodigo: '101'
-        },
-        {
-          codEmpresa: '001',
-          codEstabel: '101',
-          nrRequisicao: 111,
-          Sequencia: 10,
-          itCodigo: '06020095',
-          descItem: 'Luva Multitato Preta PU',
-          codRefer: '',
-          codUnidNegoc: 'MOV',
-          qtRequisitada: 1.0,
-          qtSaldo: 0.0,
-          qtAtendida: 1.0,
-          qtAAtender: 0.0,
-          qtDevolvida: 0.0,
-          qtADevolver: 1.0,
-          situacao: 2,
-          estado: 1,
-          tpRequis: 1,
-          nomeAbrev: 'marcia.b',
-          dtRequisicao: '2012-04-13',
-          dtAtend: '2012-04-13',
-          ctCodigo: '9.1.1.01.008',
-          scCodigo: '101'
-        }
+        // 319.496 (3 itens)
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319496, Sequencia: 1, itCodigo: '01010125', descItem: 'Kit Pistão a Gás 50N Cinza', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 2.0, qtSaldo: 2.0, qtAtendida: 0.0, qtAAtender: 2.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'msevero', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319496, Sequencia: 2, itCodigo: '01010047', descItem: 'Kit Pont Prince (10) Unidades', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 5.0, qtSaldo: 5.0, qtAtendida: 0.0, qtAAtender: 5.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'msevero', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319496, Sequencia: 3, itCodigo: '07060334', descItem: 'Correia Der', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 1.0, qtSaldo: 1.0, qtAtendida: 0.0, qtAAtender: 1.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'msevero', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.505
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319505, Sequencia: 1, itCodigo: '01010115', descItem: 'Porta Latas Simples 348 x 91 x 115mm', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 1.0, qtSaldo: 1.0, qtAtendida: 0.0, qtAAtender: 1.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'marcia.b', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.524
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319524, Sequencia: 1, itCodigo: '06020095', descItem: 'Luva Multitato Preta PU', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 3.0, qtSaldo: 3.0, qtAtendida: 0.0, qtAAtender: 3.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'fur186', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.610 (2 itens)
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319610, Sequencia: 1, itCodigo: 'PI0020', descItem: 'VALVULA ESFERA TRIPARTIDA INOX 1/2 BSP', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 4.0, qtSaldo: 4.0, qtAtendida: 0.0, qtAAtender: 4.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'msevero', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319610, Sequencia: 2, itCodigo: 'PI0041', descItem: 'CURVA 90 RAIO LONGO SCH 40 1/2', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 2.0, qtSaldo: 2.0, qtAtendida: 0.0, qtAAtender: 2.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'msevero', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.706
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319706, Sequencia: 1, itCodigo: 'PI0440', descItem: 'ELETRODO SOLDA INOX 316L 2.5MM', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 10.0, qtSaldo: 10.0, qtAtendida: 0.0, qtAAtender: 10.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'aamaral', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.727
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319727, Sequencia: 1, itCodigo: '11000015', descItem: 'CARBONATO DE CALCIO (PA)', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 50.0, qtSaldo: 50.0, qtAtendida: 0.0, qtAAtender: 50.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'fur186', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.813
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319813, Sequencia: 1, itCodigo: '01010125', descItem: 'Kit Pistão a Gás 50N Cinza', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 1.0, qtSaldo: 1.0, qtAtendida: 0.0, qtAAtender: 1.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'msevero', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.824
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319824, Sequencia: 1, itCodigo: '07060334', descItem: 'Correia Der', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 2.0, qtSaldo: 2.0, qtAtendida: 0.0, qtAAtender: 2.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'fur186', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.835
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319835, Sequencia: 1, itCodigo: '01010047', descItem: 'Kit Pont Prince (10) Unidades', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 2.0, qtSaldo: 2.0, qtAtendida: 0.0, qtAAtender: 2.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'aamaral', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.850
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319850, Sequencia: 1, itCodigo: 'PI0010', descItem: 'TUBO ACO CARBONO SCH 40 1/2 6000MM', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 6.0, qtSaldo: 6.0, qtAtendida: 0.0, qtAAtender: 6.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'msevero', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.855
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319855, Sequencia: 1, itCodigo: '06020095', descItem: 'Luva Multitato Preta PU', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 2.0, qtSaldo: 2.0, qtAtendida: 0.0, qtAAtender: 2.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'marcia.b', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // 319.877
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 319877, Sequencia: 1, itCodigo: '07060334', descItem: 'Correia Der', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 1.0, qtSaldo: 1.0, qtAtendida: 0.0, qtAAtender: 1.0, qtDevolvida: 0.0, qtADevolver: 0.0, situacao: 1, estado: 1, tpRequis: 1, nomeAbrev: 'fur186', dtRequisicao: '2026-11-18', dtAtend: null, ctCodigo: '9.1.1.01.008', scCodigo: '101' },
+
+        // Devolução 111
+        { codEmpresa: '001', codEstabel: '101', nrRequisicao: 111, Sequencia: 10, itCodigo: '06020095', descItem: 'Luva Multitato Preta PU', codRefer: '', codUnidNegoc: 'MOV', qtRequisitada: 1.0, qtSaldo: 0.0, qtAtendida: 1.0, qtAAtender: 0.0, qtDevolvida: 0.0, qtADevolver: 1.0, situacao: 2, estado: 1, tpRequis: 1, nomeAbrev: 'marcia.b', dtRequisicao: '2012-04-13', dtAtend: '2012-04-13', ctCodigo: '9.1.1.01.008', scCodigo: '101' }
       ],
 
       // movto_estoq (Movimentos de Atendimento de Requisição para Devolução - fcGetSaldoEstoqEstabItDev)
