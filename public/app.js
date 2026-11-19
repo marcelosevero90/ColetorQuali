@@ -181,11 +181,11 @@ const App = (() => {
       const qtdPend = await DB.getQtdPendenciasSync(codEmpresa);
       if (qtdPend > 0) {
         console.log(`[SYNC RECORRENTE] Transmitindo ${qtdPend} pendência(s) offline da Empresa ${codEmpresa}...`);
-        await DB.integrarFilaOffline(
+        await DB.integrarFilaOffline({
           codEmpresa,
-          state.session.pasoeUrl || '/api/datasul',
-          state.session.authHeader
-        );
+          pasoeUrl: state.session.pasoeUrl || '/api/datasul',
+          authHeader: state.session.authHeader
+        });
         await atualizarBadgePendencias();
       }
 
@@ -6560,8 +6560,12 @@ const App = (() => {
   }
 
   async function integrarFilaOffline() {
-    if (!isOnline()) {
-      alert('Dispositivo offline. Conecte-se para transmitir ao PASOE.');
+    if (state.simularOffline) {
+      alert('⚠️ O coletor está em modo de simulação offline.\n\nPor favor, desative o botão "Simulando Offline" no topo da tela para restabelecer a conexão e permitir a transmissão ao TOTVS.');
+      return;
+    }
+    if (!navigator.onLine) {
+      alert('Dispositivo sem conexão à rede de dados. Conecte-se para transmitir ao PASOE.');
       return;
     }
 
@@ -6709,7 +6713,12 @@ const App = (() => {
         }
       }
 
-      alert(`Sincronização finalizada!\nProcessados com sucesso: ${res.processados || 0}\nErros: ${res.erros || 0}`);
+      let msgResultado = `Sincronização finalizada!\n\nProcessados com sucesso: ${res.processados || 0}\nErros: ${res.erros || 0}`;
+      if (res.erros > 0 && Array.isArray(res.relatorio)) {
+        const errosMsg = res.relatorio.filter(r => r.status === 'ERROR').map(r => `• ${r.tipo}: ${r.mensagem}`).join('\n');
+        msgResultado += '\n\nFalhas ocorridas:\n' + errosMsg;
+      }
+      alert(msgResultado);
       renderTelaSincronizacao();
       atualizarBadgePendencias();
     } catch (e) {

@@ -26,6 +26,7 @@ PROCEDURE pi-find:
 
     DEFINE VAR oJsonPayloadObject   AS JsonObject   NO-UNDO.
     DEFINE VAR aJsonPayloadArray    AS JsonArray    NO-UNDO.
+    DEFINE VAR aSubPayload          AS JsonArray    NO-UNDO.
     DEFINE VAR iContPayload         AS INTEGER      NO-UNDO.
     DEFINE VAR iContSE              AS INTEGER      NO-UNDO.
 
@@ -72,6 +73,12 @@ PROCEDURE pi-find:
         DO iContPayload = 1 TO aJsonPayloadArray:LENGTH ON ERROR UNDO, LEAVE:
             //-- Cabecalho
             oJsonPayloadObject = aJsonPayloadArray:GetJsonObject(iContPayload).
+
+            IF VALID-OBJECT(oJsonPayloadObject) AND oJsonPayloadObject:Has("payload") THEN DO:
+                aSubPayload = oJsonPayloadObject:GetJsonArray("payload") NO-ERROR.
+                IF VALID-OBJECT(aSubPayload) AND aSubPayload:LENGTH > 0 THEN
+                    oJsonPayloadObject = aSubPayload:GetJsonObject(1).
+            END.
                        
             ASSIGN i-nrRequis   = oJsonPayloadObject:GetInteger("nrRequisicao")
                    c-itCodigo   = oJsonPayloadObject:GetCharacter("itCodigo")

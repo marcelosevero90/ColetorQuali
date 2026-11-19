@@ -749,9 +749,25 @@ const DB = (() => {
     return list.sort((a, b) => (b.id_local || 0) - (a.id_local || 0));
   }
 
-  // Envia fila de pendências offline para os endpoints oficiais do PASOE (fcSetInventarioNovaFicha e fcSetInventarioApuracaoFicha)
-  async function integrarFilaOffline({ pasoeUrl, codEmpresa, authHeader }) {
-    if (!navigator.onLine) return { success: false, motivo: 'OFFLINE', mensagem: 'Dispositivo offline.' };
+  // Envia fila de pendências offline para os endpoints oficiais do PASOE (fcSetInventarioNovaFicha, fcSetInventarioApuracaoFicha, fcSetRequisicao, fcSetRequisDevol)
+  async function integrarFilaOffline(opcoesOuEmpresa, pasoeUrlParam, authHeaderParam) {
+    let pasoeUrl = '';
+    let codEmpresa = '001';
+    let authHeader = '';
+
+    if (opcoesOuEmpresa && typeof opcoesOuEmpresa === 'object') {
+      pasoeUrl = opcoesOuEmpresa.pasoeUrl || '';
+      codEmpresa = opcoesOuEmpresa.codEmpresa || '001';
+      authHeader = opcoesOuEmpresa.authHeader || '';
+    } else {
+      codEmpresa = opcoesOuEmpresa || '001';
+      pasoeUrl = pasoeUrlParam || '';
+      authHeader = authHeaderParam || '';
+    }
+
+    const estaOnline = typeof window !== 'undefined' && window.App?.isOnline ? window.App.isOnline() : navigator.onLine;
+    if (!estaOnline) return { success: false, motivo: 'OFFLINE', mensagem: 'Dispositivo offline ou com simulação offline ativa.' };
+
     const emp = normalizarEmpresa(codEmpresa || '001');
     const fila = await getFilaSyncEmpresa(emp);
     const pendentes = fila.filter(r => r.status === 'Pendente');
@@ -766,14 +782,23 @@ const DB = (() => {
         : rawUrl;
       const headers = {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'companyId': emp
       };
       if (authHeader) headers['Authorization'] = authHeader;
 
+      // Se body já contém 'payload' como array, preserva intacto sem re-empacotar
+      let jsonBody;
+      if (body && Array.isArray(body.payload)) {
+        jsonBody = { ...body };
+      } else {
+        jsonBody = { ...body, payload: [body] };
+      }
+
       const res = await fetch(finalUrl, {
         method: 'PUT',
         headers,
-        body: JSON.stringify({ ...body, payload: [body] })
+        body: JSON.stringify(jsonBody)
       });
       return await res.json();
     }
@@ -902,16 +927,47 @@ const DB = (() => {
     const pendentesAtend = pendentes.filter(p => p.tipo === 'ATENDIMENTO_REQUISICAO');
     for (const p of pendentesAtend) {
       try {
-        const payloadEnvio = { ...p.payload, codEmpresa: emp };
+        let itensAtendimento = [];
+        if (p.payload && Array.isArray(p.payload.payload)) {
+          const primeiro = p.payload.payload[0];
+          if (primeiro && Array.isArray(primeiro.payload)) {
+            itensAtendimento = primeiro.payload;
+          } else {
+            itensAtendimento = p.payload.payload;
+          }
+        } else if (p.payload && Array.isArray(p.payload)) {
+          itensAtendimento = p.payload;
+        } else if (p.payload && (p.payload.nrRequisicao || p.payload.itCodigo)) {
+          itensAtendimento = [p.payload];
+        }
+
+        const payloadEnvio = {
+          payload: itensAtendimento,
+          codEmpresa: emp
+        };
+
+        // Espelha campos na raiz para compatibilidade com Progress ABL
+        if (itensAtendimento.length > 0 && typeof itensAtendimento[0] === 'object') {
+          Object.keys(itensAtendimento[0]).forEach(k => {
+            if (payloadEnvio[k] === undefined) {
+              payloadEnvio[k] = itensAtendimento[0][k];
+            }
+          });
+        }
+
         const data = await dispararApi('/fcSetRequisicao', payloadEnvio);
-        if (data.type === 'OK' || data.code === '0' || (data.detailedMessage && !data.detailedMessage.toLowerCase().includes('erro'))) {
+        const nrReqLog = payloadEnvio.nrRequisicao || payloadEnvio.payload?.[0]?.nrRequisicao || '';
+        const isOk = (data.type === 'OK' || data.code === '0' || String(data.code) === '0') &&
+                     (!data.type || data.type.toUpperCase() !== 'ERROR');
+
+        if (isOk) {
           await remove('fila_sync', p.id_uuid);
           processados++;
           relatorio.push({
             id_uuid: p.id_uuid,
             tipo: p.tipo,
             status: 'OK',
-            mensagem: `Atendimento Req #${p.payload?.payload?.[0]?.nrRequisicao || ''} sincronizado com sucesso no ERP!`
+            mensagem: `Atendimento Req #${nrReqLog} sincronizado com sucesso no ERP!`
           });
         } else {
           erros++;
@@ -942,16 +998,46 @@ const DB = (() => {
     const pendentesDevol = pendentes.filter(p => p.tipo === 'DEVOLUCAO_REQUISICAO');
     for (const p of pendentesDevol) {
       try {
-        const payloadEnvio = { ...p.payload, codEmpresa: emp };
+        let itensDevolucao = [];
+        if (p.payload && Array.isArray(p.payload.payload)) {
+          const primeiro = p.payload.payload[0];
+          if (primeiro && Array.isArray(primeiro.payload)) {
+            itensDevolucao = primeiro.payload;
+          } else {
+            itensDevolucao = p.payload.payload;
+          }
+        } else if (p.payload && Array.isArray(p.payload)) {
+          itensDevolucao = p.payload;
+        } else if (p.payload && (p.payload.nrRequisicao || p.payload.itCodigo)) {
+          itensDevolucao = [p.payload];
+        }
+
+        const payloadEnvio = {
+          payload: itensDevolucao,
+          codEmpresa: emp
+        };
+
+        if (itensDevolucao.length > 0 && typeof itensDevolucao[0] === 'object') {
+          Object.keys(itensDevolucao[0]).forEach(k => {
+            if (payloadEnvio[k] === undefined) {
+              payloadEnvio[k] = itensDevolucao[0][k];
+            }
+          });
+        }
+
         const data = await dispararApi('/fcSetRequisDevol', payloadEnvio);
-        if (data.type === 'OK' || data.code === '0' || (data.detailedMessage && !data.detailedMessage.toLowerCase().includes('erro'))) {
+        const nrReqLog = payloadEnvio.nrRequisicao || payloadEnvio.payload?.[0]?.nrRequisicao || '';
+        const isOk = (data.type === 'OK' || data.code === '0' || String(data.code) === '0') &&
+                     (!data.type || data.type.toUpperCase() !== 'ERROR');
+
+        if (isOk) {
           await remove('fila_sync', p.id_uuid);
           processados++;
           relatorio.push({
             id_uuid: p.id_uuid,
             tipo: p.tipo,
             status: 'OK',
-            mensagem: `Devolução Req #${p.payload?.payload?.[0]?.nrRequisicao || ''} sincronizada com sucesso no ERP!`
+            mensagem: `Devolução Req #${nrReqLog} sincronizada com sucesso no ERP!`
           });
         } else {
           erros++;
