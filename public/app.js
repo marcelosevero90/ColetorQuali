@@ -209,12 +209,13 @@ const App = (() => {
       ? endpoint
       : `${pasoeUrl.replace(/\/+$/, '')}/${endpoint.replace(/^\/+/, '')}`;
 
-    // Se for aplicativo APK nativo (Capacitor ou Cordova)
-    const isNativeApp = !!(window.Capacitor || window.cordova);
     let finalUrl = rawUrl;
-    // O proxy no servidor só é usado no navegador Web comum para contornar restrições de Mixed Content (HTTPS -> HTTP) e CORS.
-    // No APK nativo no celular, o app comunica-se diretamente com o IP/URL local do PASOE na intranet do cliente.
-    if (!isNativeApp && (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) && !rawUrl.includes(window.location.host)) {
+    const gatewayBase = window.ColetorGateway ? window.ColetorGateway.getBaseUrl() : '';
+    const isExternalUrl = (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) &&
+      (!gatewayBase || !rawUrl.startsWith(gatewayBase)) &&
+      (!window.location.host || !rawUrl.includes(window.location.host));
+
+    if (isExternalUrl) {
       finalUrl = `/api/pasoe-proxy?url=${encodeURIComponent(rawUrl)}`;
     }
 
@@ -543,6 +544,15 @@ const App = (() => {
               ? empresasCache.map(emp => `<option value="${emp}" ${emp === state.empresaInput ? 'selected' : ''}>Empresa ${emp}</option>`).join('')
               : '<option value="001">Empresa 001 (Padrão)</option><option value="002">Empresa 002</option>'}
           </select>
+        </div>
+
+        <div class="form-group" style="margin-top: 10px; padding: 6px 10px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; color: #475569; font-weight: 700;">🔗 Servidor Gateway:</span>
+            <a href="javascript:void(0)" onclick="App.configurarGateway()" style="font-size: 11px; color: #0284c7; text-decoration: underline; font-weight: 700;" id="link-gateway-atual" title="Clique para alterar o IP do notebook">
+              ${window.ColetorGateway ? (window.ColetorGateway.getBaseUrl() || 'Mesmo Host') : 'http://192.168.0.8:3000'}
+            </a>
+          </div>
         </div>
 
         <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
@@ -8189,9 +8199,25 @@ const App = (() => {
     document.getElementById('device-frame')?.classList.toggle('fullscreen');
   }
 
+  function configurarGateway() {
+    const atual = window.ColetorGateway ? window.ColetorGateway.getBaseUrl() : 'http://192.168.0.8:3000';
+    const novo = prompt('Informe a URL do Servidor Gateway (Notebook com VPN conectada):\nExemplo: http://192.168.0.8:3000\n(Deixe em branco para usar a mesma origem do navegador)', atual || 'http://192.168.0.8:3000');
+    if (novo !== null) {
+      if (window.ColetorGateway) {
+        window.ColetorGateway.setBaseUrl(novo);
+      }
+      const link = document.getElementById('link-gateway-atual');
+      if (link) {
+        link.textContent = novo.trim() || 'Mesmo Host';
+      }
+      mostrarAviso(`Servidor Gateway configurado: ${novo.trim() || 'Mesmo Host'}`, 'success');
+    }
+  }
+
   return {
     init,
     navegar,
+    configurarGateway,
     alternarSimulacaoOffline,
     alternarVisibilidadeSenha,
     resolverAliasLogin,

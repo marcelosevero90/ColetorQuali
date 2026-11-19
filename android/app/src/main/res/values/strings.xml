@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Coletor Quali</string>
+    <string name="title_activity_main">Coletor Quali</string>
+    <string name="package_name">com.quali.coletor</string>
+    <string name="custom_url_scheme">com.quali.coletor</string>
+</resources>

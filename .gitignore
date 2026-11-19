@@ -18,3 +18,10 @@ collect/app/dbi*
 
 # Test screenshots
 evidencia_*.png
+
+# Android build artifacts
+android/app/build/
+android/.gradle/
+android/build/
+*.apk
+*.aab

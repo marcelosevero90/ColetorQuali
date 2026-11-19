@@ -81,7 +81,10 @@ const FastLoader = (() => {
           : `${baseUrl}/${endpointPath.replace(/^\/+/, '')}`;
 
         let requestUrl = fullUrl;
-        if ((fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) && !fullUrl.includes(window.location.host)) {
+        const gatewayBase = window.ColetorGateway ? window.ColetorGateway.getBaseUrl() : '';
+        if ((fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) &&
+            (!gatewayBase || !fullUrl.startsWith(gatewayBase)) &&
+            (!window.location.host || !fullUrl.includes(window.location.host))) {
           requestUrl = `/api/pasoe-proxy?url=${encodeURIComponent(fullUrl)}`;
         }
 

@@ -1,0 +1,13 @@
+{
+  "appId": "com.quali.coletor",
+  "appName": "Coletor Quali",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#f8fafc"
+  }
+}

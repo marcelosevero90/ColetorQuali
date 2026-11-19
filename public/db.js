@@ -777,7 +777,10 @@ const DB = (() => {
 
     async function dispararApi(endpoint, body) {
       const rawUrl = `${baseUrl}${endpoint}`;
-      const finalUrl = (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) && !rawUrl.includes(window.location.host)
+      const gatewayBase = window.ColetorGateway ? window.ColetorGateway.getBaseUrl() : '';
+      const finalUrl = (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) &&
+        (!gatewayBase || !rawUrl.startsWith(gatewayBase)) &&
+        (!window.location.host || !rawUrl.includes(window.location.host))
         ? `/api/pasoe-proxy?url=${encodeURIComponent(rawUrl)}`
         : rawUrl;
       const headers = {

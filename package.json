@@ -5,9 +5,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "verify": "node scripts/verifyInventarioOffline.js"
+    "verify": "node scripts/verifyInventarioOffline.js",
+    "cap:sync": "cap sync android",
+    "cap:copy": "cap copy android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
     "cors": "^2.8.5",
     "express": "^4.19.2"
   },
