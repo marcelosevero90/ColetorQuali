@@ -341,6 +341,7 @@ class TotvsDataStore {
       deposito: [
         { codEmpresa: '001', codDepos: 'ALM', nome: 'ALMOXARIFADO CENTRAL', consSaldo: true },
         { codEmpresa: '001', codDepos: 'AL1', nome: 'Almoxarifado 1', consSaldo: true },
+        { codEmpresa: '001', codDepos: 'MAN', nome: 'MANUTENÇÃO', consSaldo: true },
         { codEmpresa: '001', codDepos: 'EXP', nome: 'EXPEDICAO PRODUTOS', consSaldo: true },
         { codEmpresa: '001', codDepos: 'PRO', nome: 'DEPOSITO PRODUCAO', consSaldo: true },
         { codEmpresa: '001', codDepos: 'QUA', nome: 'QUARENTENA / QUALIDADE', consSaldo: true },
@@ -405,7 +406,108 @@ class TotvsDataStore {
         { codEmpresa: '001', itCodigo: 'PI0010', codEstab: '101', codDep: 'ALM', codLocal: 'A-01-01', lote: '', codRefer: 'PAD', descItem: 'TUBO ACO CARBONO SCH 40 1/2 6000MM', qtAlocada: 0, qtidadeAtu: 120.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '', qtDisponivelCalc: 120.0 },
         { codEmpresa: '001', itCodigo: '01010115', codEstab: '101', codDep: 'AL1', codLocal: 'BRANCO', lote: '', codRefer: '', descItem: 'Porta Latas Simples 348 x 91 x 115mm 01010115', qtAlocada: 0, qtidadeAtu: 50.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '', qtDisponivelCalc: 50.0 },
         { codEmpresa: '001', itCodigo: '01010125', codEstab: '101', codDep: 'AL1', codLocal: 'BRANCO', lote: '', codRefer: '', descItem: 'Kit Pistão a Gás 50N Cinza', qtAlocada: 0, qtidadeAtu: 6371.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '', qtDisponivelCalc: 6371.0 },
+        { codEmpresa: '001', itCodigo: '07060334', codEstab: '101', codDep: 'MAN', codLocal: '', lote: '', codRefer: '', descItem: 'Correia Der', qtAlocada: 0, qtidadeAtu: 7.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '', qtDisponivelCalc: 7.0 },
+        { codEmpresa: '001', itCodigo: '06020095', codEstab: '101', codDep: 'AL1', codLocal: '', lote: '', codRefer: '', descItem: 'Luva Multitato Preta PU', qtAlocada: 0, qtidadeAtu: 10.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '', qtDisponivelCalc: 10.0 },
         { codEmpresa: '002', itCodigo: '052900017', codEstab: '2100', codDep: '102', codLocal: '4-2-2', lote: 'LT-AGRO-90', codRefer: 'SAF26', descItem: 'ANTIFERRUGEM INDUSTRIAL PROTETIVO', qtAlocada: 0, qtidadeAtu: 350.0, qtAlocPed: 0, qtAlocProd: 0, dtValiLote: '2028-12-31', qtDisponivelCalc: 350.0 }
+      ],
+
+      // requisicao (fcGetRequisicao.p / fcGetRequisDevol.p)
+      requisicao: [
+        {
+          codEmpresa: '001',
+          codEstabel: '101',
+          nrRequisicao: 319877,
+          dtRequisicao: '2026-11-18',
+          nomeAbrev: 'fur186',
+          tpRequis: 1, // Estoque
+          situacao: 1, // 1 = Aberta, 2 = Atendida Total
+          estado: 1,   // 1 = Aprovada
+          dtAtend: null,
+          dtDevol: null
+        },
+        {
+          codEmpresa: '001',
+          codEstabel: '101',
+          nrRequisicao: 111,
+          dtRequisicao: '2012-04-13',
+          nomeAbrev: 'marcia.b',
+          tpRequis: 1,
+          situacao: 2,
+          estado: 1,
+          dtAtend: '2012-04-13',
+          dtDevol: null
+        }
+      ],
+
+      // it_requisicao (Itens da requisição)
+      it_requisicao: [
+        {
+          codEmpresa: '001',
+          codEstabel: '101',
+          nrRequisicao: 319877,
+          Sequencia: 1,
+          itCodigo: '07060334',
+          descItem: 'Correia Der',
+          codRefer: '',
+          codUnidNegoc: 'MOV',
+          qtRequisitada: 1.0,
+          qtSaldo: 1.0,
+          qtAtendida: 0.0,
+          qtAAtender: 1.0,
+          qtDevolvida: 0.0,
+          qtADevolver: 0.0,
+          situacao: 1,
+          estado: 1,
+          tpRequis: 1,
+          nomeAbrev: 'fur186',
+          dtRequisicao: '2026-11-18',
+          dtAtend: null,
+          ctCodigo: '9.1.1.01.008',
+          scCodigo: '101'
+        },
+        {
+          codEmpresa: '001',
+          codEstabel: '101',
+          nrRequisicao: 111,
+          Sequencia: 10,
+          itCodigo: '06020095',
+          descItem: 'Luva Multitato Preta PU',
+          codRefer: '',
+          codUnidNegoc: 'MOV',
+          qtRequisitada: 1.0,
+          qtSaldo: 0.0,
+          qtAtendida: 1.0,
+          qtAAtender: 0.0,
+          qtDevolvida: 0.0,
+          qtADevolver: 1.0,
+          situacao: 2,
+          estado: 1,
+          tpRequis: 1,
+          nomeAbrev: 'marcia.b',
+          dtRequisicao: '2012-04-13',
+          dtAtend: '2012-04-13',
+          ctCodigo: '9.1.1.01.008',
+          scCodigo: '101'
+        }
+      ],
+
+      // movto_estoq (Movimentos de Atendimento de Requisição para Devolução - fcGetSaldoEstoqEstabItDev)
+      movto_estoq: [
+        {
+          codEmpresa: '001',
+          codEstabel: '101',
+          itCodigo: '06020095',
+          espDocto: 30, // 30 = RM (Requisição de Material)
+          nroDocto: '111',
+          codDepos: 'AL1',
+          codLocaliz: '',
+          lote: '',
+          dtValiLote: '',
+          codRefer: '',
+          quantidade: 1.0,
+          dtTrans: '2012-04-13',
+          usuario: 'marcia.b'
+        }
       ],
 
       // inventario (fcGetInventariosFichas.p / fcSetInventarioApuracaoFicha.p / fcSetInventarioNovaFicha.p)
@@ -553,6 +655,8 @@ class TotvsDataStore {
       { itCodigo: '01010115', descItem: 'Porta Latas Simples 348 x 91 x 115mm 01010115', tipoConEst: 1, locUnica: false, depositoPad: 'AL1', nomeDeposito: 'Almoxarifado 1', codLocaliz: 'BRANCO', descricaoLocaliz: 'BRANCO', un: 'Un', codBarras: '7890101011500', requerValorFicha: false },
       { itCodigo: '01010125', descItem: 'Kit Pistão a Gás 50N Cinza', tipoConEst: 1, locUnica: false, depositoPad: 'AL1', nomeDeposito: 'Almoxarifado 1', codLocaliz: 'BRANCO', descricaoLocaliz: 'BRANCO', un: 'Un', codBarras: '7890101012507', requerValorFicha: false },
       { itCodigo: '01010047', descItem: 'Kit Pont Prince (10) Unidades', tipoConEst: 1, locUnica: true, depositoPad: 'AL1', nomeDeposito: 'Almoxarifado 1', codLocaliz: 'BRANCO', descricaoLocaliz: 'BRANCO', un: 'UN', codBarras: '7890101004700', requerValorFicha: false },
+      { itCodigo: '07060334', descItem: 'Correia Der', tipoConEst: 1, locUnica: false, depositoPad: 'MAN', nomeDeposito: 'MANUTENÇÃO', codLocaliz: '', descricaoLocaliz: '', un: 'PC', codBarras: '7890706033400', requerValorFicha: false },
+      { itCodigo: '06020095', descItem: 'Luva Multitato Preta PU', tipoConEst: 1, locUnica: false, depositoPad: 'AL1', nomeDeposito: 'Almoxarifado 1', codLocaliz: '', descricaoLocaliz: '', un: 'PAR', codBarras: '7890602009500', requerValorFicha: false },
       { itCodigo: 'D352-221/1', descItem: 'Roupeiro Lumiere 6Pts 6Gav Cinamomo/Off White Vol 1/5', tipoConEst: 3, locUnica: false, depositoPad: 'AST', nomeDeposito: 'ASSISTENCIA TECNICA', codLocaliz: '', descricaoLocaliz: 'BRANCO', un: 'UN', codBarras: '7890000352221', requerValorFicha: false }
     ].map(it => ({ codEmpresa: '001', ...it, dataAtualiz: '2026-11-16T08:00:00Z' }));
 

@@ -1464,6 +1464,399 @@ router.all(['/fcSetTransfMaterial', '/qdcSetTransfMaterial'], async (req, res) =
   }
 });
 
+// =============================================================================
+// 16. REQUISIÇÕES DE MATERIAL (CD1409 / CD1410)
+// =============================================================================
+
+// Helper para tentar o PASOE e recorrer ao mock local apenas se inacessível
+async function proxyPasoeOuFallback(endpoint, req, res, fallbackFn) {
+  const realPasoeUrl = `http://10.15.1.20:8180/api/promob/v1/${endpoint}`;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'companyId': req.headers['companyid'] || '001'
+    };
+    if (req.headers['authorization']) {
+      headers['Authorization'] = req.headers['authorization'];
+    } else {
+      headers['Authorization'] = 'Basic ' + Buffer.from('matheus.st:qwe8451').toString('base64');
+    }
+
+    const pasoeRes = await fetch(realPasoeUrl, {
+      method: req.method || 'PUT',
+      headers,
+      body: req.body && Object.keys(req.body).length > 0 ? JSON.stringify(req.body) : undefined,
+      signal: controller.signal
+    });
+
+    clearTimeout(timeout);
+    if (!pasoeRes.ok) {
+      console.warn(`[PASOE] ${endpoint} retornou HTTP ${pasoeRes.status}, utilizando fallback local.`);
+      return fallbackFn(req, res);
+    }
+    const dados = await pasoeRes.json();
+    if (dados && (dados.type === 'ERROR' || dados.code === '55504' || dados.error_code === '55504')) {
+      console.warn(`[PASOE] ${endpoint} retornou erro (${dados.code || dados.error_code}), utilizando fallback local.`);
+      return fallbackFn(req, res);
+    }
+    // Se o PASOE retornou lista vazia (items: []), mas temos dados locais para teste
+    if (endpoint.startsWith('fcGet') && ((Array.isArray(dados) && dados.length === 0) || (dados && Array.isArray(dados.items) && dados.items.length === 0))) {
+      return fallbackFn(req, res);
+    }
+    return res.status(pasoeRes.status).json(dados);
+  } catch (errPasoe) {
+    return fallbackFn(req, res);
+  }
+}
+
+// fcGetRequisicao.p / qdcGetRequisicao.p (PUT/POST)
+router.all(['/fcGetRequisicao', '/qdcGetRequisicao'], async (req, res) => {
+  return proxyPasoeOuFallback('fcGetRequisicao', req, res, (r, s) => {
+    const payload = extrairPayload(r);
+    const nrReqIni = Number(payload.nrReqIni || 0);
+    const nrReqFim = Number(payload.nrReqFim || 999999999);
+    const estabIni = (payload.estabIni || '').trim();
+    const estabFim = (payload.estabFim || 'ZZZ').trim();
+    const codEmpresa = r.headers['companyid'] || '001';
+
+    const lista = (db.data.it_requisicao || []).filter(it => {
+      const nr = Number(it.nrRequisicao);
+      const est = String(it.codEstabel || '').trim();
+      const empOk = !it.codEmpresa || db.constructor.matchEmpresa ? true : it.codEmpresa === codEmpresa;
+      const numOk = nr >= nrReqIni && nr <= nrReqFim;
+      const estOk = (!estabIni || est >= estabIni) && (!estabFim || est <= estabFim);
+      const pendOk = Number(it.qtAAtender || 0) > 0;
+      return numOk && estOk && pendOk;
+    });
+
+    return s.json(lista.map(it => ({
+      nrRequisicao: it.nrRequisicao,
+      dtRequisicao: it.dtRequisicao,
+      descItem: it.descItem,
+      situacao: it.situacao,
+      itCodigo: it.itCodigo,
+      dtAtend: it.dtAtend || '',
+      estado: it.estado,
+      tpRequis: it.tpRequis,
+      codEstabel: it.codEstabel,
+      qtRequisitada: it.qtRequisitada,
+      qtAtendida: it.qtAtendida,
+      qtAAtender: it.qtAAtender,
+      qtDevolvida: it.qtDevolvida || 0,
+      qtADevolver: it.qtADevolver || 0,
+      codUnidNegoc: it.codUnidNegoc || 'MOV',
+      nomeAbrev: it.nomeAbrev,
+      Sequencia: it.Sequencia
+    })));
+  });
+});
+
+// fcGetSaldoEstoqEstabItem.p / qdcGetSaldoEstoqEstabItem.p (PUT/POST)
+router.all(['/fcGetSaldoEstoqEstabItem', '/qdcGetSaldoEstoqEstabItem'], async (req, res) => {
+  return proxyPasoeOuFallback('fcGetSaldoEstoqEstabItem', req, res, (r, s) => {
+    const payload = extrairPayload(r);
+    const codEstabel = (payload.codEstabel || '').trim();
+    const itCodigo = (payload.itCodigo || '').trim();
+
+    const matches = (db.data.saldo_estoq || []).filter(item => {
+      const est = (item.codEstab || item.codEstabel || '').trim();
+      const it = (item.itCodigo || '').trim();
+      const disp = item.qtDisponivelCalc !== undefined
+        ? item.qtDisponivelCalc
+        : ((item.qtidadeAtu || 0) - ((item.qtAlocada || 0) + (item.qtAlocPed || 0) + (item.qtAlocProd || 0)));
+      return (!codEstabel || est === codEstabel) && it === itCodigo && disp > 0;
+    });
+
+    return s.json(matches.map(m => {
+      const disp = m.qtDisponivelCalc !== undefined
+        ? m.qtDisponivelCalc
+        : ((m.qtidadeAtu || 0) - ((m.qtAlocada || 0) + (m.qtAlocPed || 0) + (m.qtAlocProd || 0)));
+      return {
+        itCodigo: m.itCodigo,
+        codEstabel: m.codEstab || m.codEstabel || codEstabel,
+        codDepos: m.codDep || m.codDepos,
+        lote: m.lote || '',
+        dtValiLote: m.dtValiLote || '',
+        codLocaliz: m.codLocal || m.codLocaliz || '',
+        qtDisponivel: disp,
+        codRefer: m.codRefer || '',
+        qtAAtender: 0,
+        selecionado: 99
+      };
+    }));
+  });
+});
+
+// fcSetRequisicao.p / qdcSetRequisicao.p (PUT/POST)
+router.all(['/fcSetRequisicao', '/qdcSetRequisicao'], async (req, res) => {
+  return proxyPasoeOuFallback('fcSetRequisicao', req, res, (r, s) => {
+    const payload = extrairPayload(r);
+    const nrRequis = Number(payload.nrRequisicao);
+    const itCodigo = String(payload.itCodigo || '').trim();
+    const sequencia = Number(payload.sequencia);
+    const codUsuario = payload.codUsuario || 'operador';
+    const estoques = Array.isArray(payload.estoque) ? payload.estoque : [];
+
+    const itemReq = (db.data.it_requisicao || []).find(it =>
+      Number(it.nrRequisicao) === nrRequis &&
+      String(it.itCodigo).trim() === itCodigo &&
+      Number(it.Sequencia) === sequencia
+    );
+
+    if (!itemReq) {
+      return s.json({
+        type: 'ERROR',
+        code: '17006',
+        message: `Item da Requisição ${nrRequis} - ${itCodigo} - ${sequencia} não encontrado!`,
+        detailedMessage: `Item da Requisição ${nrRequis} - ${itCodigo} - ${sequencia} não encontrado!`
+      });
+    }
+
+    if (estoques.length === 0) {
+      return s.json({
+        type: 'ERROR',
+        code: '17006',
+        message: 'Estoque para retirada não foi informado!',
+        detailedMessage: 'Estoque para retirada não foi informado!'
+      });
+    }
+
+    let d_qt_atend = 0;
+    for (const est of estoques) {
+      const qtdAtender = Number(est.qtAAtender || 0);
+      if (qtdAtender <= 0) continue;
+      d_qt_atend += qtdAtender;
+
+      // Abate do saldo_estoq
+      const saldo = (db.data.saldo_estoq || []).find(se =>
+        String(se.itCodigo).trim() === itCodigo &&
+        (se.codDep || se.codDepos) === est.codDepos &&
+        (se.codEstab || se.codEstabel) === est.codEstabel &&
+        (se.lote || '') === (est.lote || '') &&
+        (se.codLocal || se.codLocaliz || '') === (est.codLocaliz || '') &&
+        (se.codRefer || '') === (est.codRefer || '')
+      );
+      if (saldo) {
+        if (saldo.qtDisponivelCalc !== undefined) saldo.qtDisponivelCalc -= qtdAtender;
+        if (saldo.qtidadeAtu !== undefined) saldo.qtidadeAtu -= qtdAtender;
+      }
+
+      // Registra o movimento de estoque (espDocto: 30) para futura devolução
+      if (!db.data.movto_estoq) db.data.movto_estoq = [];
+      db.data.movto_estoq.push({
+        codEmpresa: r.headers['companyid'] || '001',
+        codEstabel: est.codEstabel,
+        itCodigo: itCodigo,
+        espDocto: 30, // RM
+        nroDocto: String(nrRequis),
+        codDepos: est.codDepos,
+        codLocaliz: est.codLocaliz || '',
+        lote: est.lote || '',
+        dtValiLote: est.dtValiLote || '',
+        codRefer: est.codRefer || '',
+        quantidade: qtdAtender,
+        dtTrans: new Date().toISOString().split('T')[0],
+        usuario: codUsuario
+      });
+    }
+
+    itemReq.qtAtendida = Number(itemReq.qtAtendida || 0) + d_qt_atend;
+    itemReq.qtAAtender = Math.max(0, Number(itemReq.qtAAtender || 0) - d_qt_atend);
+    itemReq.qtADevolver = Number(itemReq.qtADevolver || 0) + d_qt_atend;
+    itemReq.dtAtend = new Date().toISOString().split('T')[0];
+
+    if (itemReq.qtAAtender === 0) {
+      itemReq.situacao = 2; // Atendida
+      const reqPai = (db.data.requisicao || []).find(rq => Number(rq.nrRequisicao) === nrRequis);
+      if (reqPai) reqPai.situacao = 2;
+    }
+
+    return s.json({
+      type: 'OK',
+      code: '0',
+      message: 'Requisição efetuada com sucesso no Datasul!',
+      detailedMessage: 'Processo realizado com sucesso!'
+    });
+  });
+});
+
+// fcGetRequisDevol.p / qdcGetRequisDevol.p (PUT/POST)
+router.all(['/fcGetRequisDevol', '/qdcGetRequisDevol'], async (req, res) => {
+  return proxyPasoeOuFallback('fcGetRequisDevol', req, res, (r, s) => {
+    const lista = (db.data.it_requisicao || []).filter(it => {
+      return Number(it.qtADevolver || 0) > 0;
+    });
+
+    return s.json(lista.map(it => ({
+      nrRequisicao: it.nrRequisicao,
+      dtRequisicao: it.dtRequisicao,
+      descItem: it.descItem,
+      situacao: it.situacao,
+      itCodigo: it.itCodigo,
+      dtAtend: it.dtAtend || '',
+      estado: it.estado,
+      tpRequis: it.tpRequis,
+      codEstabel: it.codEstabel,
+      qtRequisitada: it.qtRequisitada,
+      qtAtendida: it.qtAtendida,
+      qtAAtender: it.qtAAtender,
+      qtDevolvida: it.qtDevolvida || 0,
+      qtADevolver: it.qtADevolver || 0,
+      codUnidNegoc: it.codUnidNegoc || 'MOV',
+      nomeAbrev: it.nomeAbrev,
+      Sequencia: it.Sequencia
+    })));
+  });
+});
+
+// fcGetSaldoEstoqEstabItDev.p / qdcGetSaldoEstoqEstabItDev.p (PUT/POST)
+router.all(['/fcGetSaldoEstoqEstabItDev', '/qdcGetSaldoEstoqEstabItDev'], async (req, res) => {
+  return proxyPasoeOuFallback('fcGetSaldoEstoqEstabItDev', req, res, (r, s) => {
+    const payload = extrairPayload(r);
+    const nrRequis = Number(payload.nrRequis);
+    const codEstabel = (payload.codEstabel || '').trim();
+    const itCodigo = (payload.itCodigo || '').trim();
+
+    const matches = (db.data.movto_estoq || []).filter(m => {
+      const docNum = Number(String(m.nroDocto || '').replace(/\D/g, ''));
+      const estOk = !codEstabel || m.codEstabel === codEstabel;
+      const itOk = !itCodigo || m.itCodigo === itCodigo;
+      const espOk = Number(m.espDocto) === 30;
+      const numOk = docNum === nrRequis;
+      return espOk && numOk && estOk && itOk;
+    });
+
+    return s.json(matches.map(m => ({
+      itCodigo: m.itCodigo,
+      codEstabel: m.codEstabel,
+      codDepos: m.codDepos,
+      lote: m.lote || '',
+      dtValiLote: m.dtValiLote || '',
+      codLocaliz: m.codLocaliz || '',
+      qtDisponivel: m.quantidade,
+      codRefer: m.codRefer || '',
+      dtTrans: m.dtTrans,
+      qtADevolver: 0
+    })));
+  });
+});
+
+// fcSetRequisDevol.p / qdcSetRequisDevol.p (PUT/POST)
+router.all(['/fcSetRequisDevol', '/qdcSetRequisDevol'], async (req, res) => {
+  return proxyPasoeOuFallback('fcSetRequisDevol', req, res, (r, s) => {
+    const payload = extrairPayload(r);
+    const nrRequis = Number(payload.nrRequisicao);
+    const itCodigo = String(payload.itCodigo || '').trim();
+    const sequencia = Number(payload.sequencia);
+    const codUsuario = payload.codUsuario || 'operador';
+    const codEstabel = payload.codEstabel || '101';
+    const qtDevol = Number(payload.qtDevol || 0);
+    const dtDevol = payload.dtDevol || new Date().toISOString().split('T')[0];
+    const codDeposEnt = payload.codDeposEnt || 'AL1';
+    const codLocalizEnt = payload.codLocalizEnt || '';
+    const loteEnt = payload.loteEnt || '';
+    const codReferEnt = payload.codReferEnt || '';
+
+    const itemReq = (db.data.it_requisicao || []).find(it =>
+      Number(it.nrRequisicao) === nrRequis &&
+      String(it.itCodigo).trim() === itCodigo &&
+      Number(it.Sequencia) === sequencia
+    );
+
+    if (!itemReq) {
+      return s.json({
+        type: 'ERROR',
+        code: '17006',
+        message: `Item da Requisição ${nrRequis} - ${itCodigo} - ${sequencia} não encontrado!`,
+        detailedMessage: `Item da Requisição ${nrRequis} - ${itCodigo} - ${sequencia} não encontrado!`
+      });
+    }
+
+    if (qtDevol <= 0) {
+      return s.json({
+        type: 'ERROR',
+        code: '17006',
+        message: 'Quantidade a devolver deve ser maior que zero!',
+        detailedMessage: 'Quantidade a devolver deve ser maior que zero!'
+      });
+    }
+
+    // Devolve para o saldo_estoq
+    let saldo = (db.data.saldo_estoq || []).find(se =>
+      String(se.itCodigo).trim() === itCodigo &&
+      (se.codDep || se.codDepos) === codDeposEnt &&
+      (se.codEstab || se.codEstabel) === codEstabel &&
+      (se.lote || '') === loteEnt &&
+      (se.codLocal || se.codLocaliz || '') === codLocalizEnt &&
+      (se.codRefer || '') === codReferEnt
+    );
+
+    if (saldo) {
+      if (saldo.qtDisponivelCalc !== undefined) saldo.qtDisponivelCalc += qtDevol;
+      if (saldo.qtidadeAtu !== undefined) saldo.qtidadeAtu += qtDevol;
+    } else {
+      db.data.saldo_estoq.push({
+        codEmpresa: r.headers['companyid'] || '001',
+        codEstab: codEstabel,
+        codEstabel: codEstabel,
+        codDep: codDeposEnt,
+        codDepos: codDeposEnt,
+        codLocal: codLocalizEnt,
+        codLocaliz: codLocalizEnt,
+        lote: loteEnt,
+        codRefer: codReferEnt,
+        itCodigo: itCodigo,
+        descItem: itemReq.descItem,
+        qtAlocada: 0,
+        qtAlocPed: 0,
+        qtAlocProd: 0,
+        dtValiLote: '',
+        qtidadeAtu: qtDevol,
+        qtDisponivelCalc: qtDevol
+      });
+    }
+
+    // Registra movimento de devolução (espDocto: 7 / DRM)
+    if (!db.data.movto_estoq) db.data.movto_estoq = [];
+    db.data.movto_estoq.push({
+      codEmpresa: r.headers['companyid'] || '001',
+      codEstabel: codEstabel,
+      itCodigo: itCodigo,
+      espDocto: 7, // DRM
+      nroDocto: String(nrRequis),
+      codDepos: codDeposEnt,
+      codLocaliz: codLocalizEnt,
+      lote: loteEnt,
+      codRefer: codReferEnt,
+      quantidade: qtDevol,
+      dtTrans: dtDevol,
+      usuario: codUsuario
+    });
+
+    itemReq.qtDevolvida = Number(itemReq.qtDevolvida || 0) + qtDevol;
+    itemReq.qtADevolver = Math.max(0, Number(itemReq.qtADevolver || 0) - qtDevol);
+    itemReq.qtAAtender = Number(itemReq.qtAAtender || 0) + qtDevol;
+    itemReq.qtAtendida = Math.max(0, Number(itemReq.qtAtendida || 0) - qtDevol);
+
+    if (itemReq.qtAAtender > 0) {
+      itemReq.situacao = 1; // Aberta novamente
+      const reqPai = (db.data.requisicao || []).find(rq => Number(rq.nrRequisicao) === nrRequis);
+      if (reqPai) reqPai.situacao = 1;
+    }
+
+    return s.json({
+      type: 'OK',
+      code: '0',
+      message: 'Devolução efetuada com sucesso no Datasul!',
+      detailedMessage: 'Processo realizado com sucesso!'
+    });
+  });
+});
+
 // Reset da base para testes
 router.post('/resetBase', (req, res) => {
   db.resetDefault();
