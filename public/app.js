@@ -999,12 +999,6 @@ const App = (() => {
           </button>
         `}
 
-        <button type="button" class="home-service-card" style="opacity: 0.6; cursor: not-allowed; border-color: #e2e8f0; background: #f8fafc;" onclick="alert('ℹ️ Módulo de Recebimento / Compras previsto para próximas versões.')">
-          <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#64748b; font-size:24px;">🚛</div>
-          <div class="home-card-title" style="color: #64748b; font-size: 14px;">Recebimento</div>
-          <div class="home-card-desc" style="color: #94a3b8; font-weight: 600;">Em breve</div>
-        </button>
-
         <button type="button" class="home-service-card" style="opacity: 0.6; cursor: not-allowed; border-color: #e2e8f0; background: #f8fafc;" onclick="alert('ℹ️ Módulo de Produção / Chão de Fábrica previsto para próximas versões.')">
           <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#64748b; font-size:24px;">🏭</div>
           <div class="home-card-title" style="color: #64748b; font-size: 14px;">Produção</div>
