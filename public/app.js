@@ -4485,6 +4485,11 @@ const App = (() => {
     devolucao: {
       telaSub: 'lista', // 'lista' | 'detalhe'
       termoBusca: '',
+      dtCorte: (() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        return d.toISOString().split('T')[0];
+      })(),
       carregando: false,
       listaItens: [], // itens retornados de fcGetRequisDevol
       reqSelecionada: null,
@@ -5096,6 +5101,12 @@ const App = (() => {
 
     return `
       <div style="margin-bottom: 14px;">
+        ${!isOnline() ? `
+          <div style="background: #fefce8; border: 1px solid #fde047; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; font-size: 11px; color: #854d0e; display: flex; align-items: center; gap: 6px;">
+            <span>📴</span>
+            <span><strong>Modo Offline:</strong> Exibindo saldos de estoque em cache local.</span>
+          </div>
+        ` : ''}
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">
             2. Saldos em Estoque (Item: ${escapeHtml(itemAtual.itCodigo)}):
@@ -5520,13 +5531,22 @@ const App = (() => {
         <button class="btn-topbar-action" onclick="App.buscarRequisicoesDevolucao(document.getElementById('req-devol-input-busca')?.value || '', true)" title="Recarregar">🔄</button>
       </div>
 
-      <!-- Barra de Busca -->
-      <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-        <input type="text" id="req-devol-input-busca" class="form-input" style="font-size: 12.5px; flex: 1;"
-               placeholder="Buscar por requisição, requisitante ou item..."
-               value="${escapeHtml(dev.termoBusca || '')}"
-               onkeydown="if(event.key==='Enter') App.buscarRequisicoesDevolucao(this.value)">
-        <button type="button" class="btn btn-primary" style="width: auto; padding: 0 12px; font-size: 12px; background: #7c3aed; border-color: #6d28d9;"
+      <!-- Barra de Filtros: Data de Corte e Busca -->
+      <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-end; flex-wrap: wrap;">
+        <div style="flex: 0 0 145px;">
+          <label style="font-size: 11px; font-weight: 700; color: #6d28d9; display: block; margin-bottom: 2px;">Data Corte (≥):</label>
+          <input type="date" id="req-devol-input-dtcorte" class="form-input" style="font-size: 12px; padding: 4px 6px; height: 34px;"
+                 value="${dev.dtCorte || ''}"
+                 onchange="App.onAlterarDtCorteDevolucao(this.value)">
+        </div>
+        <div style="flex: 1; min-width: 170px;">
+          <label style="font-size: 11px; font-weight: 700; color: #475569; display: block; margin-bottom: 2px;">Buscar:</label>
+          <input type="text" id="req-devol-input-busca" class="form-input" style="font-size: 12.5px; height: 34px;"
+                 placeholder="Buscar por requisição, requisitante ou item..."
+                 value="${escapeHtml(dev.termoBusca || '')}"
+                 onkeydown="if(event.key==='Enter') App.buscarRequisicoesDevolucao(this.value)">
+        </div>
+        <button type="button" class="btn btn-primary" style="width: auto; padding: 0 14px; height: 34px; font-size: 12px; background: #7c3aed; border-color: #6d28d9;"
                 onclick="App.buscarRequisicoesDevolucao(document.getElementById('req-devol-input-busca').value)">
           Buscar 🔍
         </button>
@@ -5577,9 +5597,22 @@ const App = (() => {
     }
   }
 
+  function onAlterarDtCorteDevolucao(data) {
+    stateRequisicoes.devolucao.dtCorte = data;
+  }
+
   async function buscarRequisicoesDevolucao(termo = '', forcarOnline = false) {
     const dev = stateRequisicoes.devolucao;
     dev.termoBusca = termo || '';
+    const inputDtCorte = document.getElementById('req-devol-input-dtcorte');
+    if (inputDtCorte && inputDtCorte.value) {
+      dev.dtCorte = inputDtCorte.value;
+    }
+    if (!dev.dtCorte) {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      dev.dtCorte = d.toISOString().split('T')[0];
+    }
     const codEmpresa = state.session.codEmpresa || '001';
 
     const cont = document.getElementById('req-devol-conteudo');
@@ -5588,6 +5621,7 @@ const App = (() => {
         <div style="text-align:center; padding: 30px; color: #64748b;">
           <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
           <div style="font-size: 13px; font-weight: 600;">Consultando devoluções no ERP TOTVS (fcGetRequisDevol)...</div>
+          <div style="font-size: 11px; color: #7c3aed; margin-top: 4px;">Filtro: Data de Corte a partir de ${formatarDataBr(dev.dtCorte)}</div>
         </div>
       `;
     }
@@ -5597,7 +5631,8 @@ const App = (() => {
 
     if (isOnline()) {
       const payload = {
-        payload: [{ dtCorte: '2000-01-01' }]
+        dtCorte: dev.dtCorte,
+        payload: [{ dtCorte: dev.dtCorte }]
       };
       try {
         const res = await pasoeFetch('/fcGetRequisDevol', {
@@ -5607,6 +5642,32 @@ const App = (() => {
         const data = await res.json();
         dadosCarregados = extrairLista(data);
         if (dadosCarregados && dadosCarregados.length > 0) {
+          // Se o PASOE ainda não retornou o array movimentos embutido (caso o .r ainda não tenha sido recompilado no servidor),
+          // busca os movimentos para garantir o cache offline completo
+          const itensSemMov = dadosCarregados.filter(it => !Array.isArray(it.movimentos) || it.movimentos.length === 0);
+          if (itensSemMov.length > 0) {
+            await Promise.allSettled(itensSemMov.map(async (it) => {
+              try {
+                const resMov = await pasoeFetch('/fcGetSaldoEstoqEstabItDev', {
+                  method: 'PUT',
+                  body: JSON.stringify({
+                    nrRequis: Number(it.nrRequisicao),
+                    codEstabel: (it.codEstabel || state.session.codEstabel || '101').trim(),
+                    itCodigo: it.itCodigo,
+                    payload: [{
+                      nrRequis: Number(it.nrRequisicao),
+                      codEstabel: (it.codEstabel || state.session.codEstabel || '101').trim(),
+                      itCodigo: it.itCodigo
+                    }]
+                  })
+                });
+                const dMov = await resMov.json();
+                it.movimentos = extrairLista(dMov) || [];
+              } catch (eMov) {
+                it.movimentos = [];
+              }
+            }));
+          }
           await DB.putConfig('cache_requisicoes_devol_' + codEmpresa, dadosCarregados);
         }
       } catch (err) {
@@ -5617,7 +5678,11 @@ const App = (() => {
     if (!dadosCarregados) {
       const emCache = await DB.getConfig('cache_requisicoes_devol_' + codEmpresa);
       if (emCache && emCache.length > 0) {
-        dadosCarregados = emCache;
+        dadosCarregados = emCache.filter(it => {
+          if (!dev.dtCorte || !it.dtRequisicao) return true;
+          const dtIso = normalizarDataIso(it.dtRequisicao);
+          return !dtIso || dtIso >= dev.dtCorte;
+        });
         offline = true;
       } else {
         dadosCarregados = [];
@@ -5942,6 +6007,12 @@ const App = (() => {
 
     return `
       <div style="margin-bottom: 14px;">
+        ${!isOnline() ? `
+          <div style="background: #fefce8; border: 1px solid #fde047; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; font-size: 11px; color: #854d0e; display: flex; align-items: center; gap: 6px;">
+            <span>📴</span>
+            <span><strong>Modo Offline:</strong> Exibindo movimentos de atendimento em cache local.</span>
+          </div>
+        ` : ''}
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
           <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">
             2. Movimentos de Saída (Selecione a retirada de origem):
@@ -6050,6 +6121,22 @@ const App = (() => {
     const contMovs = document.getElementById('painel-movimentos-devolucao');
     if (contMovs) contMovs.innerHTML = renderizarGridMovimentosDevolucao();
 
+    // Se estiver OFFLINE, usa diretamente os movimentos do cache do item selecionado!
+    if (!isOnline()) {
+      dev.carregandoMovimentos = false;
+      const movsCache = Array.isArray(dev.itemSelecionado?.movimentos) ? [...dev.itemSelecionado.movimentos] : [];
+      dev.movimentos = movsCache;
+      if (dev.movimentos.length > 0) {
+        dev.movimentoSelecionadoIdx = 0;
+        dev.quantidadeDevolver = Math.min(dev.movimentos[0].qtDisponivel, dev.itemSelecionado ? dev.itemSelecionado.qtADevolver : dev.movimentos[0].qtDisponivel);
+      } else {
+        dev.movimentoSelecionadoIdx = null;
+        dev.quantidadeDevolver = 0;
+      }
+      if (contMovs) contMovs.innerHTML = renderizarGridMovimentosDevolucao();
+      return;
+    }
+
     const codEstabel = (state.session.codEstabel || '101').trim();
     const payload = {
       nrRequis: Number(nrRequis),
@@ -6071,15 +6158,23 @@ const App = (() => {
       });
       const data = await res.json();
       dev.movimentos = extrairLista(data);
+      if (dev.itemSelecionado) {
+        dev.itemSelecionado.movimentos = dev.movimentos;
+        const codEmpresa = state.session.codEmpresa || '001';
+        await DB.putConfig('cache_requisicoes_devol_' + codEmpresa, dev.listaItens);
+      }
     } catch (err) {
-      console.warn('Erro ao consultar fcGetSaldoEstoqEstabItDev via PASOE:', err.message);
-      dev.movimentos = [];
+      console.warn('Erro ao consultar fcGetSaldoEstoqEstabItDev via PASOE. Tentando movimentos em cache:', err.message);
+      dev.movimentos = Array.isArray(dev.itemSelecionado?.movimentos) ? [...dev.itemSelecionado.movimentos] : [];
     }
 
     dev.carregandoMovimentos = false;
     if (dev.movimentos.length > 0) {
       dev.movimentoSelecionadoIdx = 0;
       dev.quantidadeDevolver = Math.min(dev.movimentos[0].qtDisponivel, dev.itemSelecionado ? dev.itemSelecionado.qtADevolver : dev.movimentos[0].qtDisponivel);
+    } else {
+      dev.movimentoSelecionadoIdx = null;
+      dev.quantidadeDevolver = 0;
     }
 
     if (contMovs) contMovs.innerHTML = renderizarGridMovimentosDevolucao();
@@ -6237,6 +6332,23 @@ const App = (() => {
         itCodigo: it.itCodigo,
         quantidade: qtdDevol
       });
+
+      // Abate a quantidade disponível no movimento selecionado
+      mov.qtDisponivel = Math.max(0, mov.qtDisponivel - qtdDevol);
+
+      // Abate também nos movimentos do item selecionado
+      if (it.movimentos && Array.isArray(it.movimentos)) {
+        const movItem = it.movimentos.find(m => 
+          m.codEstabel === mov.codEstabel && 
+          m.codDepos === mov.codDepos && 
+          (m.codLocaliz || '') === (mov.codLocaliz || '') && 
+          (m.lote || '') === (mov.lote || '') &&
+          (m.dtTrans || '') === (mov.dtTrans || '')
+        );
+        if (movItem) {
+          movItem.qtDisponivel = Math.max(0, movItem.qtDisponivel - qtdDevol);
+        }
+      }
 
       // Atualiza o item localmente em cache
       it.qtADevolver = Math.max(0, it.qtADevolver - qtdDevol);
@@ -7121,6 +7233,7 @@ const App = (() => {
     mudarPaginaAtendimento,
     onAlterarOrdemDataDevolucao,
     onAlterarItensPorPaginaDevolucao,
+    onAlterarDtCorteDevolucao,
     mudarPaginaDevolucao,
     voltarListaRequisicoesAtendimento,
     buscarRequisicoesAtendimento,

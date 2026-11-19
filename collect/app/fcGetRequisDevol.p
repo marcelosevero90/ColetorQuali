@@ -52,6 +52,8 @@ PROCEDURE pi-find:
     // Criacao do Retorno 
     DEFINE VAR oJsonArray   AS JsonArray  NO-UNDO.
     DEFINE VAR oJsonOutput  AS JsonObject NO-UNDO.
+    DEFINE VAR aJsonMovtos  AS JsonArray  NO-UNDO.
+    DEFINE VAR oJsonMov     AS JsonObject NO-UNDO.
                                     
     
     bloco:
@@ -73,16 +75,18 @@ PROCEDURE pi-find:
             //-- Cabecalho
             oJsonPayloadObject = aJsonPayloadArray:GetJsonObject(iContPayload).
             
-            ASSIGN dtCorte            = oJsonPayloadObject:GetDate("dtCorte")
-                    /*nrReqIni            = oJsonPayloadObject:GetInteger("nrReqIni") 
-                   nrReqFim            = oJsonPayloadObject:GetInteger("nrReqFim")
-                   dtReqIni            = oJsonPayloadObject:GetDate("dtReqIni")
-                   dtReqFim            = oJsonPayloadObject:GetDate("dtReqFim")
-                   estabIni            = oJsonPayloadObject:GetCharacter("estabIni")
-                   estabFim            = oJsonPayloadObject:GetCharacter("estabFim")
-                   requisitanteIni     = oJsonPayloadObject:GetCharacter("requisitanteIni")
-                   requisitanteFim     = oJsonPayloadObject:GetCharacter("requisitanteFim")*/                   
-                   .
+            IF oJsonPayloadObject:Has("dtCorte") THEN DO:
+                ASSIGN dtCorte = oJsonPayloadObject:GetDate("dtCorte") NO-ERROR.
+                IF dtCorte = ? THEN
+                    ASSIGN dtCorte = DATE(oJsonPayloadObject:GetCharacter("dtCorte")) NO-ERROR.
+            END.
+            IF dtCorte = ? AND jsonInput:Has("dtCorte") THEN DO:
+                ASSIGN dtCorte = jsonInput:GetDate("dtCorte") NO-ERROR.
+                IF dtCorte = ? THEN
+                    ASSIGN dtCorte = DATE(jsonInput:GetCharacter("dtCorte")) NO-ERROR.
+            END.
+            IF dtCorte = ? THEN
+                ASSIGN dtCorte = TODAY - 1.
         END.
 
         ASSIGN oJsonArray  = NEW JsonArray()
@@ -129,6 +133,32 @@ PROCEDURE pi-find:
             oJsonOutput:ADD("codUnidNegoc" ,  it-requisicao.cod-Unid-Negoc      ).
             oJsonOutput:ADD("nomeAbrev"    ,  it-requisicao.nome-Abrev         ).
             oJsonOutput:ADD("Sequencia"    ,  it-requisicao.Sequencia       ).
+
+            ASSIGN aJsonMovtos = NEW JsonArray().
+
+            FOR EACH movto-estoq NO-LOCK
+                WHERE movto-estoq.cod-estabel = it-requisicao.cod-estabel
+                  AND movto-estoq.it-codigo   = it-requisicao.it-codigo
+                  AND movto-estoq.esp-docto   = 30
+                  AND int(replace(movto-estoq.nro-docto,'.','')) = it-requisicao.nr-requis,
+                FIRST saldo-estoq OF movto-estoq NO-LOCK:
+
+                oJsonMov = NEW JsonObject().
+                oJsonMov:ADD("itCodigo"     , saldo-estoq.it-codigo).
+                oJsonMov:ADD("codEstabel"   , saldo-estoq.cod-estabel).
+                oJsonMov:ADD("codDepos"     , saldo-estoq.cod-depos).
+                oJsonMov:ADD("lote"         , saldo-estoq.lote).
+                oJsonMov:ADD("dtValiLote"   , saldo-estoq.dt-vali-lote).
+                oJsonMov:ADD("codLocaliz"   , saldo-estoq.cod-localiz).
+                oJsonMov:ADD("qtDisponivel" , movto-estoq.quantidade).
+                oJsonMov:ADD("codRefer"     , saldo-estoq.cod-refer).
+                oJsonMov:ADD("dtTrans"      , movto-estoq.dt-trans).
+                oJsonMov:ADD("qtADevolver"  , 0).
+
+                aJsonMovtos:ADD(oJsonMov).
+            END.
+
+            oJsonOutput:ADD("movimentos", aJsonMovtos).
 
             oJsonArray :ADD(oJsonOutput).
         END.
