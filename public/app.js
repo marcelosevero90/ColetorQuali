@@ -4625,19 +4625,17 @@ const App = (() => {
     const termoLimpo = (at.termoBusca || '').trim();
     const nrBusca = termoLimpo && /^\d+$/.test(termoLimpo.replace(/\D/g, '')) ? Number(termoLimpo.replace(/\D/g, '')) : null;
 
+    const payloadItem = {
+      nrReqIni: nrBusca !== null ? nrBusca : 0,
+      nrReqFim: nrBusca !== null ? nrBusca : 0,
+      estabIni: '',
+      estabFim: '',
+      requisitanteIni: '',
+      requisitanteFim: ''
+    };
+
     const payload = {
-      payload: [
-        {
-          nrReqIni: nrBusca !== null ? nrBusca : 0,
-          nrReqFim: nrBusca !== null ? nrBusca : 999999999,
-          dtReqIni: '1990-01-01',
-          dtReqFim: '2099-12-31',
-          estabIni: '',
-          estabFim: 'ZZZZ',
-          requisitanteIni: '',
-          requisitanteFim: '~~~~~~~~~~~~'
-        }
-      ]
+      payload: [payloadItem]
     };
 
     try {
@@ -4650,50 +4648,6 @@ const App = (() => {
     } catch (err) {
       console.warn('Erro ao consultar fcGetRequisicao via PASOE:', err.message);
       at.listaItens = [];
-    }
-
-    // Fallback com as requisições em aberto homologadas no Totvs Datasul
-    if (at.listaItens.length === 0) {
-      at.listaItens = [
-        // 319.496 (3 itens)
-        { nrRequisicao: 319496, dtRequisicao: '2026-11-18', descItem: 'Kit Pistão a Gás 50N Cinza', situacao: 1, itCodigo: '01010125', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 2.0, qtAtendida: 0.0, qtAAtender: 2.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'msevero', Sequencia: 1 },
-        { nrRequisicao: 319496, dtRequisicao: '2026-11-18', descItem: 'Kit Pont Prince (10) Unidades', situacao: 1, itCodigo: '01010047', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 5.0, qtAtendida: 0.0, qtAAtender: 5.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'msevero', Sequencia: 2 },
-        { nrRequisicao: 319496, dtRequisicao: '2026-11-18', descItem: 'Correia Der', situacao: 1, itCodigo: '07060334', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 1.0, qtAtendida: 0.0, qtAAtender: 1.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'msevero', Sequencia: 3 },
-
-        // 319.505
-        { nrRequisicao: 319505, dtRequisicao: '2026-11-18', descItem: 'Porta Latas Simples 348 x 91 x 115mm', situacao: 1, itCodigo: '01010115', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 1.0, qtAtendida: 0.0, qtAAtender: 1.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'marcia.b', Sequencia: 1 },
-
-        // 319.524
-        { nrRequisicao: 319524, dtRequisicao: '2026-11-18', descItem: 'Luva Multitato Preta PU', situacao: 1, itCodigo: '06020095', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 3.0, qtAtendida: 0.0, qtAAtender: 3.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'fur186', Sequencia: 1 },
-
-        // 319.610 (2 itens)
-        { nrRequisicao: 319610, dtRequisicao: '2026-11-18', descItem: 'VALVULA ESFERA TRIPARTIDA INOX 1/2 BSP', situacao: 1, itCodigo: 'PI0020', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 4.0, qtAtendida: 0.0, qtAAtender: 4.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'msevero', Sequencia: 1 },
-        { nrRequisicao: 319610, dtRequisicao: '2026-11-18', descItem: 'CURVA 90 RAIO LONGO SCH 40 1/2', situacao: 1, itCodigo: 'PI0041', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 2.0, qtAtendida: 0.0, qtAAtender: 2.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'msevero', Sequencia: 2 },
-
-        // 319.706
-        { nrRequisicao: 319706, dtRequisicao: '2026-11-18', descItem: 'ELETRODO SOLDA INOX 316L 2.5MM', situacao: 1, itCodigo: 'PI0440', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 10.0, qtAtendida: 0.0, qtAAtender: 10.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'aamaral', Sequencia: 1 },
-
-        // 319.727
-        { nrRequisicao: 319727, dtRequisicao: '2026-11-18', descItem: 'CARBONATO DE CALCIO (PA)', situacao: 1, itCodigo: '11000015', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 50.0, qtAtendida: 0.0, qtAAtender: 50.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'fur186', Sequencia: 1 },
-
-        // 319.813
-        { nrRequisicao: 319813, dtRequisicao: '2026-11-18', descItem: 'Kit Pistão a Gás 50N Cinza', situacao: 1, itCodigo: '01010125', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 1.0, qtAtendida: 0.0, qtAAtender: 1.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'msevero', Sequencia: 1 },
-
-        // 319.824
-        { nrRequisicao: 319824, dtRequisicao: '2026-11-18', descItem: 'Correia Der', situacao: 1, itCodigo: '07060334', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 2.0, qtAtendida: 0.0, qtAAtender: 2.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'fur186', Sequencia: 1 },
-
-        // 319.835
-        { nrRequisicao: 319835, dtRequisicao: '2026-11-18', descItem: 'Kit Pont Prince (10) Unidades', situacao: 1, itCodigo: '01010047', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 2.0, qtAtendida: 0.0, qtAAtender: 2.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'aamaral', Sequencia: 1 },
-
-        // 319.850
-        { nrRequisicao: 319850, dtRequisicao: '2026-11-18', descItem: 'TUBO ACO CARBONO SCH 40 1/2 6000MM', situacao: 1, itCodigo: 'PI0010', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 6.0, qtAtendida: 0.0, qtAAtender: 6.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'msevero', Sequencia: 1 },
-
-        // 319.855
-        { nrRequisicao: 319855, dtRequisicao: '2026-11-18', descItem: 'Luva Multitato Preta PU', situacao: 1, itCodigo: '06020095', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 2.0, qtAtendida: 0.0, qtAAtender: 2.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'marcia.b', Sequencia: 1 },
-
-        // 319.877
-        { nrRequisicao: 319877, dtRequisicao: '2026-11-18', descItem: 'Correia Der', situacao: 1, itCodigo: '07060334', dtAtend: '', estado: 1, tpRequis: 1, codEstabel: codEstabel, qtRequisitada: 1.0, qtAtendida: 0.0, qtAAtender: 1.0, qtDevolvida: 0.0, qtADevolver: 0.0, codUnidNegoc: 'MOV', nomeAbrev: 'fur186', Sequencia: 1 }
-      ];
     }
 
     // Filtro no client-side se termo foi informado
@@ -5010,24 +4964,6 @@ const App = (() => {
       at.saldosEstoque = [];
     }
 
-    // Se mock de fallback
-    if (at.saldosEstoque.length === 0 && itCodigo === '07060334') {
-      at.saldosEstoque = [
-        {
-          itCodigo: '07060334',
-          codEstabel,
-          codDepos: 'MAN',
-          lote: '',
-          dtValiLote: '',
-          codLocaliz: '',
-          qtDisponivel: 7.0,
-          codRefer: '',
-          qtAAtender: 0,
-          selecionado: 99
-        }
-      ];
-    }
-
     at.carregandoSaldos = false;
     if (contSaldos) contSaldos.innerHTML = renderizarGridSaldosEstoque();
   }
@@ -5206,31 +5142,6 @@ const App = (() => {
     } catch (err) {
       console.warn('Erro ao consultar fcGetRequisDevol via PASOE:', err.message);
       dev.listaItens = [];
-    }
-
-    // Fallback de segurança se vazio
-    if (dev.listaItens.length === 0 && (!dev.termoBusca || dev.termoBusca.includes('111'))) {
-      dev.listaItens = [
-        {
-          nrRequisicao: 111,
-          dtRequisicao: '2012-04-13',
-          descItem: 'Luva Multitato Preta PU',
-          situacao: 2,
-          itCodigo: '06020095',
-          dtAtend: '2012-04-13',
-          estado: 1,
-          tpRequis: 1,
-          codEstabel: state.session.codEstabel || '101',
-          qtRequisitada: 1.0,
-          qtAtendida: 1.0,
-          qtAAtender: 0.0,
-          qtDevolvida: 0.0,
-          qtADevolver: 1.0,
-          codUnidNegoc: 'MOV',
-          nomeAbrev: 'marcia.b',
-          Sequencia: 10
-        }
-      ];
     }
 
     if (dev.termoBusca) {
@@ -5511,24 +5422,6 @@ const App = (() => {
     } catch (err) {
       console.warn('Erro ao consultar fcGetSaldoEstoqEstabItDev via PASOE:', err.message);
       dev.movimentos = [];
-    }
-
-    // Fallback de mock para teste caso vazio
-    if (dev.movimentos.length === 0 && String(nrRequis).includes('111')) {
-      dev.movimentos = [
-        {
-          itCodigo: '06020095',
-          codEstabel,
-          codDepos: 'AL1',
-          lote: '',
-          dtValiLote: '',
-          codLocaliz: '',
-          qtDisponivel: 1.0,
-          codRefer: '',
-          dtTrans: '2012-04-13',
-          qtADevolver: 0
-        }
-      ];
     }
 
     dev.carregandoMovimentos = false;

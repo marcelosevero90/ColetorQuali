@@ -79,33 +79,47 @@ PROCEDURE pi-find:
             //-- Cabecalho
             oJsonPayloadObject = aJsonPayloadArray:GetJsonObject(iContPayload).
             
-            ASSIGN nrReqIni            = oJsonPayloadObject:GetInteger("nrReqIni") 
-                   nrReqFim            = oJsonPayloadObject:GetInteger("nrReqFim")
-                   dtReqIni            = oJsonPayloadObject:GetDate("dtReqIni")
-                   dtReqFim            = oJsonPayloadObject:GetDate("dtReqFim")
-                   estabIni            = oJsonPayloadObject:GetCharacter("estabIni")
-                   estabFim            = oJsonPayloadObject:GetCharacter("estabFim")
-                   requisitanteIni     = oJsonPayloadObject:GetCharacter("requisitanteIni")
-                   requisitanteFim     = oJsonPayloadObject:GetCharacter("requisitanteFim")
-                   
-                   .
+            IF VALID-OBJECT(oJsonPayloadObject) THEN DO:
+                IF oJsonPayloadObject:Has("nrReqIni") THEN
+                    ASSIGN nrReqIni = oJsonPayloadObject:GetInteger("nrReqIni") NO-ERROR.
+                IF oJsonPayloadObject:Has("nrReqFim") THEN
+                    ASSIGN nrReqFim = oJsonPayloadObject:GetInteger("nrReqFim") NO-ERROR.
+                IF oJsonPayloadObject:Has("dtReqIni") THEN DO:
+                    ASSIGN dtReqIni = oJsonPayloadObject:GetDate("dtReqIni") NO-ERROR.
+                    IF dtReqIni = ? THEN
+                        ASSIGN dtReqIni = DATE(oJsonPayloadObject:GetCharacter("dtReqIni")) NO-ERROR.
+                END.
+                IF oJsonPayloadObject:Has("dtReqFim") THEN DO:
+                    ASSIGN dtReqFim = oJsonPayloadObject:GetDate("dtReqFim") NO-ERROR.
+                    IF dtReqFim = ? THEN
+                        ASSIGN dtReqFim = DATE(oJsonPayloadObject:GetCharacter("dtReqFim")) NO-ERROR.
+                END.
+                IF oJsonPayloadObject:Has("estabIni") THEN
+                    ASSIGN estabIni = oJsonPayloadObject:GetCharacter("estabIni") NO-ERROR.
+                IF oJsonPayloadObject:Has("estabFim") THEN
+                    ASSIGN estabFim = oJsonPayloadObject:GetCharacter("estabFim") NO-ERROR.
+                IF oJsonPayloadObject:Has("requisitanteIni") THEN
+                    ASSIGN requisitanteIni = oJsonPayloadObject:GetCharacter("requisitanteIni") NO-ERROR.
+                IF oJsonPayloadObject:Has("requisitanteFim") THEN
+                    ASSIGN requisitanteFim = oJsonPayloadObject:GetCharacter("requisitanteFim") NO-ERROR.
+            END.
         END.
 
         ASSIGN oJsonArray  = NEW JsonArray()
                oJsonOutput = NEW JsonObject().
 
-        FOR EACH requisicao FIELDS(dt-Requis) NO-LOCK
+        FOR EACH requisicao NO-LOCK
             WHERE requisicao.tp-requis         = 1 /* Requisicao de estoque */
               AND requisicao.situacao          = 1 /* 1 = Aberto  */
               AND requisicao.estado            = 1  /*Aprovada*/  
-              AND requisicao.cod-estabel      >= estabIni
-              AND requisicao.cod-estabel      <= estabFim
-              AND requisicao.nr-requis        >= nrReqIni 
-              AND requisicao.nr-requis        <= nrReqFim 
-              AND requisicao.dt-requis        >= dtReqIni
-              AND requisicao.dt-requis        <= dtReqFim
-              AND requisicao.nome-abrev       >= requisitanteIni
-              AND requisicao.nome-abrev       <= requisitanteFim,
+              AND (IF estabIni <> "" AND estabIni <> ? THEN requisicao.cod-estabel >= estabIni ELSE TRUE)
+              AND (IF estabFim <> "" AND estabFim <> ? THEN requisicao.cod-estabel <= estabFim ELSE TRUE)
+              AND (IF nrReqIni > 0 THEN requisicao.nr-requis >= nrReqIni ELSE TRUE)
+              AND (IF nrReqFim > 0 THEN requisicao.nr-requis <= nrReqFim ELSE TRUE)
+              AND (IF dtReqIni <> ? THEN requisicao.dt-requis >= dtReqIni ELSE TRUE)
+              AND (IF dtReqFim <> ? THEN requisicao.dt-requis <= dtReqFim ELSE TRUE)
+              AND (IF requisitanteIni <> "" AND requisitanteIni <> ? THEN requisicao.nome-abrev >= requisitanteIni ELSE TRUE)
+              AND (IF requisitanteFim <> "" AND requisitanteFim <> ? THEN requisicao.nome-abrev <= requisitanteFim ELSE TRUE),
             EACH it-requisicao NO-LOCK 
             WHERE it-requisicao.nr-requisicao = requisicao.nr-requisicao 
               AND it-requisicao.estado        = 1  /*Aprovada*/          

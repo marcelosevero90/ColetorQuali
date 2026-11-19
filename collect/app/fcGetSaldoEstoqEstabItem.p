@@ -60,8 +60,8 @@ PROCEDURE pi-find:
             .
 
         FOR EACH saldo-estoq FIELDS(cod-estabel cod-depos lote dt-vali-lote cod-localiz cod-refer
-                                    qtidade-atu qt-alocada qt-aloc-ped qt-aloc-prod it-codigo) USE-INDEX estabel-item NO-LOCK
-            WHERE saldo-estoq.cod-estabel   = cEstab    
+                                    qtidade-atu qt-alocada qt-aloc-ped qt-aloc-prod it-codigo) NO-LOCK
+            WHERE (IF cEstab <> "" AND cEstab <> ? THEN saldo-estoq.cod-estabel = cEstab ELSE TRUE)
               AND saldo-estoq.it-codigo     = cItCodigo 
               AND saldo-estoq.qtidade-atu - (saldo-estoq.qt-alocada + saldo-estoq.qt-aloc-ped + saldo-estoq.qt-aloc-prod) > 0
             .

@@ -1503,10 +1503,7 @@ async function proxyPasoeOuFallback(endpoint, req, res, fallbackFn) {
       console.warn(`[PASOE] ${endpoint} retornou erro (${dados.code || dados.error_code}), utilizando fallback local.`);
       return fallbackFn(req, res);
     }
-    // Se o PASOE retornou lista vazia (items: []), mas temos dados locais para teste
-    if (endpoint.startsWith('fcGet') && ((Array.isArray(dados) && dados.length === 0) || (dados && Array.isArray(dados.items) && dados.items.length === 0))) {
-      return fallbackFn(req, res);
-    }
+    // Retorna exatamente a resposta do PASOE real (mesmo se vazia, sem sobrescrever com mock local)
     return res.status(pasoeRes.status).json(dados);
   } catch (errPasoe) {
     return fallbackFn(req, res);
