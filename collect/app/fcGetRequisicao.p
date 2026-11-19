@@ -56,8 +56,10 @@ PROCEDURE pi-find:
 
 
     // Criacao do Retorno 
-    DEFINE VAR oJsonArray   AS JsonArray  NO-UNDO.
-    DEFINE VAR oJsonOutput  AS JsonObject NO-UNDO.
+    DEFINE VAR oJsonArray         AS JsonArray  NO-UNDO.
+    DEFINE VAR oJsonOutput        AS JsonObject NO-UNDO.
+    DEFINE VAR aJsonSaldosEstoque AS JsonArray  NO-UNDO.
+    DEFINE VAR oJsonSaldoEstoque  AS JsonObject NO-UNDO.
                                     
     
     bloco:
@@ -148,6 +150,31 @@ PROCEDURE pi-find:
             oJsonOutput:ADD("codUnidNegoc" ,  it-requisicao.cod-Unid-Negoc      ).
             oJsonOutput:ADD("nomeAbrev"    ,  it-requisicao.nome-Abrev         ).
             oJsonOutput:ADD("Sequencia"    ,  it-requisicao.Sequencia       ).
+
+            ASSIGN aJsonSaldosEstoque = NEW JsonArray().
+
+            FOR EACH saldo-estoq FIELDS(cod-estabel cod-depos lote dt-vali-lote cod-localiz cod-refer
+                                        qtidade-atu qt-alocada qt-aloc-ped qt-aloc-prod it-codigo) NO-LOCK
+                WHERE saldo-estoq.cod-estabel = it-requisicao.cod-estabel
+                  AND saldo-estoq.it-codigo   = it-requisicao.it-codigo
+                  AND saldo-estoq.qtidade-atu - (saldo-estoq.qt-alocada + saldo-estoq.qt-aloc-ped + saldo-estoq.qt-aloc-prod) > 0:
+
+                oJsonSaldoEstoque = NEW JsonObject().
+                oJsonSaldoEstoque:ADD("itCodigo"     , saldo-estoq.it-codigo).
+                oJsonSaldoEstoque:ADD("codEstabel"   , saldo-estoq.cod-estabel).
+                oJsonSaldoEstoque:ADD("codDepos"     , saldo-estoq.cod-depos).
+                oJsonSaldoEstoque:ADD("lote"         , saldo-estoq.lote).
+                oJsonSaldoEstoque:ADD("dtValiLote"   , saldo-estoq.dt-vali-lote).
+                oJsonSaldoEstoque:ADD("codLocaliz"   , saldo-estoq.cod-localiz).
+                oJsonSaldoEstoque:ADD("qtDisponivel" , saldo-estoq.qtidade-atu - (saldo-estoq.qt-alocada + saldo-estoq.qt-aloc-ped + saldo-estoq.qt-aloc-prod)).
+                oJsonSaldoEstoque:ADD("codRefer"     , saldo-estoq.cod-refer).
+                oJsonSaldoEstoque:ADD("qtAAtender"   , 0).
+                oJsonSaldoEstoque:ADD("selecionado"  , 99).
+
+                aJsonSaldosEstoque:ADD(oJsonSaldoEstoque).
+            END.
+
+            oJsonOutput:ADD("saldosEstoque", aJsonSaldosEstoque).
 
             oJsonArray :ADD(oJsonOutput).
         END.

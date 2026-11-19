@@ -1539,25 +1539,53 @@ router.all(['/fcGetRequisicao', '/qdcGetRequisicao'], async (req, res) => {
       return numOk && estOk && pendOk;
     });
 
-    return s.json(lista.map(it => ({
-      nrRequisicao: it.nrRequisicao,
-      dtRequisicao: it.dtRequisicao,
-      descItem: it.descItem,
-      situacao: it.situacao,
-      itCodigo: it.itCodigo,
-      dtAtend: it.dtAtend || '',
-      estado: it.estado,
-      tpRequis: it.tpRequis,
-      codEstabel: it.codEstabel,
-      qtRequisitada: it.qtRequisitada,
-      qtAtendida: it.qtAtendida,
-      qtAAtender: it.qtAAtender,
-      qtDevolvida: it.qtDevolvida || 0,
-      qtADevolver: it.qtADevolver || 0,
-      codUnidNegoc: it.codUnidNegoc || 'MOV',
-      nomeAbrev: it.nomeAbrev,
-      Sequencia: it.Sequencia
-    })));
+    return s.json(lista.map(it => {
+      const saldosItem = (db.data.saldo_estoq || []).filter(item => {
+        const est = (item.codEstab || item.codEstabel || '').trim();
+        const itCod = (item.itCodigo || '').trim();
+        const disp = item.qtDisponivelCalc !== undefined
+          ? item.qtDisponivelCalc
+          : ((item.qtidadeAtu || 0) - ((item.qtAlocada || 0) + (item.qtAlocPed || 0) + (item.qtAlocProd || 0)));
+        return (!it.codEstabel || est === String(it.codEstabel).trim()) && itCod === it.itCodigo && disp > 0;
+      }).map(m => {
+        const disp = m.qtDisponivelCalc !== undefined
+          ? m.qtDisponivelCalc
+          : ((m.qtidadeAtu || 0) - ((m.qtAlocada || 0) + (m.qtAlocPed || 0) + (m.qtAlocProd || 0)));
+        return {
+          itCodigo: m.itCodigo,
+          codEstabel: m.codEstab || m.codEstabel || it.codEstabel,
+          codDepos: m.codDep || m.codDepos,
+          lote: m.lote || '',
+          dtValiLote: m.dtValiLote || '',
+          codLocaliz: m.codLocal || m.codLocaliz || '',
+          qtDisponivel: disp,
+          codRefer: m.codRefer || '',
+          qtAAtender: 0,
+          selecionado: 99
+        };
+      });
+
+      return {
+        nrRequisicao: it.nrRequisicao,
+        dtRequisicao: it.dtRequisicao,
+        descItem: it.descItem,
+        situacao: it.situacao,
+        itCodigo: it.itCodigo,
+        dtAtend: it.dtAtend || '',
+        estado: it.estado,
+        tpRequis: it.tpRequis,
+        codEstabel: it.codEstabel,
+        qtRequisitada: it.qtRequisitada,
+        qtAtendida: it.qtAtendida,
+        qtAAtender: it.qtAAtender,
+        qtDevolvida: it.qtDevolvida || 0,
+        qtADevolver: it.qtADevolver || 0,
+        codUnidNegoc: it.codUnidNegoc || 'MOV',
+        nomeAbrev: it.nomeAbrev,
+        Sequencia: it.Sequencia,
+        saldosEstoque: saldosItem
+      };
+    }));
   });
 });
 
@@ -1697,25 +1725,53 @@ router.all(['/fcGetRequisDevol', '/qdcGetRequisDevol'], async (req, res) => {
       return Number(it.qtADevolver || 0) > 0;
     });
 
-    return s.json(lista.map(it => ({
-      nrRequisicao: it.nrRequisicao,
-      dtRequisicao: it.dtRequisicao,
-      descItem: it.descItem,
-      situacao: it.situacao,
-      itCodigo: it.itCodigo,
-      dtAtend: it.dtAtend || '',
-      estado: it.estado,
-      tpRequis: it.tpRequis,
-      codEstabel: it.codEstabel,
-      qtRequisitada: it.qtRequisitada,
-      qtAtendida: it.qtAtendida,
-      qtAAtender: it.qtAAtender,
-      qtDevolvida: it.qtDevolvida || 0,
-      qtADevolver: it.qtADevolver || 0,
-      codUnidNegoc: it.codUnidNegoc || 'MOV',
-      nomeAbrev: it.nomeAbrev,
-      Sequencia: it.Sequencia
-    })));
+    return s.json(lista.map(it => {
+      const saldosItem = (db.data.saldo_estoq || []).filter(item => {
+        const est = (item.codEstab || item.codEstabel || '').trim();
+        const itCod = (item.itCodigo || '').trim();
+        const disp = item.qtDisponivelCalc !== undefined
+          ? item.qtDisponivelCalc
+          : ((item.qtidadeAtu || 0) - ((item.qtAlocada || 0) + (item.qtAlocPed || 0) + (item.qtAlocProd || 0)));
+        return (!it.codEstabel || est === String(it.codEstabel).trim()) && itCod === it.itCodigo && disp > 0;
+      }).map(m => {
+        const disp = m.qtDisponivelCalc !== undefined
+          ? m.qtDisponivelCalc
+          : ((m.qtidadeAtu || 0) - ((m.qtAlocada || 0) + (m.qtAlocPed || 0) + (m.qtAlocProd || 0)));
+        return {
+          itCodigo: m.itCodigo,
+          codEstabel: m.codEstab || m.codEstabel || it.codEstabel,
+          codDepos: m.codDep || m.codDepos,
+          lote: m.lote || '',
+          dtValiLote: m.dtValiLote || '',
+          codLocaliz: m.codLocal || m.codLocaliz || '',
+          qtDisponivel: disp,
+          codRefer: m.codRefer || '',
+          qtAAtender: 0,
+          selecionado: 99
+        };
+      });
+
+      return {
+        nrRequisicao: it.nrRequisicao,
+        dtRequisicao: it.dtRequisicao,
+        descItem: it.descItem,
+        situacao: it.situacao,
+        itCodigo: it.itCodigo,
+        dtAtend: it.dtAtend || '',
+        estado: it.estado,
+        tpRequis: it.tpRequis,
+        codEstabel: it.codEstabel,
+        qtRequisitada: it.qtRequisitada,
+        qtAtendida: it.qtAtendida,
+        qtAAtender: it.qtAAtender,
+        qtDevolvida: it.qtDevolvida || 0,
+        qtADevolver: it.qtADevolver || 0,
+        codUnidNegoc: it.codUnidNegoc || 'MOV',
+        nomeAbrev: it.nomeAbrev,
+        Sequencia: it.Sequencia,
+        saldosEstoque: saldosItem
+      };
+    }));
   });
 });
 

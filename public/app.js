@@ -4730,6 +4730,29 @@ const App = (() => {
         // Salva cache local no IndexedDB para uso offline
         if (dadosCarregados && dadosCarregados.length > 0) {
           await DB.putConfig('cache_requisicoes_atend_' + codEmpresa, dadosCarregados);
+
+          // Popula também a store 'saldo_estoq' no IndexedDB com os saldos trazidos em cada item
+          const saldosParaGravar = [];
+          dadosCarregados.forEach(it => {
+            if (Array.isArray(it.saldosEstoque) && it.saldosEstoque.length > 0) {
+              it.saldosEstoque.forEach(s => {
+                saldosParaGravar.push({
+                  codEmpresa,
+                  codEstabel: s.codEstabel || it.codEstabel || state.session.codEstabel || '101',
+                  codDepos: s.codDepos || s.codDep || '',
+                  codLocaliz: s.codLocaliz || s.codLocal || '',
+                  lote: s.lote || '',
+                  codRefer: s.codRefer || '',
+                  itCodigo: s.itCodigo || it.itCodigo,
+                  qtDisponivel: Number(s.qtDisponivel || 0),
+                  dtValiLote: s.dtValiLote || ''
+                });
+              });
+            }
+          });
+          if (saldosParaGravar.length > 0) {
+            await DB.bulkPut('saldo_estoq', saldosParaGravar, codEmpresa, 100);
+          }
         }
       } catch (err) {
         console.warn('Falha na consulta online de fcGetRequisicao. Tentando cache offline:', err.message);
@@ -5088,6 +5111,13 @@ const App = (() => {
           </span>
         </div>
 
+        ${saldos.length > 0 && at.origemSaldo === 'cache' ? `
+          <div style="background: #fefce8; border: 1px solid #fde047; border-radius: 6px; padding: 6px 10px; margin-bottom: 8px; font-size: 11px; color: #854d0e; display: flex; align-items: center; gap: 6px;">
+            <span>📴</span>
+            <span><strong>Modo Offline:</strong> Exibindo saldo do estoque em cache local.</span>
+          </div>
+        ` : ''}
+
         ${saldos.length === 0 ? `
           <div class="card" style="text-align: center; color: #ef4444; font-size: 12px; padding: 16px; background: #fef2f2; border: 1px solid #fecaca;">
             ⚠️ Nenhum saldo disponível encontrado no estoque para este item nesta filial.
@@ -5198,8 +5228,9 @@ const App = (() => {
     const codEmpresa = state.session.codEmpresa || '001';
 
     let saldosEncontrados = null;
+    let origem = 'online';
 
-    // Se online, tenta buscar do ERP
+    // Se online, tenta buscar do ERP (saldo atualizado em tempo real)
     if (isOnline()) {
       const payload = {
         codEstabel,
@@ -5212,25 +5243,72 @@ const App = (() => {
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        saldosEncontrados = extrairLista(data);
+        const listaOnline = extrairLista(data);
+        if (listaOnline && listaOnline.length > 0) {
+          saldosEncontrados = listaOnline;
+          origem = 'online';
+
+          // Atualiza também na base local do IndexedDB e no item para persistência offline
+          try {
+            await DB.bulkPut('saldo_estoq', listaOnline.map(s => ({
+              codEmpresa,
+              codEstabel: s.codEstabel || codEstabel,
+              codDepos: s.codDepos || s.codDep || '',
+              codLocaliz: s.codLocaliz || s.codLocal || '',
+              lote: s.lote || '',
+              codRefer: s.codRefer || '',
+              itCodigo: s.itCodigo || itCodigo,
+              qtDisponivel: Number(s.qtDisponivel || 0),
+              dtValiLote: s.dtValiLote || ''
+            })), codEmpresa, 50);
+
+            if (at.itemSelecionado) {
+              at.itemSelecionado.saldosEstoque = listaOnline;
+            }
+          } catch (ePut) {
+            console.warn('Erro ao atualizar saldos no IndexedDB:', ePut.message);
+          }
+        }
       } catch (err) {
         console.warn('Falha na consulta online de saldos. Tentando base local:', err.message);
       }
     }
 
-    // Se offline ou consulta vazia/falha, busca da store local 'saldo_estoq' do IndexedDB
+    // Se offline ou consulta online vazia/falhou, busca do cache local:
     if (!saldosEncontrados || saldosEncontrados.length === 0) {
-      try {
-        const saldosLocais = await DB.consultarSaldoEstoqueItem(codEmpresa, codEstabel, itCodigo);
-        if (saldosLocais && saldosLocais.length > 0) {
-          saldosEncontrados = saldosLocais;
+      origem = 'cache';
+
+      // 1ª opção de cache: verificar no array 'saldosEstoque' do próprio item selecionado (trazido na fcGetRequisicao)
+      if (at.itemSelecionado && Array.isArray(at.itemSelecionado.saldosEstoque) && at.itemSelecionado.saldosEstoque.length > 0) {
+        saldosEncontrados = at.itemSelecionado.saldosEstoque
+          .map(s => ({
+            codEstabel: s.codEstabel || codEstabel,
+            codDepos: s.codDepos || s.codDep || '',
+            codLocaliz: s.codLocaliz || s.codLocal || '',
+            lote: s.lote || '',
+            codRefer: s.codRefer || '',
+            itCodigo: s.itCodigo || itCodigo,
+            qtDisponivel: Number(s.qtDisponivel || 0),
+            dtValiLote: s.dtValiLote || ''
+          }))
+          .filter(s => s.qtDisponivel > 0);
+      }
+
+      // 2ª opção de cache: consultar na store 'saldo_estoq' do IndexedDB
+      if (!saldosEncontrados || saldosEncontrados.length === 0) {
+        try {
+          const saldosLocais = await DB.consultarSaldoEstoqueItem(codEmpresa, codEstabel, itCodigo);
+          if (saldosLocais && saldosLocais.length > 0) {
+            saldosEncontrados = saldosLocais;
+          }
+        } catch (eLocal) {
+          console.warn('Erro ao consultar saldos no IndexedDB local:', eLocal.message);
         }
-      } catch (eLocal) {
-        console.warn('Erro ao consultar saldos no IndexedDB local:', eLocal.message);
       }
     }
 
     at.saldosEstoque = saldosEncontrados || [];
+    at.origemSaldo = origem;
     at.carregandoSaldos = false;
     if (contSaldos) contSaldos.innerHTML = renderizarGridSaldosEstoque();
   }
@@ -5394,6 +5472,22 @@ const App = (() => {
       // Atualiza o item localmente em cache
       it.qtAAtender = Math.max(0, it.qtAAtender - totalInformado);
       it.qtAtendida = Number(it.qtAtendida || 0) + totalInformado;
+
+      // Abate também do array saldosEstoque do próprio item em cache se existir
+      if (Array.isArray(it.saldosEstoque)) {
+        linhasEstoque.forEach(lin => {
+          const sObj = it.saldosEstoque.find(s =>
+            (s.codDepos || s.codDep) === lin.codDepos &&
+            (s.codLocaliz || s.codLocal || '') === (lin.codLocaliz || '') &&
+            (s.lote || '') === (lin.lote || '') &&
+            (s.codRefer || '') === (lin.codRefer || '')
+          );
+          if (sObj) {
+            sObj.qtDisponivel = Math.max(0, Number(sObj.qtDisponivel || 0) - Number(lin.qtAAtender || 0));
+          }
+        });
+      }
+
       await DB.putConfig('cache_requisicoes_atend_' + codEmpresa, at.listaItens);
 
       alert('✅ Atendimento registrado com sucesso em MODO OFFLINE!\n\nRequisição: ' + req.nrRequisicao + '\nItem: ' + it.itCodigo + '\nQuantidade: ' + totalInformado + '\n\nO movimento foi salvo na fila de sincronização e o saldo local já foi abatido.');
@@ -6254,7 +6348,16 @@ const App = (() => {
           <span class="badge badge-warning">${escapeHtml(op.status)}</span>
         </div>
         <div style="font-size:11.5px; margin-top:3px;">
-          Item: <strong>${escapeHtml(op.payload?.itCodigo)}</strong> • Dep: <strong>${escapeHtml(op.payload?.codDepos)}</strong> • Qtd: <strong>${op.payload?.qtApurada ?? '-'}</strong>
+          ${(() => {
+            const p = (Array.isArray(op.payload?.payload) && op.payload.payload.length > 0)
+              ? op.payload.payload[0]
+              : (op.payload || {});
+            const itCod = p.itCodigo || p.item || '-';
+            const depCod = p.codDepos || p.deposito || '-';
+            const qtd = p.qtAAtender ?? p.qtADevolver ?? p.qtApurada ?? p.quantidade ?? '-';
+            const reqNum = p.nrRequisicao ? ` • Req: <strong>#${p.nrRequisicao}</strong>` : '';
+            return `Item: <strong>${escapeHtml(itCod)}</strong> • Dep: <strong>${escapeHtml(depCod)}</strong> • Qtd: <strong>${qtd}</strong>${reqNum}`;
+          })()}
         </div>
         ${op.ultimoErro ? `<div style="font-size:10.5px; color:#dc2626; margin-top:3px;">Erro: ${escapeHtml(op.ultimoErro)}</div>` : ''}
       </div>

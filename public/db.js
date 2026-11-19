@@ -218,9 +218,9 @@ const DB = (() => {
       item.lote = String(item.lote ?? '').trim();
       item.codRefer = String(item.codRefer ?? item.cod_refer ?? '').trim();
     } else if (storeName === 'saldo_estoq') {
-      item.codEstab = String(item.codEstab ?? item.cod_estabel ?? '').trim();
-      item.codDep = String(item.codDep ?? item.cod_depos ?? '').trim();
-      item.codLocal = String(item.codLocal ?? item.cod_localiz ?? '').trim();
+      item.codEstab = String(item.codEstab ?? item.cod_estabel ?? item.codEstabel ?? '').trim();
+      item.codDep = String(item.codDep ?? item.cod_depos ?? item.codDepos ?? '').trim();
+      item.codLocal = String(item.codLocal ?? item.cod_localiz ?? item.codLocaliz ?? '').trim();
       item.itCodigo = String(item.itCodigo ?? item.it_codigo ?? '').trim();
       item.lote = String(item.lote ?? '').trim();
       item.codRefer = String(item.codRefer ?? item.cod_refer ?? '').trim();
