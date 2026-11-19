@@ -4483,7 +4483,10 @@ const App = (() => {
       carregandoSaldos: false,
       quantidadesInformadas: {}, // idxSaldo => number
       dataAtend: new Date().toISOString().split('T')[0],
-      isOffline: false
+      isOffline: false,
+      paginaAtual: 1,
+      itensPorPagina: 10,
+      ordemData: 'desc' // 'desc' = maior para o menor (mais recente); 'asc' = menor para o maior
     },
     devolucao: {
       telaSub: 'lista', // 'lista' | 'detalhe'
@@ -4497,7 +4500,10 @@ const App = (() => {
       movimentoSelecionadoIdx: null,
       quantidadeDevolver: 0,
       dataDevol: new Date().toISOString().split('T')[0],
-      isOffline: false
+      isOffline: false,
+      paginaAtual: 1,
+      itensPorPagina: 10,
+      ordemData: 'desc'
     }
   };
 
@@ -4624,7 +4630,7 @@ const App = (() => {
       </div>
 
       <!-- Barra de Busca Rápida -->
-      <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+      <div style="display: flex; gap: 6px; margin-bottom: 8px;">
         <input type="text" id="req-atend-input-busca" class="form-input" style="font-size: 12.5px; flex: 1;"
                placeholder="Buscar por requisição, requisitante ou item..."
                value="${escapeHtml(at.termoBusca || '')}"
@@ -4633,6 +4639,27 @@ const App = (() => {
                 onclick="App.buscarRequisicoesAtendimento(document.getElementById('req-atend-input-busca').value)">
           Buscar 🔍
         </button>
+      </div>
+
+      <!-- Barra de Controles: Ordenação por Data e Itens por Página -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px;">
+          <span style="font-size: 11px; color: #64748b; font-weight: 700; white-space: nowrap;">Ordem:</span>
+          <select class="form-input" style="font-size: 11.5px; padding: 3px 6px; height: 30px; font-weight: 600;"
+                  onchange="App.onAlterarOrdemDataAtendimento(this.value)">
+            <option value="desc" ${at.ordemData === 'desc' ? 'selected' : ''}>📅 Data: Mais recente ➔ Mais antiga (Maior para menor)</option>
+            <option value="asc" ${at.ordemData === 'asc' ? 'selected' : ''}>📅 Data: Mais antiga ➔ Mais recente (Menor para maior)</option>
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 11px; color: #64748b; font-weight: 700; white-space: nowrap;">Exibir:</span>
+          <select class="form-input" style="font-size: 11.5px; padding: 3px 6px; height: 30px; width: 85px; font-weight: 600;"
+                  onchange="App.onAlterarItensPorPaginaAtendimento(this.value)">
+            <option value="10" ${Number(at.itensPorPagina) === 10 ? 'selected' : ''}>10 por pág</option>
+            <option value="25" ${Number(at.itensPorPagina) === 25 ? 'selected' : ''}>25 por pág</option>
+            <option value="50" ${Number(at.itensPorPagina) === 50 ? 'selected' : ''}>50 por pág</option>
+          </select>
+        </div>
       </div>
 
       <!-- Status Offline se aplicável -->
@@ -4682,8 +4709,8 @@ const App = (() => {
     let dadosCarregados = null;
     let offline = false;
 
-    // Tentar consulta online se dispositivo conectado
-    if (navigator.onLine) {
+    // Tentar consulta online se dispositivo conectado e não estiver simulando offline
+    if (isOnline()) {
       const payloadItem = {
         nrReqIni: nrBusca !== null ? nrBusca : 0,
         nrReqFim: nrBusca !== null ? nrBusca : 0,
@@ -4760,16 +4787,38 @@ const App = (() => {
 
     const reqsAgrupadas = agruparRequisicoes(lista);
 
+    // Ordenação por data (maior para menor = mais recente primeiro, ou menor para maior)
+    reqsAgrupadas.sort((a, b) => {
+      const dtA = String(a.dtRequisicao || '').trim();
+      const dtB = String(b.dtRequisicao || '').trim();
+      const cmp = dtA.localeCompare(dtB);
+      if (cmp !== 0) {
+        return at.ordemData === 'asc' ? cmp : -cmp;
+      }
+      return at.ordemData === 'asc' ? (Number(a.nrRequisicao) - Number(b.nrRequisicao)) : (Number(b.nrRequisicao) - Number(a.nrRequisicao));
+    });
+
+    // Paginação: 10, 25 ou 50 por página
+    const totalRegistros = reqsAgrupadas.length;
+    const itensPorPagina = Number(at.itensPorPagina) || 10;
+    const totalPaginas = Math.ceil(totalRegistros / itensPorPagina) || 1;
+    if (at.paginaAtual > totalPaginas) at.paginaAtual = totalPaginas;
+    if (at.paginaAtual < 1) at.paginaAtual = 1;
+
+    const idxInicio = (at.paginaAtual - 1) * itensPorPagina;
+    const idxFim = Math.min(idxInicio + itensPorPagina, totalRegistros);
+    const reqsPaginadas = reqsAgrupadas.slice(idxInicio, idxFim);
+
     cont.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <span style="font-size: 12px; font-weight: 700; color: #475569;">
-          ${reqsAgrupadas.length} requisição(ões) encontrada(s):
+          ${totalRegistros} requisição(ões) encontrada(s) • Pág ${at.paginaAtual}/${totalPaginas}:
         </span>
-        <span style="font-size: 11px; color: #64748b;">Toque para atender</span>
+        <span style="font-size: 11px; color: #64748b;">Exibindo ${idxInicio + 1} a ${idxFim}</span>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 10px;">
-        ${reqsAgrupadas.map(r => {
+        ${reqsPaginadas.map(r => {
           let saldoTotalReq = 0;
           r.itens.forEach(it => { saldoTotalReq += Number(it.qtAAtender || 0); });
 
@@ -4785,7 +4834,7 @@ const App = (() => {
                   </strong>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="font-size: 11.5px; color: #64748b;">${formatarDataBr(r.dtRequisicao)}</span>
+                  <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">📅 ${formatarDataBr(r.dtRequisicao)}</span>
                   <span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:700; font-size: 10px;">Aberta</span>
                 </div>
               </div>
@@ -4833,6 +4882,41 @@ const App = (() => {
           `;
         }).join('')}
       </div>
+
+      <!-- Barra Inferior de Paginação -->
+      ${totalPaginas > 1 ? `
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding: 10px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #475569;">
+            <div>Exibindo <strong>${idxInicio + 1} - ${idxFim}</strong> de <strong>${totalRegistros}</strong> requisições</div>
+            <div>Página <strong>${at.paginaAtual}</strong> de <strong>${totalPaginas}</strong></div>
+          </div>
+          <div style="display: flex; justify-content: center; align-items: center; gap: 6px;">
+            <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 8px; font-size: 11px;"
+                    ${at.paginaAtual <= 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}
+                    onclick="App.mudarPaginaAtendimento(1)">
+              ⏮ Primeira
+            </button>
+            <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px;"
+                    ${at.paginaAtual <= 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}
+                    onclick="App.mudarPaginaAtendimento(${at.paginaAtual - 1})">
+              ◀ Ant.
+            </button>
+            <span style="font-size: 12px; font-weight: 800; padding: 0 8px; color: #0284c7;">
+              ${at.paginaAtual} / ${totalPaginas}
+            </span>
+            <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px;"
+                    ${at.paginaAtual >= totalPaginas ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}
+                    onclick="App.mudarPaginaAtendimento(${at.paginaAtual + 1})">
+              Próx. ▶
+            </button>
+            <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 8px; font-size: 11px;"
+                    ${at.paginaAtual >= totalPaginas ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}
+                    onclick="App.mudarPaginaAtendimento(${totalPaginas})">
+              Última ⏭
+            </button>
+          </div>
+        </div>
+      ` : ''}
     `;
   }
 
@@ -4857,6 +4941,28 @@ const App = (() => {
     if (at.itemSelecionado) {
       consultarSaldosItemAtendimento(at.itemSelecionado.itCodigo);
     }
+  }
+
+
+  function onAlterarOrdemDataAtendimento(valor) {
+    const at = stateRequisicoes.atendimento;
+    at.ordemData = valor || 'desc';
+    at.paginaAtual = 1;
+    renderizarGridListaAtendimento();
+  }
+
+  function onAlterarItensPorPaginaAtendimento(valor) {
+    const at = stateRequisicoes.atendimento;
+    at.itensPorPagina = Number(valor) || 10;
+    at.paginaAtual = 1;
+    renderizarGridListaAtendimento();
+  }
+
+  function mudarPaginaAtendimento(pagina) {
+    const at = stateRequisicoes.atendimento;
+    at.paginaAtual = Number(pagina) || 1;
+    renderizarGridListaAtendimento();
+    document.getElementById('req-atend-conteudo')?.scrollIntoView({ behavior: 'smooth' });
   }
 
   function voltarListaRequisicoesAtendimento() {
@@ -5094,7 +5200,7 @@ const App = (() => {
     let saldosEncontrados = null;
 
     // Se online, tenta buscar do ERP
-    if (navigator.onLine) {
+    if (isOnline()) {
       const payload = {
         codEstabel,
         itCodigo,
@@ -5215,7 +5321,7 @@ const App = (() => {
     };
 
     // Fluxo ONLINE
-    if (navigator.onLine) {
+    if (isOnline()) {
       mostrarLoading('Atendendo Requisição no TOTVS...', 'Executando fcSetRequisicao.p / ceapi001k...');
       try {
         const res = await pasoeFetch('/fcSetRequisicao', {
@@ -5327,7 +5433,7 @@ const App = (() => {
       </div>
 
       <!-- Barra de Busca -->
-      <div style="display: flex; gap: 6px; margin-bottom: 10px;">
+      <div style="display: flex; gap: 6px; margin-bottom: 8px;">
         <input type="text" id="req-devol-input-busca" class="form-input" style="font-size: 12.5px; flex: 1;"
                placeholder="Buscar por requisição, requisitante ou item..."
                value="${escapeHtml(dev.termoBusca || '')}"
@@ -5336,6 +5442,27 @@ const App = (() => {
                 onclick="App.buscarRequisicoesDevolucao(document.getElementById('req-devol-input-busca').value)">
           Buscar 🔍
         </button>
+      </div>
+
+      <!-- Barra de Controles: Ordenação por Data e Itens por Página -->
+      <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; background: #faf5ff; border: 1px solid #ede9fe; border-radius: 8px; padding: 6px 10px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px;">
+          <span style="font-size: 11px; color: #6d28d9; font-weight: 700; white-space: nowrap;">Ordem:</span>
+          <select class="form-input" style="font-size: 11.5px; padding: 3px 6px; height: 30px; font-weight: 600;"
+                  onchange="App.onAlterarOrdemDataDevolucao(this.value)">
+            <option value="desc" ${dev.ordemData === 'desc' ? 'selected' : ''}>📅 Data: Mais recente ➔ Mais antiga (Maior para menor)</option>
+            <option value="asc" ${dev.ordemData === 'asc' ? 'selected' : ''}>📅 Data: Mais antiga ➔ Mais recente (Menor para maior)</option>
+          </select>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 11px; color: #6d28d9; font-weight: 700; white-space: nowrap;">Exibir:</span>
+          <select class="form-input" style="font-size: 11.5px; padding: 3px 6px; height: 30px; width: 85px; font-weight: 600;"
+                  onchange="App.onAlterarItensPorPaginaDevolucao(this.value)">
+            <option value="10" ${Number(dev.itensPorPagina) === 10 ? 'selected' : ''}>10 por pág</option>
+            <option value="25" ${Number(dev.itensPorPagina) === 25 ? 'selected' : ''}>25 por pág</option>
+            <option value="50" ${Number(dev.itensPorPagina) === 50 ? 'selected' : ''}>50 por pág</option>
+          </select>
+        </div>
       </div>
 
       <!-- Status Offline se aplicável -->
@@ -5380,7 +5507,7 @@ const App = (() => {
     let dadosCarregados = null;
     let offline = false;
 
-    if (navigator.onLine) {
+    if (isOnline()) {
       const payload = {
         payload: [{ dtCorte: '2000-01-01' }]
       };
@@ -5447,16 +5574,38 @@ const App = (() => {
 
     const reqsAgrupadas = agruparRequisicoes(lista);
 
+    // Ordenação por data (maior para menor = mais recente primeiro, ou menor para maior)
+    reqsAgrupadas.sort((a, b) => {
+      const dtA = String(a.dtRequisicao || '').trim();
+      const dtB = String(b.dtRequisicao || '').trim();
+      const cmp = dtA.localeCompare(dtB);
+      if (cmp !== 0) {
+        return dev.ordemData === 'asc' ? cmp : -cmp;
+      }
+      return dev.ordemData === 'asc' ? (Number(a.nrRequisicao) - Number(b.nrRequisicao)) : (Number(b.nrRequisicao) - Number(a.nrRequisicao));
+    });
+
+    // Paginação: 10, 25 ou 50 por página
+    const totalRegistros = reqsAgrupadas.length;
+    const itensPorPagina = Number(dev.itensPorPagina) || 10;
+    const totalPaginas = Math.ceil(totalRegistros / itensPorPagina) || 1;
+    if (dev.paginaAtual > totalPaginas) dev.paginaAtual = totalPaginas;
+    if (dev.paginaAtual < 1) dev.paginaAtual = 1;
+
+    const idxInicio = (dev.paginaAtual - 1) * itensPorPagina;
+    const idxFim = Math.min(idxInicio + itensPorPagina, totalRegistros);
+    const reqsPaginadas = reqsAgrupadas.slice(idxInicio, idxFim);
+
     cont.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <span style="font-size: 12px; font-weight: 700; color: #475569;">
-          ${reqsAgrupadas.length} requisição(ões) com devolução pendente:
+          ${totalRegistros} requisição(ões) com devolução pendente • Pág ${dev.paginaAtual}/${totalPaginas}:
         </span>
-        <span style="font-size: 11px; color: #64748b;">Toque para devolver</span>
+        <span style="font-size: 11px; color: #64748b;">Exibindo ${idxInicio + 1} a ${idxFim}</span>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 10px;">
-        ${reqsAgrupadas.map(r => {
+        ${reqsPaginadas.map(r => {
           let saldoTotalDevol = 0;
           r.itens.forEach(it => { saldoTotalDevol += Number(it.qtADevolver || 0); });
 
@@ -5472,7 +5621,7 @@ const App = (() => {
                   </strong>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
-                  <span style="font-size: 11.5px; color: #64748b;">${formatarDataBr(r.dtRequisicao)}</span>
+                  <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">📅 ${formatarDataBr(r.dtRequisicao)}</span>
                   <span class="badge" style="background:#ede9fe; color:#6d28d9; border:1px solid #ddd6fe; font-weight:700; font-size: 10px;">Atendida</span>
                 </div>
               </div>
@@ -5520,6 +5669,41 @@ const App = (() => {
           `;
         }).join('')}
       </div>
+
+      <!-- Barra Inferior de Paginação -->
+      ${totalPaginas > 1 ? `
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding: 10px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: #475569;">
+            <div>Exibindo <strong>${idxInicio + 1} - ${idxFim}</strong> de <strong>${totalRegistros}</strong> requisições</div>
+            <div>Página <strong>${dev.paginaAtual}</strong> de <strong>${totalPaginas}</strong></div>
+          </div>
+          <div style="display: flex; justify-content: center; align-items: center; gap: 6px;">
+            <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 8px; font-size: 11px;"
+                    ${dev.paginaAtual <= 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}
+                    onclick="App.mudarPaginaDevolucao(1)">
+              ⏮ Primeira
+            </button>
+            <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px;"
+                    ${dev.paginaAtual <= 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}
+                    onclick="App.mudarPaginaDevolucao(${dev.paginaAtual - 1})">
+              ◀ Ant.
+            </button>
+            <span style="font-size: 12px; font-weight: 800; padding: 0 8px; color: #7c3aed;">
+              ${dev.paginaAtual} / ${totalPaginas}
+            </span>
+            <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px;"
+                    ${dev.paginaAtual >= totalPaginas ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}
+                    onclick="App.mudarPaginaDevolucao(${dev.paginaAtual + 1})">
+              Próx. ▶
+            </button>
+            <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 8px; font-size: 11px;"
+                    ${dev.paginaAtual >= totalPaginas ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : ''}
+                    onclick="App.mudarPaginaDevolucao(${totalPaginas})">
+              Última ⏭
+            </button>
+          </div>
+        </div>
+      ` : ''}
     `;
   }
 
@@ -5543,6 +5727,28 @@ const App = (() => {
     if (dev.itemSelecionado) {
       consultarMovimentosDevolucao(req.nrRequisicao, dev.itemSelecionado.itCodigo);
     }
+  }
+
+
+  function onAlterarOrdemDataDevolucao(valor) {
+    const dev = stateRequisicoes.devolucao;
+    dev.ordemData = valor || 'desc';
+    dev.paginaAtual = 1;
+    renderizarGridListaDevolucao();
+  }
+
+  function onAlterarItensPorPaginaDevolucao(valor) {
+    const dev = stateRequisicoes.devolucao;
+    dev.itensPorPagina = Number(valor) || 10;
+    dev.paginaAtual = 1;
+    renderizarGridListaDevolucao();
+  }
+
+  function mudarPaginaDevolucao(pagina) {
+    const dev = stateRequisicoes.devolucao;
+    dev.paginaAtual = Number(pagina) || 1;
+    renderizarGridListaDevolucao();
+    document.getElementById('req-devol-conteudo')?.scrollIntoView({ behavior: 'smooth' });
   }
 
   function voltarListaRequisicoesDevolucao() {
@@ -5878,7 +6084,7 @@ const App = (() => {
     };
 
     // Fluxo ONLINE
-    if (navigator.onLine) {
+    if (isOnline()) {
       mostrarLoading('Devolvendo Material no TOTVS...', 'Executando fcSetRequisDevol.p / ceapi001k...');
       try {
         const res = await pasoeFetch('/fcSetRequisDevol', {
@@ -6804,6 +7010,12 @@ const App = (() => {
     renderTelaRequisicoesMenu,
     renderTelaRequisicaoAtendimento,
     abrirDetalheRequisicaoAtendimento,
+    onAlterarOrdemDataAtendimento,
+    onAlterarItensPorPaginaAtendimento,
+    mudarPaginaAtendimento,
+    onAlterarOrdemDataDevolucao,
+    onAlterarItensPorPaginaDevolucao,
+    mudarPaginaDevolucao,
     voltarListaRequisicoesAtendimento,
     buscarRequisicoesAtendimento,
     onTrocarRequisicaoAtendimento,
