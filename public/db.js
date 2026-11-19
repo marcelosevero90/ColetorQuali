@@ -1103,6 +1103,11 @@ const DB = (() => {
         if (isOk) {
           await remove('fila_sync', p.id_uuid);
           processados++;
+          try {
+            if (typeof window !== 'undefined' && window.App?.limparErroOrdem) {
+              window.App.limparErroOrdem(nrOpLog);
+            }
+          } catch (eErr) {}
           relatorio.push({
             id_uuid: p.id_uuid,
             tipo: p.tipo,
@@ -1114,6 +1119,11 @@ const DB = (() => {
           const msgErro = data.detailedMessage || data.message || 'Erro ao efetivar reporte no Datasul';
           p.ultimoErro = msgErro;
           await put('fila_sync', p, emp);
+          try {
+            if (typeof window !== 'undefined' && window.App?.salvarErroOrdem) {
+              window.App.salvarErroOrdem(nrOpLog, msgErro);
+            }
+          } catch (eErr) {}
           relatorio.push({
             id_uuid: p.id_uuid,
             tipo: p.tipo,
@@ -1125,6 +1135,12 @@ const DB = (() => {
         erros++;
         p.ultimoErro = err.message;
         await put('fila_sync', p, emp);
+        try {
+          const nrOpLog = p.payload?.nrOrdProdu || p.payload?.payload?.[0]?.nrOrdProdu || '';
+          if (nrOpLog && typeof window !== 'undefined' && window.App?.salvarErroOrdem) {
+            window.App.salvarErroOrdem(nrOpLog, err.message);
+          }
+        } catch (eErr) {}
         relatorio.push({
           id_uuid: p.id_uuid,
           tipo: p.tipo,

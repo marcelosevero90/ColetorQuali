@@ -22,6 +22,7 @@ PROCEDURE pi-find:
     DEFINE VAR c-dscSituacao        AS CHAR         NO-UNDO.
     DEFINE VAR iNrOrdProdu          AS INTEGER      NO-UNDO.
     DEFINE VAR cItCodigo            AS CHAR         NO-UNDO.
+    DEFINE VAR dtCorte              AS DATE         NO-UNDO.
 
     // Criacao do Retorno 
     DEFINE VAR oJsonArray   AS JsonArray  NO-UNDO.
@@ -52,7 +53,18 @@ PROCEDURE pi-find:
             ASSIGN c-CodEstabel = oJsonPayloadObject:GetCharacter("codEstabel").
             ASSIGN iNrOrdProdu  = oJsonPayloadObject:GetInteger("nrOrdProdu") NO-ERROR.
             ASSIGN cItCodigo    = oJsonPayloadObject:GetCharacter("itCodigo") NO-ERROR.
+            IF oJsonPayloadObject:Has("dtCorte") THEN DO:
+                ASSIGN dtCorte = oJsonPayloadObject:GetDate("dtCorte") NO-ERROR.
+                IF dtCorte = ? THEN
+                    ASSIGN dtCorte = DATE(oJsonPayloadObject:GetCharacter("dtCorte")) NO-ERROR.
+            END.
         END.        
+        
+        IF dtCorte = ? AND jsonInput:Has("dtCorte") THEN DO:
+            ASSIGN dtCorte = jsonInput:GetDate("dtCorte") NO-ERROR.
+            IF dtCorte = ? THEN
+                ASSIGN dtCorte = DATE(jsonInput:GetCharacter("dtCorte")) NO-ERROR.
+        END.
         
         ASSIGN iPrimOrdManut = 0.
         FIND FIRST param-mi NO-LOCK NO-ERROR.
@@ -76,9 +88,11 @@ PROCEDURE pi-find:
               AND ord-prod.tipo         = 1 //interna
               AND (IF iPrimOrdManut > 0 THEN
                       ord-prod.nr-ord-produ < iPrimOrdManut
-                   ELSE TRUE),
+                   ELSE TRUE)
               AND (IF iNrOrdProdu > 0 THEN ord-prod.nr-ord-produ = iNrOrdProdu ELSE TRUE)
               AND (IF cItCodigo <> "" AND cItCodigo <> ? THEN ord-prod.it-codigo BEGINS cItCodigo ELSE TRUE)
+              AND (IF dtCorte <> ? THEN ord-prod.dt-emissao >= dtCorte ELSE TRUE)
+              ,
               FIRST ITEM OF ord-prod NO-LOCK.
 
             oJsonOutput = NEW JsonObject().

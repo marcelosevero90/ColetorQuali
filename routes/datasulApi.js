@@ -1526,12 +1526,13 @@ async function proxyPasoeOuFallback(endpoint, req, res, fallbackFn) {
       });
     }
 
-    // Pós-processamento inteligente para fcGetOrdemProdEst (limita payload e mescla ordens locais)
+    // Pós-processamento inteligente para fcGetOrdemProdEst (limita payload, filtra dtCorte e mescla ordens locais)
     if (endpoint === 'fcGetOrdemProdEst') {
       let items = Array.isArray(dados.items) ? dados.items : (Array.isArray(dados) ? dados : []);
       const payload = extrairPayload(req);
       const nrOrdProdu = Number(payload.nrOrdProdu || 0);
       const itCodigo = (payload.itCodigo || '').trim().toLowerCase();
+      const dtCorte = payload.dtCorte ? normalizarDataIso(payload.dtCorte) : '';
 
       // Mescla com ordens locais de teste (como a 279059 do print)
       const ordensMock = (db.data.ord_prod || []).filter(op => {
@@ -1544,7 +1545,16 @@ async function proxyPasoeOuFallback(endpoint, req, res, fallbackFn) {
         items = items.filter(op => Number(op.nrOrdProdu) === nrOrdProdu);
       } else if (itCodigo) {
         items = items.filter(op => (op.itCodigo || '').toLowerCase().startsWith(itCodigo));
-      } else if (items.length > 200) {
+      }
+
+      if (dtCorte) {
+        items = items.filter(op => {
+          const dt = normalizarDataIso(op.dtEmissao || op.dtInicio || '');
+          return !dt || dt >= dtCorte;
+        });
+      }
+
+      if (items.length > 200) {
         items = items.slice(0, 200);
       }
 
@@ -1976,14 +1986,17 @@ router.all(['/fcGetOrdemProdEst', '/qdcGetOrdemProdEst'], async (req, res) => {
     const codEstabel = (payload.codEstabel || r.headers['codestabel'] || '101').trim();
     const nrOrdProdu = Number(payload.nrOrdProdu || 0);
     const itCodigo = (payload.itCodigo || '').trim();
+    const dtCorte = payload.dtCorte ? normalizarDataIso(payload.dtCorte) : '';
 
     const lista = (db.data.ord_prod || []).filter(op => {
       const estOk = !codEstabel || op.codEstabel === codEstabel;
       const numOk = !nrOrdProdu || Number(op.nrOrdProdu) === nrOrdProdu;
       const itOk = !itCodigo || (op.itCodigo || '').toLowerCase().startsWith(itCodigo.toLowerCase());
+      const dt = normalizarDataIso(op.dtEmissao || op.dtInicio || '');
+      const dataOk = !dtCorte || !dt || dt >= dtCorte;
       const aberto = Number(op.estado || 0) < 7;
       const temSaldo = (Number(op.qtOrdem || 0) - Number(op.qtProduzida || 0)) > 0;
-      return estOk && numOk && itOk && aberto && temSaldo;
+      return estOk && numOk && itOk && dataOk && aberto && temSaldo;
     });
 
     return s.json({

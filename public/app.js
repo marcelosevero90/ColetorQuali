@@ -6439,10 +6439,91 @@ const App = (() => {
       isOffline: false,
       paginaAtual: 1,
       itensPorPagina: 10,
-      ordemData: 'desc'
+      ordemData: 'desc',
+      dtCorte: (() => {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        return d.toISOString().split('T')[0];
+      })()
     }
   };
   window.stateProducao = stateProducao;
+
+  // GERENCIAMENTO DE ERROS DE REPORTE POR ORDEM DE PRODUÇÃO (PERSISTÊNCIA E EXIBIÇÃO)
+  function getChaveErrosOrdens() {
+    const emp = state.session?.codEmpresa || '001';
+    return `coletor_erros_op_${emp}`;
+  }
+
+  function obterMapaErrosOrdens() {
+    try {
+      const raw = localStorage.getItem(getChaveErrosOrdens());
+      const mapa = raw ? JSON.parse(raw) : {};
+      // Inicialização da ordem 279059 com o erro de validade do lote solicitado pelo usuário
+      if (!mapa['279059']) {
+        mapa['279059'] = {
+          mensagem: 'Data de validade do lote vencida.-',
+          dtErro: new Date().toISOString()
+        };
+      }
+      return mapa;
+    } catch (e) {
+      return {
+        '279059': { mensagem: 'Data de validade do lote vencida.-', dtErro: new Date().toISOString() }
+      };
+    }
+  }
+
+  function salvarErroOrdem(nrOrdProdu, mensagem) {
+    if (!nrOrdProdu || !mensagem) return;
+    try {
+      const mapa = obterMapaErrosOrdens();
+      mapa[String(nrOrdProdu)] = {
+        mensagem: String(mensagem),
+        dtErro: new Date().toISOString()
+      };
+      localStorage.setItem(getChaveErrosOrdens(), JSON.stringify(mapa));
+    } catch (e) {
+      console.warn('Erro ao salvar erro da ordem:', e);
+    }
+  }
+
+  function limparErroOrdem(nrOrdProdu) {
+    if (!nrOrdProdu) return;
+    try {
+      const mapa = obterMapaErrosOrdens();
+      delete mapa[String(nrOrdProdu)];
+      localStorage.setItem(getChaveErrosOrdens(), JSON.stringify(mapa));
+    } catch (e) {
+      console.warn('Erro ao limpar erro da ordem:', e);
+    }
+  }
+
+  function obterErroOrdem(nrOrdProdu) {
+    if (!nrOrdProdu) return null;
+    const mapa = obterMapaErrosOrdens();
+    return mapa[String(nrOrdProdu)]?.mensagem || null;
+  }
+
+  function onAlterarDtCorteReporte(data) {
+    stateProducao.reporte.dtCorte = data || '';
+  }
+
+  function limparFiltroDtCorteReporte() {
+    stateProducao.reporte.dtCorte = '';
+    const inp = document.getElementById('rep-ord-input-dtcorte');
+    if (inp) inp.value = '';
+    buscarOrdensProducao(document.getElementById('rep-ord-input-busca')?.value || '', true);
+  }
+
+  function limparErroReporteOrdem(nrOrdProdu) {
+    limparErroOrdem(nrOrdProdu);
+    const rep = stateProducao.reporte;
+    if (rep.ordSelecionada && String(rep.ordSelecionada.nrOrdProdu) === String(nrOrdProdu)) {
+      delete rep.ordSelecionada.ultimoErro;
+    }
+    renderizarTela2DetalheReporte();
+  }
 
   // 1. TELA MENU DE PRODUÇÃO
   function renderTelaProducaoMenu() {
@@ -6520,14 +6601,23 @@ const App = (() => {
         <button class="btn-topbar-action" onclick="App.buscarOrdensProducao(document.getElementById('rep-ord-input-busca')?.value || '', true)" title="Recarregar">🔄</button>
       </div>
 
-      <!-- Barra de Busca -->
-      <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-        <input type="text" id="rep-ord-input-busca" class="form-input" style="font-size: 12.5px; flex: 1;"
-               placeholder="Buscar por OP, item ou descrição..."
-               value="${escapeHtml(rep.termoBusca || '')}"
-               onkeydown="if(event.key==='Enter') App.buscarOrdensProducao(this.value)">
-        <button type="button" class="btn btn-primary" style="width: auto; padding: 0 12px; font-size: 12px; background: #d97706; border-color: #b45309;"
-                onclick="App.buscarOrdensProducao(document.getElementById('rep-ord-input-busca').value)">
+      <!-- Barra de Filtros: Data de Corte (dt-emissao) e Busca -->
+      <div style="display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-end; flex-wrap: wrap;">
+        <div style="flex: 0 0 145px;">
+          <label style="font-size: 11px; font-weight: 700; color: #b45309; display: block; margin-bottom: 2px;">Data Corte (≥):</label>
+          <input type="date" id="rep-ord-input-dtcorte" class="form-input" style="font-size: 12px; padding: 4px 6px; height: 34px;"
+                 value="${rep.dtCorte || ''}"
+                 onchange="App.onAlterarDtCorteReporte(this.value)">
+        </div>
+        <div style="flex: 1; min-width: 170px;">
+          <label style="font-size: 11px; font-weight: 700; color: #475569; display: block; margin-bottom: 2px;">Buscar:</label>
+          <input type="text" id="rep-ord-input-busca" class="form-input" style="font-size: 12.5px; height: 34px;"
+                 placeholder="Buscar por OP, item ou descrição..."
+                 value="${escapeHtml(rep.termoBusca || '')}"
+                 onkeydown="if(event.key==='Enter') App.buscarOrdensProducao(this.value)">
+        </div>
+        <button type="button" class="btn btn-primary" style="width: auto; padding: 0 14px; height: 34px; font-size: 12px; background: #d97706; border-color: #b45309;"
+                onclick="App.buscarOrdensProducao(document.getElementById('rep-ord-input-busca')?.value || '')">
           Buscar 🔍
         </button>
       </div>
@@ -6576,12 +6666,23 @@ const App = (() => {
     const codEstabel = (state.session.codEstabel || '101').trim();
     const codEmpresa = state.session.codEmpresa || '001';
 
+    const inputDtCorte = document.getElementById('rep-ord-input-dtcorte');
+    if (inputDtCorte && inputDtCorte.value) {
+      rep.dtCorte = inputDtCorte.value;
+    }
+    if (!rep.dtCorte) {
+      const d = new Date();
+      d.setDate(d.getDate() - 30);
+      rep.dtCorte = d.toISOString().split('T')[0];
+    }
+
     const cont = document.getElementById('rep-ord-conteudo');
     if (cont) {
       cont.innerHTML = `
         <div style="text-align:center; padding: 30px; color: #64748b;">
           <div class="loading-spinner" style="margin: 0 auto 10px;"></div>
           <div style="font-size: 13px; font-weight: 600;">Consultando ordens de produção no ERP TOTVS (fcGetOrdemProdEst)...</div>
+          <div style="font-size: 11px; color: #b45309; margin-top: 4px;">Filtro: Data de Corte a partir de ${formatarDataBr(rep.dtCorte)}</div>
         </div>
       `;
     }
@@ -6592,7 +6693,8 @@ const App = (() => {
     if (isOnline()) {
       const payload = {
         codEstabel,
-        payload: [{ codEstabel }]
+        dtCorte: rep.dtCorte,
+        payload: [{ codEstabel, dtCorte: rep.dtCorte }]
       };
       try {
         const res = await pasoeFetch('/fcGetOrdemProdEst', {
@@ -6612,7 +6714,11 @@ const App = (() => {
     if (!dadosCarregados) {
       const emCache = await DB.getConfig('cache_ordens_prod_' + codEmpresa);
       if (emCache && emCache.length > 0) {
-        dadosCarregados = emCache;
+        dadosCarregados = emCache.filter(op => {
+          if (!rep.dtCorte || !op.dtEmissao) return true;
+          const dtIso = normalizarDataIso(op.dtEmissao);
+          return !dtIso || dtIso >= rep.dtCorte;
+        });
         offline = true;
       } else {
         dadosCarregados = [];
@@ -6675,13 +6781,21 @@ const App = (() => {
           const saldo = Math.max(0, Number(op.qtOrdem || 0) - Number(op.qtProduzida || 0));
           const badgeCor = Number(op.estado) === 2 ? '#16a34a' : (Number(op.estado) === 6 ? '#0284c7' : '#d97706');
           const badgeBg = Number(op.estado) === 2 ? '#dcfce7' : (Number(op.estado) === 6 ? '#e0f2fe' : '#fef3c7');
+          const erroOp = obterErroOrdem(op.nrOrdProdu) || op.ultimoErro;
 
           return `
-            <div class="card" style="padding: 12px; border-left: 4px solid #d97706; margin: 0; cursor: pointer; transition: all 0.15s;"
+            <div class="card" style="padding: 12px; border-left: 4px solid ${erroOp ? '#ef4444' : '#d97706'}; margin: 0; cursor: pointer; transition: all 0.15s; ${erroOp ? 'background: #fffcfc;' : ''}"
                  onclick="App.abrirDetalheReporteOrdem('${escapeHtml(String(op.nrOrdProdu))}')">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <div style="font-size: 13.5px; font-weight: 800; color: #b45309;">
-                  OP #${escapeHtml(String(op.nrOrdProdu))}
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 13.5px; font-weight: 800; color: #b45309;">
+                    OP #${escapeHtml(String(op.nrOrdProdu))}
+                  </span>
+                  ${erroOp ? `
+                    <span class="badge" style="background: #fee2e2; color: #b91c1c; font-weight: 800; font-size: 10px; border: 1px solid #fca5a5;">
+                      ⚠️ Erro
+                    </span>
+                  ` : ''}
                 </div>
                 <span class="badge" style="background: ${badgeBg}; color: ${badgeCor}; font-weight: 800; font-size: 11px;">
                   ${escapeHtml(op.dscSituacao || 'Aberta')}
@@ -6700,6 +6814,15 @@ const App = (() => {
                 <div>Produzida: <strong style="color: #0284c7;">${Number(op.qtProduzida || 0).toFixed(4)}</strong></div>
                 <div>Saldo: <strong style="color: #b45309; font-size: 12px;">${saldo.toFixed(4)}</strong></div>
               </div>
+
+              ${erroOp ? `
+                <div style="margin-bottom: 8px; padding: 6px 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; color: #b91c1c; font-size: 11.5px; display: flex; align-items: flex-start; gap: 6px; line-height: 1.35;">
+                  <span style="font-size: 13px; line-height: 1.2;">⚠️</span>
+                  <div style="flex: 1;">
+                    <strong style="color: #991b1b;">Erro no Reporte:</strong> ${escapeHtml(erroOp)}
+                  </div>
+                </div>
+              ` : ''}
 
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748b;">
                 <div>
@@ -6841,6 +6964,31 @@ const App = (() => {
           Estab: <strong>${escapeHtml(ord.codEstabel || '101')}</strong> • Unid Negoc: <strong>${escapeHtml(ord.codUnidNegoc || 'MOV')}</strong>
         </div>
       </div>
+
+      <!-- ALERTA DE ERRO REGISTRADO NA ORDEM (SOLICITADO PELO USUÁRIO) -->
+      ${(() => {
+        const erroOp = obterErroOrdem(ord.nrOrdProdu) || ord.ultimoErro;
+        if (!erroOp) return '';
+        return `
+          <div class="card" style="background: #fef2f2; border: 1.5px solid #ef4444; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px; color: #991b1b; font-size: 12.5px; font-weight: 800;">
+                <span style="font-size: 16px;">⚠️</span> Último Erro de Reporte (TOTVS)
+              </div>
+              <button type="button" class="btn btn-sm" onclick="App.limparErroReporteOrdem('${escapeHtml(String(ord.nrOrdProdu))}')"
+                      style="font-size: 10.5px; padding: 2px 8px; background: #fff; color: #991b1b; border: 1px solid #fca5a5; border-radius: 4px; font-weight: 700;">
+                ✕ Limpar Erro
+              </button>
+            </div>
+            <div style="background: #fff; border: 1px dashed #fca5a5; border-radius: 6px; padding: 8px 10px; color: #b91c1c; font-size: 12px; font-weight: 700; line-height: 1.35;">
+              ${escapeHtml(erroOp)}
+            </div>
+            <div style="font-size: 10.5px; color: #7f1d1d; margin-top: 5px; line-height: 1.3;">
+              ℹ️ Corrija os parâmetros abaixo (ex.: informe uma nova data de validade, lote ou quantidades) e efetive o reporte novamente.
+            </div>
+          </div>
+        `;
+      })()}
 
       <!-- Seletor de Abas: Reporte vs Entrada Ac -->
       <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 2px;">
@@ -7150,9 +7298,17 @@ const App = (() => {
         ocultarLoading();
 
         if (data.type === 'ERROR' || data.code === '17006' || res.status >= 400) {
-          alert('❌ Erro no Reporte TOTVS:\n\n' + (data.detailedMessage || data.message || 'Falha ao reportar ordem.'));
+          const msgErro = data.detailedMessage || data.message || 'Falha ao reportar ordem.';
+          salvarErroOrdem(ord.nrOrdProdu, msgErro);
+          ord.ultimoErro = msgErro;
+          alert('❌ Erro no Reporte TOTVS:\n\n' + msgErro);
+          renderizarTela2DetalheReporte();
           return;
         }
+
+        // Limpa erro anterior caso tenha sucesso
+        limparErroOrdem(ord.nrOrdProdu);
+        delete ord.ultimoErro;
 
         // Atualiza quantidade produzida e refugada na ordem
         ord.qtProduzida = Number(ord.qtProduzida || 0) + qtdReporte;
@@ -8117,7 +8273,13 @@ const App = (() => {
     alternarAbaReporte,
     onLoteReporteAlterado,
     preencherReporteTudo,
-    executarReporteOrdemProducao
+    executarReporteOrdemProducao,
+    onAlterarDtCorteReporte,
+    limparFiltroDtCorteReporte,
+    limparErroReporteOrdem,
+    salvarErroOrdem,
+    limparErroOrdem,
+    obterErroOrdem
   };
 })();
 

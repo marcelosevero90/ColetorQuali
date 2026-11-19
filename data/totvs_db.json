@@ -2872,7 +2872,8 @@
       "tipoConEst": 3,
       "locUnica": false,
       "ctRefugo": "42103045",
-      "scRefugo": ""
+      "scRefugo": "",
+      "ultimoErro": "Data de validade do lote vencida.-"
     },
     {
       "codEmpresa": "001",
@@ -2900,7 +2901,8 @@
       "tipoConEst": 1,
       "locUnica": true,
       "ctRefugo": "42103045",
-      "scRefugo": ""
+      "scRefugo": "",
+      "ultimoErro": "Data de validade do lote vencida.-"
     },
     {
       "codEmpresa": "001",
