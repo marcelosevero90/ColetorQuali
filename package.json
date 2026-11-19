@@ -1,7 +1,7 @@
 {
   "name": "coletor-quali",
-  "version": "3.0.0",
-  "description": "Aplicativo Coletor Móvel Quali Offline-First - Módulo de Inventário",
+  "version": "3.1.0",
+  "description": "Aplicativo Coletor Móvel Quali Offline-First - Módulos de Inventário e Transferência de Materiais",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

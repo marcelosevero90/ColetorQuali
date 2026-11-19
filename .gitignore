@@ -15,3 +15,6 @@ collect/app/lbi*
 collect/app/rcd*
 collect/app/srt*
 collect/app/dbi*
+
+# Test screenshots
+evidencia_*.png
