@@ -6507,6 +6507,8 @@ const App = (() => {
 
   function onAlterarDtCorteReporte(data) {
     stateProducao.reporte.dtCorte = data || '';
+    stateProducao.reporte.paginaAtual = 1;
+    buscarOrdensProducao(document.getElementById('rep-ord-input-busca')?.value || '', true);
   }
 
   function limparFiltroDtCorteReporte() {
@@ -6747,6 +6749,15 @@ const App = (() => {
         String(op.descItem || '').toLowerCase().includes(t)
       );
     }
+
+    // Prioriza ordens com erro no topo da listagem para rápida ação e visualização do usuário
+    ordens.sort((a, b) => {
+      const erroA = Boolean(obterErroOrdem(a.nrOrdProdu) || a.ultimoErro);
+      const erroB = Boolean(obterErroOrdem(b.nrOrdProdu) || b.ultimoErro);
+      if (erroA && !erroB) return -1;
+      if (!erroA && erroB) return 1;
+      return 0;
+    });
 
     const resumoCont = document.getElementById('rep-ord-resumo-contador');
     if (resumoCont) {
