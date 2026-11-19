@@ -204,6 +204,27 @@ class TotvsDataStore {
           permComprMLA: false,
           permCredAvCli: false
         },
+        {
+          codEmpresa: '001',
+          codUsuario: 'sem_estoque',
+          nome: 'Operador Sem Permissão Estoque',
+          senha: '123',
+          situacao: 9,
+          codEstabPad: '101',
+          TpAgrupTransf: 1,
+          tabPrincipal: 1,
+          permEstoque: false,
+          permCompras: true,
+          permCredito: false,
+          permProducao: false,
+          permEstoqReqAte: false,
+          permEstoqReqDev: false,
+          permEstoqReqMov: false,
+          permEstoqReqInv: false,
+          permEstoqReqRec: false,
+          permComprMLA: false,
+          permCredAvCli: false
+        },
         // Empresa 002
         {
           codEmpresa: '002',

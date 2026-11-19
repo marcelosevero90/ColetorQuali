@@ -278,36 +278,42 @@ const App = (() => {
     ocultarLoading();
   }
 
+  function temPermissaoEstoque() {
+    const p = state.session?.paramUsuario;
+    if (!p) return true;
+    return p.permEstoque === true || p.permEstoque === 'true' || p.permEstoque === 1;
+  }
+
   function temPermissaoInventario() {
     const p = state.session?.paramUsuario;
     if (!p) return true;
-    const permEst = p.permEstoque !== false;
-    return Boolean(permEst && (p.permEstoqReqInv === true || p.permEstoqReqInv === 'true' || p.permEstoqReqInv === 1));
+    if (!temPermissaoEstoque()) return false;
+    return Boolean(p.permEstoqReqInv === true || p.permEstoqReqInv === 'true' || p.permEstoqReqInv === 1);
   }
 
   function temPermissaoTransferencia() {
     const p = state.session?.paramUsuario;
     if (!p) return true;
-    const permEst = p.permEstoque !== false;
-    return Boolean(permEst && (p.permEstoqReqMov === true || p.permEstoqReqMov === 'true' || p.permEstoqReqMov === 1));
+    if (!temPermissaoEstoque()) return false;
+    return Boolean(p.permEstoqReqMov === true || p.permEstoqReqMov === 'true' || p.permEstoqReqMov === 1);
   }
 
   function temPermissaoReqAtendimento() {
     const p = state.session?.paramUsuario;
     if (!p) return true;
-    const permEst = p.permEstoque !== false;
-    return Boolean(permEst && (p.permEstoqReqAte === true || p.permEstoqReqAte === 'true' || p.permEstoqReqAte === 1));
+    if (!temPermissaoEstoque()) return false;
+    return Boolean(p.permEstoqReqAte === true || p.permEstoqReqAte === 'true' || p.permEstoqReqAte === 1);
   }
 
   function temPermissaoReqDevolucao() {
     const p = state.session?.paramUsuario;
     if (!p) return true;
-    const permEst = p.permEstoque !== false;
-    return Boolean(permEst && (p.permEstoqReqDev === true || p.permEstoqReqDev === 'true' || p.permEstoqReqDev === 1));
+    if (!temPermissaoEstoque()) return false;
+    return Boolean(p.permEstoqReqDev === true || p.permEstoqReqDev === 'true' || p.permEstoqReqDev === 1);
   }
 
   function temPermissaoRequisicoes() {
-    return temPermissaoReqAtendimento() || temPermissaoReqDevolucao();
+    return temPermissaoEstoque() && (temPermissaoReqAtendimento() || temPermissaoReqDevolucao());
   }
 
   function bloquearAcesso(modulo, campo) {
@@ -315,6 +321,12 @@ const App = (() => {
   }
 
   function navegar(tela, params = {}) {
+    if (tela.startsWith('estoque') && !temPermissaoEstoque()) {
+      bloquearAcesso('Módulo de Estoque', 'permEstoque');
+      if (state.telaAtual !== 'menu') navegar('menu');
+      return;
+    }
+
     if (tela.startsWith('inventario') && !temPermissaoInventario()) {
       bloquearAcesso('Inventário Físico', 'permEstoqReqInv');
       if (state.telaAtual !== 'menu') navegar('menu');
@@ -350,35 +362,25 @@ const App = (() => {
     const footer = document.getElementById('app-footer');
     if (footer) {
       footer.style.display = tela === 'login' ? 'none' : 'flex';
-      const podeInv = temPermissaoInventario();
-      const podeTransf = temPermissaoTransferencia();
-      const podeReq = temPermissaoRequisicoes();
+      const podeEstoque = temPermissaoEstoque();
 
       document.querySelectorAll('.nav-tab-btn').forEach(btn => {
-        const isInv = btn.dataset.tab === 'inventarios_ativos';
-        const isTransf = btn.dataset.tab === 'transferencias';
-        const isReq = btn.dataset.tab === 'requisicoes_menu';
+        const isEstoque = btn.dataset.tab === 'estoque_menu';
 
-        if (isInv) {
-          btn.style.opacity = podeInv ? '' : '0.35';
-          btn.style.cursor = podeInv ? '' : 'not-allowed';
-          btn.title = podeInv ? '' : 'Acesso Bloqueado';
-        }
-        if (isTransf) {
-          btn.style.opacity = podeTransf ? '' : '0.35';
-          btn.style.cursor = podeTransf ? '' : 'not-allowed';
-          btn.title = podeTransf ? '' : 'Acesso Bloqueado';
-        }
-        if (isReq) {
-          btn.style.opacity = podeReq ? '' : '0.35';
-          btn.style.cursor = podeReq ? '' : 'not-allowed';
-          btn.title = podeReq ? '' : 'Acesso Bloqueado';
+        if (isEstoque) {
+          btn.style.opacity = podeEstoque ? '' : '0.35';
+          btn.style.cursor = podeEstoque ? '' : 'not-allowed';
+          btn.title = podeEstoque ? '' : 'Acesso Bloqueado';
         }
 
-        const isInvActive = isInv && tela.startsWith('inventario');
-        const isTransfActive = isTransf && tela.startsWith('transferencia');
-        const isReqActive = isReq && tela.startsWith('requisic');
-        btn.classList.toggle('active', btn.dataset.tab === tela || isInvActive || isTransfActive || isReqActive);
+        const isEstoqueActive = isEstoque && (
+          tela === 'estoque_menu' ||
+          tela.startsWith('inventario') ||
+          tela.startsWith('transferencia') ||
+          tela.startsWith('requisic')
+        );
+
+        btn.classList.toggle('active', btn.dataset.tab === tela || isEstoqueActive);
       });
     }
 
@@ -387,6 +389,7 @@ const App = (() => {
     switch (tela) {
       case 'login': renderTelaLogin(); break;
       case 'menu': renderTelaMenu(); break;
+      case 'estoque_menu': renderTelaEstoqueMenu(); break;
       case 'estabelecimentos': renderTelaEstabelecimentos(); break;
       case 'inventarios_ativos': renderTelaInventariosAtivos(); break;
       case 'inventario_depositos': renderTelaInventarioDepositos(); break;
@@ -743,13 +746,12 @@ const App = (() => {
         }
 
         if (paramLocal) {
-          const temEstoque = paramLocal.permEstoque !== false;
-          const temInv = temEstoque && Boolean(paramLocal.permEstoqReqInv);
-          const temMov = temEstoque && Boolean(paramLocal.permEstoqReqMov);
-          const temAte = temEstoque && Boolean(paramLocal.permEstoqReqAte);
-          const temDev = temEstoque && Boolean(paramLocal.permEstoqReqDev);
-          if (!temInv && !temMov && !temAte && !temDev) {
-            throw new Error(`Usuário '${usuario}' sem permissão de acesso a módulos de Estoque no FMSC0101.`);
+          const temEstoque = paramLocal.permEstoque === true || paramLocal.permEstoque === 'true' || paramLocal.permEstoque === 1;
+          const temCompras = Boolean(paramLocal.permCompras);
+          const temProducao = Boolean(paramLocal.permProducao);
+          const temCredito = Boolean(paramLocal.permCredito);
+          if (!temEstoque && !temCompras && !temProducao && !temCredito) {
+            throw new Error(`Usuário '${usuario}' sem permissão de acesso a módulos no FMSC0101.`);
           }
         }
 
@@ -858,13 +860,12 @@ const App = (() => {
         if (Number(paramUsuario.situacao) === 0) {
           throw new Error(`Usuário '${usuarioReal}' não habilitado no FMSC0101 para a empresa ${codEmpresa}.`);
         }
-        const temEstoque = paramUsuario.permEstoque !== false;
-        const temInv = temEstoque && Boolean(paramUsuario.permEstoqReqInv);
-        const temMov = temEstoque && Boolean(paramUsuario.permEstoqReqMov);
-        const temAte = temEstoque && Boolean(paramUsuario.permEstoqReqAte);
-        const temDev = temEstoque && Boolean(paramUsuario.permEstoqReqDev);
-        if (!temInv && !temMov && !temAte && !temDev) {
-          throw new Error(`Usuário '${usuarioReal}' não possui permissão de Estoque (Inventário, Transferência ou Requisições) no FMSC0101 para a empresa ${codEmpresa}.`);
+        const temEstoque = paramUsuario.permEstoque === true || paramUsuario.permEstoque === 'true' || paramUsuario.permEstoque === 1;
+        const temCompras = Boolean(paramUsuario.permCompras);
+        const temProducao = Boolean(paramUsuario.permProducao);
+        const temCredito = Boolean(paramUsuario.permCredito);
+        if (!temEstoque && !temCompras && !temProducao && !temCredito) {
+          throw new Error(`Usuário '${usuarioReal}' sem permissão de acesso a módulos no FMSC0101 para a empresa ${codEmpresa}.`);
         }
       }
 
@@ -949,7 +950,7 @@ const App = (() => {
   }
 
   // =========================================================================
-  // TELA 2: MENU PRINCIPAL (EXCLUSIVO PARA INVENTÁRIO NESTE MOMENTO)
+  // TELA 2: MENU PRINCIPAL (SELEÇÃO DE MÓDULOS ERP & FERRAMENTAS)
   // =========================================================================
   async function renderTelaMenu() {
     const codEmpresa = state.session.codEmpresa || '001';
@@ -957,10 +958,113 @@ const App = (() => {
     const filial = state.session.codEstabel || '-';
     const nomeFilial = state.session.nomeEstabel || '';
 
+    const qtdSync = await DB.getQtdPendenciasSync(codEmpresa);
+    const podeEstoque = temPermissaoEstoque();
+
+    container.innerHTML = `
+      <!-- Banner Superior -->
+      <div class="home-active-banner" style="${podeEstoque ? '' : 'opacity: 0.7;'}">
+        <div class="home-banner-left">
+          <div class="home-banner-icon">${podeEstoque ? '📦' : '🔒'}</div>
+          <div>
+            <div class="home-banner-title">Módulo de Estoque</div>
+            <div class="home-banner-sub">${podeEstoque ? `Filial ${escapeHtml(filial)} • Inventário, Transferências e Requisições` : '<span style="color:#ef4444; font-weight:700;">Acesso ao módulo bloqueado</span>'}</div>
+          </div>
+        </div>
+        ${podeEstoque ? `
+          <button class="home-banner-btn" onclick="App.navegar('estoque_menu')">
+            Acessar ➔
+          </button>
+        ` : `
+          <button class="home-banner-btn" style="opacity: 0.55; background: #64748b; cursor: not-allowed;" onclick="App.bloquearAcesso('Módulo de Estoque', 'permEstoque')">
+            Bloqueado 🔒
+          </button>
+        `}
+      </div>
+
+      <div class="home-section-title">Módulos do Sistema</div>
+
+      <div class="home-service-grid">
+        ${podeEstoque ? `
+          <button type="button" class="home-service-card is-active" style="border: 2px solid #0284c7; background: #ffffff;" onclick="App.navegar('estoque_menu')">
+            <div class="home-card-icon-wrap" style="background:#e0f2fe; color:#0284c7; font-size:24px;">📦</div>
+            <div class="home-card-title" style="color: #0284c7; font-size: 15px; font-weight: 800;">Estoque</div>
+            <div class="home-card-desc">Contagem física, transferências e requisições</div>
+          </button>
+        ` : `
+          <button type="button" class="home-service-card" style="opacity: 0.55; cursor: not-allowed; border-color: #cbd5e1; background: #f8fafc;" onclick="App.bloquearAcesso('Módulo de Estoque', 'permEstoque')">
+            <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#94a3b8; font-size:24px;">🔒</div>
+            <div class="home-card-title" style="color: #64748b; font-size: 15px; font-weight: 800;">Estoque</div>
+            <div class="home-card-desc" style="color: #ef4444; font-weight: 700;">Bloqueado</div>
+          </button>
+        `}
+
+        <button type="button" class="home-service-card" style="opacity: 0.6; cursor: not-allowed; border-color: #e2e8f0; background: #f8fafc;" onclick="alert('ℹ️ Módulo de Recebimento / Compras previsto para próximas versões.')">
+          <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#64748b; font-size:24px;">🚛</div>
+          <div class="home-card-title" style="color: #64748b; font-size: 14px;">Recebimento</div>
+          <div class="home-card-desc" style="color: #94a3b8; font-weight: 600;">Em breve</div>
+        </button>
+
+        <button type="button" class="home-service-card" style="opacity: 0.6; cursor: not-allowed; border-color: #e2e8f0; background: #f8fafc;" onclick="alert('ℹ️ Módulo de Produção / Chão de Fábrica previsto para próximas versões.')">
+          <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#64748b; font-size:24px;">🏭</div>
+          <div class="home-card-title" style="color: #64748b; font-size: 14px;">Produção</div>
+          <div class="home-card-desc" style="color: #94a3b8; font-weight: 600;">Em breve</div>
+        </button>
+      </div>
+
+      <div class="home-section-title" style="margin-top: 18px;">Ferramentas do Coletor</div>
+
+      <div class="home-service-grid">
+        <button type="button" class="home-service-card" onclick="App.abrirModalCargaInicial('Atualizar Dados Offline')">
+          <div class="home-card-icon-wrap icon-wrap-blue">📥</div>
+          <div class="home-card-title">Carga (Totvs ➔ App)</div>
+          <div class="home-card-desc">Baixar itens em chunks, parâmetros e fichas</div>
+        </button>
+
+        <button type="button" class="home-service-card" onclick="App.navegar('sincronizacao')">
+          <div class="home-card-icon-wrap icon-wrap-green">📤</div>
+          <div class="home-card-title">Descarga / Fila Sync</div>
+          <div class="home-card-desc">${qtdSync > 0 ? `<strong style="color:#ea580c;">${qtdSync} pendência(s) offline</strong>` : 'Todas as contagens sincronizadas'}</div>
+        </button>
+
+        <button type="button" class="home-service-card" onclick="App.navegar('historico_contagens')">
+          <div class="home-card-icon-wrap icon-wrap-purple">🔍</div>
+          <div class="home-card-title">Histórico & Auditoria</div>
+          <div class="home-card-desc">Consultar leituras gravadas no dispositivo</div>
+        </button>
+      </div>
+
+      <div class="home-user-card">
+        <div class="home-user-left">
+          <div class="home-user-avatar">👤</div>
+          <div style="flex: 1; min-width: 0;">
+            <div class="home-user-name">${escapeHtml(usuario)}</div>
+            <div class="home-user-estabel">
+              Emp <strong>${escapeHtml(codEmpresa)}</strong> • Fil <strong>${escapeHtml(filial)}</strong>
+              <div style="font-size: 10px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(nomeFilial)}</div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" style="width: auto; padding: 5px 10px; font-size: 11px;" onclick="App.navegar('estabelecimentos')">Trocar ▾</button>
+      </div>
+
+      <button class="home-btn-clean" onclick="App.limparBancoESincronizar()">
+        🧹 Limpar Cache da Empresa ${escapeHtml(codEmpresa)} e Recarregar
+      </button>
+    `;
+  }
+
+  // =========================================================================
+  // SUB-MÓDULO: ESTOQUE (CONTAGEM FÍSICA, TRANSFERÊNCIAS E REQUISIÇÕES)
+  // =========================================================================
+  async function renderTelaEstoqueMenu() {
+    const codEmpresa = state.session.codEmpresa || '001';
+    const filial = state.session.codEstabel || '101';
+    const nomeFilial = state.session.nomeEstabel || '';
+
     const fichasEmp = await DB.getAllByEmpresa('fichas_inventario', codEmpresa);
     const fichasFilial = fichasEmp.filter(f => f.codEstabel === filial);
     const pendentes = fichasFilial.filter(f => f.qtApurada === null || f.qtApurada === undefined).length;
-    const qtdSync = await DB.getQtdPendenciasSync(codEmpresa);
     const transfList = await DB.listarTransferencias(codEmpresa, state.session.codUsuario);
     const transfPendEntrada = transfList.filter(t => t.status === 'PENDENTE_ENTRADA').length;
 
@@ -969,9 +1073,19 @@ const App = (() => {
     const podeReq = temPermissaoRequisicoes();
 
     container.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+        <button class="btn-topbar-action" onclick="App.navegar('menu')">‹ Menu</button>
+        <div style="text-align: center;">
+          <h3 style="font-size: 14.5px; font-weight: 800; margin: 0; color: #0284c7;">Módulo Estoque</h3>
+          <span style="font-size: 11px; color: #64748b;">Filial ${escapeHtml(filial)} • Emp ${escapeHtml(codEmpresa)}</span>
+        </div>
+        <button class="btn-topbar-action" onclick="App.renderTelaEstoqueMenu()" title="Recarregar">🔄</button>
+      </div>
+
+      <!-- Banner de Destaque do Inventário da Filial -->
       <div class="home-active-banner" style="${podeInv ? '' : 'opacity: 0.7;'}">
         <div class="home-banner-left">
-          <div class="home-banner-icon">${podeInv ? '📦' : '🔒'}</div>
+          <div class="home-banner-icon">${podeInv ? '📋' : '🔒'}</div>
           <div>
             <div class="home-banner-title">Inventário Físico (CE0712)</div>
             <div class="home-banner-sub">${podeInv ? (fichasFilial.length > 0 ? `${fichasFilial.length} ficha(s) no aparelho • ${pendentes} pendente(s)` : 'Consultar inventários do ERP TOTVS (Online/Offline)') : '<span style="color:#ef4444; font-weight:700;">Bloqueado</span>'}</div>
@@ -988,7 +1102,7 @@ const App = (() => {
         `}
       </div>
 
-      <div class="home-section-title">Operações Disponíveis</div>
+      <div class="home-section-title">Operações de Estoque</div>
 
       <div class="home-service-grid">
         ${podeInv ? `
@@ -1032,43 +1146,11 @@ const App = (() => {
             <div class="home-card-desc" style="color: #ef4444; font-weight: 700;">Bloqueado</div>
           </button>
         `}
-
-        <button type="button" class="home-service-card" onclick="App.abrirModalCargaInicial('Atualizar Dados Offline')">
-          <div class="home-card-icon-wrap icon-wrap-blue">📥</div>
-          <div class="home-card-title">Carga (Totvs ➔ App)</div>
-          <div class="home-card-desc">Baixar itens em chunks, parâmetros e fichas</div>
-        </button>
-
-        <button type="button" class="home-service-card" onclick="App.navegar('sincronizacao')">
-          <div class="home-card-icon-wrap icon-wrap-green">📤</div>
-          <div class="home-card-title">Descarga / Fila Sync</div>
-          <div class="home-card-desc">${qtdSync > 0 ? `<strong style="color:#ea580c;">${qtdSync} pendência(s) offline</strong>` : 'Todas as contagens sincronizadas'}</div>
-        </button>
-
-        <button type="button" class="home-service-card" onclick="App.navegar('historico_contagens')">
-          <div class="home-card-icon-wrap icon-wrap-purple">🔍</div>
-          <div class="home-card-title">Histórico & Auditoria</div>
-          <div class="home-card-desc">Consultar leituras gravadas no dispositivo</div>
-        </button>
       </div>
 
-      <div class="home-user-card">
-        <div class="home-user-left">
-          <div class="home-user-avatar">👤</div>
-          <div style="flex: 1; min-width: 0;">
-            <div class="home-user-name">${escapeHtml(usuario)}</div>
-            <div class="home-user-estabel">
-              Emp <strong>${escapeHtml(codEmpresa)}</strong> • Fil <strong>${escapeHtml(filial)}</strong>
-              <div style="font-size: 10px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(nomeFilial)}</div>
-            </div>
-          </div>
-        </div>
-        <button class="btn btn-secondary" style="width: auto; padding: 5px 10px; font-size: 11px;" onclick="App.navegar('estabelecimentos')">Trocar ▾</button>
+      <div class="card" style="margin-top: 16px; background: #f8fafc; border: 1px dashed #cbd5e1; text-align: center; padding: 12px; font-size: 11.5px; color: #64748b;">
+        📦 Rotinas homologadas no TOTVS Datasul: CE0712, CE0206, CD1409 e CD1410.
       </div>
-
-      <button class="home-btn-clean" onclick="App.limparBancoESincronizar()">
-        🧹 Limpar Cache da Empresa ${escapeHtml(codEmpresa)} e Recarregar
-      </button>
     `;
   }
 
@@ -6369,12 +6451,14 @@ const App = (() => {
     baixarArquivoContingencia,
     setModoVisualizacao,
     alternarTelaCheia,
+    temPermissaoEstoque,
     temPermissaoInventario,
     temPermissaoTransferencia,
     temPermissaoReqAtendimento,
     temPermissaoReqDevolucao,
     temPermissaoRequisicoes,
     bloquearAcesso,
+    renderTelaEstoqueMenu,
     renderTelaRequisicoesMenu,
     renderTelaRequisicaoAtendimento,
     buscarRequisicoesAtendimento,
