@@ -44,6 +44,7 @@ PROCEDURE pi-find:
 
     DEFINE VAR oJsonPayloadObject   AS JsonObject   NO-UNDO.
     DEFINE VAR aJsonPayloadArray    AS JsonArray    NO-UNDO.
+    DEFINE VAR aSubPayload          AS JsonArray    NO-UNDO.
     DEFINE VAR iContPayload         AS INTEGER      NO-UNDO.
     DEFINE VAR iContSE              AS INTEGER      NO-UNDO.
 
@@ -63,24 +64,61 @@ PROCEDURE pi-find:
        ON STOP  UNDO, RETURN 'NOK'.*/
 
         aJsonPayloadArray = NEW JsonArray().
-        aJsonPayloadArray = jsonInput:getJSONArray("payload") NO-ERROR.
-
-        IF aJsonPayloadArray:LENGTH = 0 THEN DO:
-             oJsonPayloadObject = CAST(jsonInput:getJSONObject("payload"), "JSONObject") NO-ERROR. 
-             aJsonPayloadArray:ADD(oJsonPayloadObject). 
+        IF jsonInput:Has("payload") THEN DO:
+            aJsonPayloadArray = jsonInput:getJSONArray("payload") NO-ERROR.
+            IF aJsonPayloadArray = ? OR aJsonPayloadArray:LENGTH = 0 THEN DO:
+                oJsonPayloadObject = jsonInput:getJSONObject("payload") NO-ERROR.
+                IF VALID-OBJECT(oJsonPayloadObject) THEN DO:
+                    aJsonPayloadArray = NEW JsonArray().
+                    aJsonPayloadArray:ADD(oJsonPayloadObject).
+                END.
+            END.
         END.
-        IF NOT TYPE-OF(aJsonPayloadArray, JsonArray) THEN DO:
-            RUN setErrorResponse('Parƒmetro NÆo ‚ Array', OUTPUT jsonOutput).
+        ELSE DO:
+            aJsonPayloadArray:ADD(jsonInput).
+        END.
+
+        IF NOT TYPE-OF(aJsonPayloadArray, JsonArray) OR aJsonPayloadArray:LENGTH = 0 THEN DO:
+            RUN setErrorResponse('Parametro Nao e Array', OUTPUT jsonOutput).
             RETURN 'NOK'. 
         END.
 
         DO iContPayload = 1 TO aJsonPayloadArray:LENGTH ON ERROR UNDO, LEAVE:
             //-- Cabecalho
             oJsonPayloadObject = aJsonPayloadArray:GetJsonObject(iContPayload).
-                       
-            ASSIGN i-nrReporte     = oJsonPayloadObject:GetInteger("nrReporte")
-                   da-dt-estorno   = oJsonPayloadObject:GetDate("dtReporte") .
-        END.                                            
+
+            IF VALID-OBJECT(oJsonPayloadObject) AND oJsonPayloadObject:Has("payload") THEN DO:
+                aSubPayload = oJsonPayloadObject:GetJsonArray("payload") NO-ERROR.
+                IF VALID-OBJECT(aSubPayload) AND aSubPayload:LENGTH > 0 THEN
+                    oJsonPayloadObject = aSubPayload:GetJsonObject(1).
+            END.
+
+            IF NOT VALID-OBJECT(oJsonPayloadObject) THEN NEXT.
+
+            IF oJsonPayloadObject:Has("nrReporte") THEN DO:
+                ASSIGN i-nrReporte = oJsonPayloadObject:GetInteger("nrReporte") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-nrReporte = 0 THEN
+                    ASSIGN i-nrReporte = INTEGER(oJsonPayloadObject:GetCharacter("nrReporte")) NO-ERROR.
+            END.
+            ELSE IF oJsonPayloadObject:Has("nr-reporte") THEN DO:
+                ASSIGN i-nrReporte = oJsonPayloadObject:GetInteger("nr-reporte") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-nrReporte = 0 THEN
+                    ASSIGN i-nrReporte = INTEGER(oJsonPayloadObject:GetCharacter("nr-reporte")) NO-ERROR.
+            END.
+
+            IF oJsonPayloadObject:Has("dtReporte") THEN DO:
+                ASSIGN da-dt-estorno = oJsonPayloadObject:GetDate("dtReporte") NO-ERROR.
+                IF da-dt-estorno = ? THEN
+                    ASSIGN da-dt-estorno = DATE(oJsonPayloadObject:GetCharacter("dtReporte")) NO-ERROR.
+            END.
+            ELSE IF oJsonPayloadObject:Has("dtEstorno") THEN DO:
+                ASSIGN da-dt-estorno = oJsonPayloadObject:GetDate("dtEstorno") NO-ERROR.
+                IF da-dt-estorno = ? THEN
+                    ASSIGN da-dt-estorno = DATE(oJsonPayloadObject:GetCharacter("dtEstorno")) NO-ERROR.
+            END.
+            IF da-dt-estorno = ? THEN
+                ASSIGN da-dt-estorno = TODAY.
+        END.
         
         EMPTY TEMP-TABLE tt-rep-prod.
         EMPTY TEMP-TABLE tt-erro.

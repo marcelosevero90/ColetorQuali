@@ -26,6 +26,7 @@ PROCEDURE pi-find:
 
     DEFINE VAR oJsonPayloadObject   AS JsonObject   NO-UNDO.
     DEFINE VAR aJsonPayloadArray    AS JsonArray    NO-UNDO.
+    DEFINE VAR aSubPayload          AS JsonArray    NO-UNDO.
     DEFINE VAR iContPayload         AS INTEGER      NO-UNDO.
     DEFINE VAR iContSE              AS INTEGER      NO-UNDO.
 
@@ -69,35 +70,118 @@ PROCEDURE pi-find:
       // ON STOP  UNDO, RETURN 'NOK'.
 
         aJsonPayloadArray = NEW JsonArray().
-        aJsonPayloadArray = jsonInput:getJSONArray("payload") NO-ERROR.
-
-        IF aJsonPayloadArray:LENGTH = 0 THEN DO:
-             oJsonPayloadObject = CAST(jsonInput:getJSONObject("payload"), "JSONObject") NO-ERROR. 
-             aJsonPayloadArray:ADD(oJsonPayloadObject). 
+        IF jsonInput:Has("payload") THEN DO:
+            aJsonPayloadArray = jsonInput:getJSONArray("payload") NO-ERROR.
+            IF aJsonPayloadArray = ? OR aJsonPayloadArray:LENGTH = 0 THEN DO:
+                oJsonPayloadObject = jsonInput:getJSONObject("payload") NO-ERROR.
+                IF VALID-OBJECT(oJsonPayloadObject) THEN DO:
+                    aJsonPayloadArray = NEW JsonArray().
+                    aJsonPayloadArray:ADD(oJsonPayloadObject).
+                END.
+            END.
         END.
-        IF NOT TYPE-OF(aJsonPayloadArray, JsonArray) THEN DO:
-            RUN setErrorResponse('Parƒmetro NÆo ‚ Array', OUTPUT jsonOutput).
+        ELSE DO:
+            aJsonPayloadArray:ADD(jsonInput).
+        END.
+
+        IF NOT TYPE-OF(aJsonPayloadArray, JsonArray) OR aJsonPayloadArray:LENGTH = 0 THEN DO:
+            RUN setErrorResponse('Parametro Nao e Array', OUTPUT jsonOutput).
             RETURN 'NOK'. 
         END.
 
         DO iContPayload = 1 TO aJsonPayloadArray:LENGTH ON ERROR UNDO, LEAVE:
             //-- Cabecalho
             oJsonPayloadObject = aJsonPayloadArray:GetJsonObject(iContPayload).
-                       
-            ASSIGN i-nrRequis   = oJsonPayloadObject:GetInteger("nrRequisicao")
-                   c-itCodigo   = oJsonPayloadObject:GetCharacter("itCodigo")
-                   i-Sequencia  = oJsonPayloadObject:GetInteger("sequencia")
-                   c-CodUsuario = oJsonPayloadObject:GetCharacter("codUsuario")
-                   c-codEstabel = oJsonPayloadObject:GetCharacter("codEstabel")
-                   d-qtDevol    = oJsonPayloadObject:GetDecimal("qtDevol")
-                   dt-devol     = oJsonPayloadObject:GetDate("dtDevol")
-                   . 
-                   
-            ASSIGN c-codDeposEnt    = oJsonPayloadObject:GetCharacter("codDeposEnt")
-                   c-codLocalizEnt  = oJsonPayloadObject:GetCharacter("codLocalizEnt")
-                   c-loteEnt        = oJsonPayloadObject:GetCharacter("loteEnt") 
-                   c-codReferEnt    = oJsonPayloadObject:GetCharacter("codReferEnt").                      
-                                      
+
+            IF VALID-OBJECT(oJsonPayloadObject) AND oJsonPayloadObject:Has("payload") THEN DO:
+                aSubPayload = oJsonPayloadObject:GetJsonArray("payload") NO-ERROR.
+                IF VALID-OBJECT(aSubPayload) AND aSubPayload:LENGTH > 0 THEN
+                    oJsonPayloadObject = aSubPayload:GetJsonObject(1).
+            END.
+
+            IF NOT VALID-OBJECT(oJsonPayloadObject) THEN NEXT.
+
+            IF oJsonPayloadObject:Has("nrRequisicao") THEN DO:
+                ASSIGN i-nrRequis = oJsonPayloadObject:GetInteger("nrRequisicao") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-nrRequis = 0 THEN
+                    ASSIGN i-nrRequis = INTEGER(oJsonPayloadObject:GetCharacter("nrRequisicao")) NO-ERROR.
+            END.
+            ELSE IF oJsonPayloadObject:Has("nr-requis") THEN DO:
+                ASSIGN i-nrRequis = oJsonPayloadObject:GetInteger("nr-requis") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-nrRequis = 0 THEN
+                    ASSIGN i-nrRequis = INTEGER(oJsonPayloadObject:GetCharacter("nr-requis")) NO-ERROR.
+            END.
+
+            IF oJsonPayloadObject:Has("itCodigo") THEN
+                ASSIGN c-itCodigo = TRIM(oJsonPayloadObject:GetCharacter("itCodigo")) NO-ERROR.
+            ELSE IF oJsonPayloadObject:Has("it-codigo") THEN
+                ASSIGN c-itCodigo = TRIM(oJsonPayloadObject:GetCharacter("it-codigo")) NO-ERROR.
+
+            IF oJsonPayloadObject:Has("sequencia") THEN DO:
+                ASSIGN i-Sequencia = oJsonPayloadObject:GetInteger("sequencia") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-Sequencia = 0 THEN
+                    ASSIGN i-Sequencia = INTEGER(oJsonPayloadObject:GetCharacter("sequencia")) NO-ERROR.
+            END.
+            ELSE IF oJsonPayloadObject:Has("Sequencia") THEN DO:
+                ASSIGN i-Sequencia = oJsonPayloadObject:GetInteger("Sequencia") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-Sequencia = 0 THEN
+                    ASSIGN i-Sequencia = INTEGER(oJsonPayloadObject:GetCharacter("Sequencia")) NO-ERROR.
+            END.
+            ELSE IF oJsonPayloadObject:Has("nrSequencia") THEN DO:
+                ASSIGN i-Sequencia = oJsonPayloadObject:GetInteger("nrSequencia") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-Sequencia = 0 THEN
+                    ASSIGN i-Sequencia = INTEGER(oJsonPayloadObject:GetCharacter("nrSequencia")) NO-ERROR.
+            END.
+
+            IF oJsonPayloadObject:Has("codUsuario") THEN
+                ASSIGN c-CodUsuario = TRIM(oJsonPayloadObject:GetCharacter("codUsuario")) NO-ERROR.
+            ELSE IF oJsonPayloadObject:Has("usuario") THEN
+                ASSIGN c-CodUsuario = TRIM(oJsonPayloadObject:GetCharacter("usuario")) NO-ERROR.
+            IF c-CodUsuario = "" OR c-CodUsuario = ? THEN
+                ASSIGN c-CodUsuario = "operador".
+
+            IF oJsonPayloadObject:Has("codEstabel") THEN
+                ASSIGN c-codEstabel = TRIM(oJsonPayloadObject:GetCharacter("codEstabel")) NO-ERROR.
+
+            IF oJsonPayloadObject:Has("qtDevol") THEN DO:
+                ASSIGN d-qtDevol = oJsonPayloadObject:GetDecimal("qtDevol") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR d-qtDevol = 0 THEN
+                    ASSIGN d-qtDevol = DECIMAL(oJsonPayloadObject:GetCharacter("qtDevol")) NO-ERROR.
+            END.
+            ELSE IF oJsonPayloadObject:Has("quantidade") THEN DO:
+                ASSIGN d-qtDevol = oJsonPayloadObject:GetDecimal("quantidade") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR d-qtDevol = 0 THEN
+                    ASSIGN d-qtDevol = DECIMAL(oJsonPayloadObject:GetCharacter("quantidade")) NO-ERROR.
+            END.
+
+            IF oJsonPayloadObject:Has("dtDevol") THEN DO:
+                ASSIGN dt-devol = oJsonPayloadObject:GetDate("dtDevol") NO-ERROR.
+                IF dt-devol = ? THEN
+                    ASSIGN dt-devol = DATE(oJsonPayloadObject:GetCharacter("dtDevol")) NO-ERROR.
+            END.
+
+            IF oJsonPayloadObject:Has("codDeposEnt") THEN
+                ASSIGN c-codDeposEnt = TRIM(oJsonPayloadObject:GetCharacter("codDeposEnt")) NO-ERROR.
+            ELSE IF oJsonPayloadObject:Has("codDepos") THEN
+                ASSIGN c-codDeposEnt = TRIM(oJsonPayloadObject:GetCharacter("codDepos")) NO-ERROR.
+
+            IF oJsonPayloadObject:Has("codLocalizEnt") THEN
+                ASSIGN c-codLocalizEnt = TRIM(oJsonPayloadObject:GetCharacter("codLocalizEnt")) NO-ERROR.
+            ELSE IF oJsonPayloadObject:Has("codLocaliz") THEN
+                ASSIGN c-codLocalizEnt = TRIM(oJsonPayloadObject:GetCharacter("codLocaliz")) NO-ERROR.
+            IF c-codLocalizEnt = "BRANCO" OR c-codLocalizEnt = "(EM BRANCO)" OR c-codLocalizEnt = "EM BRANCO" OR c-codLocalizEnt = "-" THEN
+                ASSIGN c-codLocalizEnt = "".
+
+            IF oJsonPayloadObject:Has("loteEnt") THEN
+                ASSIGN c-loteEnt = TRIM(oJsonPayloadObject:GetCharacter("loteEnt")) NO-ERROR.
+            ELSE IF oJsonPayloadObject:Has("lote") THEN
+                ASSIGN c-loteEnt = TRIM(oJsonPayloadObject:GetCharacter("lote")) NO-ERROR.
+
+            IF oJsonPayloadObject:Has("codReferEnt") THEN
+                ASSIGN c-codReferEnt = TRIM(oJsonPayloadObject:GetCharacter("codReferEnt")) NO-ERROR.
+            ELSE IF oJsonPayloadObject:Has("codRefer") THEN
+                ASSIGN c-codReferEnt = TRIM(oJsonPayloadObject:GetCharacter("codRefer")) NO-ERROR.
+        END.
         END. 
         
         IF dt-devol = ? THEN

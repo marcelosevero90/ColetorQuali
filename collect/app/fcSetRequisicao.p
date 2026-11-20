@@ -59,14 +59,22 @@ PROCEDURE pi-find:
        ON STOP  UNDO, RETURN 'NOK'.
 
         aJsonPayloadArray = NEW JsonArray().
-        aJsonPayloadArray = jsonInput:getJSONArray("payload") NO-ERROR.
-
-        IF aJsonPayloadArray:LENGTH = 0 THEN DO:
-             oJsonPayloadObject = CAST(jsonInput:getJSONObject("payload"), "JSONObject") NO-ERROR. 
-             aJsonPayloadArray:ADD(oJsonPayloadObject). 
+        IF jsonInput:Has("payload") THEN DO:
+            aJsonPayloadArray = jsonInput:getJSONArray("payload") NO-ERROR.
+            IF aJsonPayloadArray = ? OR aJsonPayloadArray:LENGTH = 0 THEN DO:
+                oJsonPayloadObject = jsonInput:getJSONObject("payload") NO-ERROR.
+                IF VALID-OBJECT(oJsonPayloadObject) THEN DO:
+                    aJsonPayloadArray = NEW JsonArray().
+                    aJsonPayloadArray:ADD(oJsonPayloadObject).
+                END.
+            END.
         END.
-        IF NOT TYPE-OF(aJsonPayloadArray, JsonArray) THEN DO:
-            RUN setErrorResponse('Parƒmetro NÆo ‚ Array', OUTPUT jsonOutput).
+        ELSE DO:
+            aJsonPayloadArray:ADD(jsonInput).
+        END.
+
+        IF NOT TYPE-OF(aJsonPayloadArray, JsonArray) OR aJsonPayloadArray:LENGTH = 0 THEN DO:
+            RUN setErrorResponse('Parametro Nao e Array', OUTPUT jsonOutput).
             RETURN 'NOK'. 
         END.
 
@@ -79,33 +87,92 @@ PROCEDURE pi-find:
                 IF VALID-OBJECT(aSubPayload) AND aSubPayload:LENGTH > 0 THEN
                     oJsonPayloadObject = aSubPayload:GetJsonObject(1).
             END.
-                       
-            ASSIGN i-nrRequis   = oJsonPayloadObject:GetInteger("nrRequisicao")
-                   c-itCodigo   = oJsonPayloadObject:GetCharacter("itCodigo")
-                   i-Sequencia  = oJsonPayloadObject:GetInteger("sequencia")
-                   c-CodUsuario = oJsonPayloadObject:GetCharacter("codUsuario").
-                   
-                               
-            arJsonArrEstoq = oJsonPayloadObject:GetJsonArray("estoque") NO-ERROR.  //("Operation").       
-            
+
+            IF NOT VALID-OBJECT(oJsonPayloadObject) THEN NEXT.
+
+            IF oJsonPayloadObject:Has("nrRequisicao") THEN DO:
+                ASSIGN i-nrRequis = oJsonPayloadObject:GetInteger("nrRequisicao") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-nrRequis = 0 THEN
+                    ASSIGN i-nrRequis = INTEGER(oJsonPayloadObject:GetCharacter("nrRequisicao")) NO-ERROR.
+            END.
+            ELSE IF oJsonPayloadObject:Has("nr-requis") THEN DO:
+                ASSIGN i-nrRequis = oJsonPayloadObject:GetInteger("nr-requis") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-nrRequis = 0 THEN
+                    ASSIGN i-nrRequis = INTEGER(oJsonPayloadObject:GetCharacter("nr-requis")) NO-ERROR.
+            END.
+
+            IF oJsonPayloadObject:Has("itCodigo") THEN
+                ASSIGN c-itCodigo = TRIM(oJsonPayloadObject:GetCharacter("itCodigo")) NO-ERROR.
+            ELSE IF oJsonPayloadObject:Has("it-codigo") THEN
+                ASSIGN c-itCodigo = TRIM(oJsonPayloadObject:GetCharacter("it-codigo")) NO-ERROR.
+
+            IF oJsonPayloadObject:Has("sequencia") THEN DO:
+                ASSIGN i-Sequencia = oJsonPayloadObject:GetInteger("sequencia") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-Sequencia = 0 THEN
+                    ASSIGN i-Sequencia = INTEGER(oJsonPayloadObject:GetCharacter("sequencia")) NO-ERROR.
+            END.
+            ELSE IF oJsonPayloadObject:Has("Sequencia") THEN DO:
+                ASSIGN i-Sequencia = oJsonPayloadObject:GetInteger("Sequencia") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-Sequencia = 0 THEN
+                    ASSIGN i-Sequencia = INTEGER(oJsonPayloadObject:GetCharacter("Sequencia")) NO-ERROR.
+            END.
+            ELSE IF oJsonPayloadObject:Has("nrSequencia") THEN DO:
+                ASSIGN i-Sequencia = oJsonPayloadObject:GetInteger("nrSequencia") NO-ERROR.
+                IF ERROR-STATUS:ERROR OR i-Sequencia = 0 THEN
+                    ASSIGN i-Sequencia = INTEGER(oJsonPayloadObject:GetCharacter("nrSequencia")) NO-ERROR.
+            END.
+
+            IF oJsonPayloadObject:Has("codUsuario") THEN
+                ASSIGN c-CodUsuario = TRIM(oJsonPayloadObject:GetCharacter("codUsuario")) NO-ERROR.
+            ELSE IF oJsonPayloadObject:Has("usuario") THEN
+                ASSIGN c-CodUsuario = TRIM(oJsonPayloadObject:GetCharacter("usuario")) NO-ERROR.
+            IF c-CodUsuario = "" OR c-CodUsuario = ? THEN
+                ASSIGN c-CodUsuario = "operador".
+
+            IF oJsonPayloadObject:Has("estoque") THEN
+                ASSIGN arJsonArrEstoq = oJsonPayloadObject:GetJsonArray("estoque") NO-ERROR.
+            ELSE IF oJsonPayloadObject:Has("saldosEstoque") THEN
+                ASSIGN arJsonArrEstoq = oJsonPayloadObject:GetJsonArray("saldosEstoque") NO-ERROR.
+
             IF arJsonArrEstoq = ? THEN
                 NEXT.
 
             IF arJsonArrEstoq:LENGTH <= 0 THEN
                 NEXT.     
                          
-            DO iContSE = 1 TO arJsonArrEstoq:LENGTH .
-            
-                oJsonSaldoEst = arJsonArrEstoq:GetJsonObject(iContSE).
+            DO iContSE = 1 TO arJsonArrEstoq:LENGTH:
+                oJsonSaldoEst = arJsonArrEstoq:GetJsonObject(iContSE) NO-ERROR.
+                IF NOT VALID-OBJECT(oJsonSaldoEst) THEN NEXT.
                 
                 CREATE tt-saldo-estoq.
-                ASSIGN tt-saldo-estoq.cod-estabel       = oJsonSaldoEst:GetCharacter("codEstabel")
-                       tt-saldo-estoq.cod-depos         = oJsonSaldoEst:GetCharacter("codDepos")
-                       tt-saldo-estoq.cod-localiz       = oJsonSaldoEst:GetCharacter("codLocaliz")
-                       tt-saldo-estoq.lote              = oJsonSaldoEst:GetCharacter("lote")
-                       tt-saldo-estoq.cod-refer         = oJsonSaldoEst:GetCharacter("codRefer")
-                       tt-saldo-estoq.it-codigo         = oJsonSaldoEst:GetCharacter("itCodigo")
-                       tt-saldo-estoq.qt-a-atender      = oJsonSaldoEst:GetDecimal("qtAAtender").                
+                IF oJsonSaldoEst:Has("codEstabel") THEN
+                    ASSIGN tt-saldo-estoq.cod-estabel = TRIM(oJsonSaldoEst:GetCharacter("codEstabel")) NO-ERROR.
+                IF oJsonSaldoEst:Has("codDepos") THEN
+                    ASSIGN tt-saldo-estoq.cod-depos = TRIM(oJsonSaldoEst:GetCharacter("codDepos")) NO-ERROR.
+                IF oJsonSaldoEst:Has("codLocaliz") THEN DO:
+                    ASSIGN tt-saldo-estoq.cod-localiz = TRIM(oJsonSaldoEst:GetCharacter("codLocaliz")) NO-ERROR.
+                    IF tt-saldo-estoq.cod-localiz = "BRANCO" OR tt-saldo-estoq.cod-localiz = "(EM BRANCO)" OR tt-saldo-estoq.cod-localiz = "EM BRANCO" OR tt-saldo-estoq.cod-localiz = "-" THEN
+                        ASSIGN tt-saldo-estoq.cod-localiz = "".
+                END.
+                IF oJsonSaldoEst:Has("lote") THEN
+                    ASSIGN tt-saldo-estoq.lote = TRIM(oJsonSaldoEst:GetCharacter("lote")) NO-ERROR.
+                IF oJsonSaldoEst:Has("codRefer") THEN
+                    ASSIGN tt-saldo-estoq.cod-refer = TRIM(oJsonSaldoEst:GetCharacter("codRefer")) NO-ERROR.
+                IF oJsonSaldoEst:Has("itCodigo") THEN
+                    ASSIGN tt-saldo-estoq.it-codigo = TRIM(oJsonSaldoEst:GetCharacter("itCodigo")) NO-ERROR.
+                IF tt-saldo-estoq.it-codigo = "" THEN
+                    ASSIGN tt-saldo-estoq.it-codigo = c-itCodigo.
+
+                IF oJsonSaldoEst:Has("qtAAtender") THEN DO:
+                    ASSIGN tt-saldo-estoq.qt-a-atender = oJsonSaldoEst:GetDecimal("qtAAtender") NO-ERROR.
+                    IF ERROR-STATUS:ERROR OR tt-saldo-estoq.qt-a-atender = 0 THEN
+                        ASSIGN tt-saldo-estoq.qt-a-atender = DECIMAL(oJsonSaldoEst:GetCharacter("qtAAtender")) NO-ERROR.
+                END.
+                ELSE IF oJsonSaldoEst:Has("quantidade") THEN DO:
+                    ASSIGN tt-saldo-estoq.qt-a-atender = oJsonSaldoEst:GetDecimal("quantidade") NO-ERROR.
+                    IF ERROR-STATUS:ERROR OR tt-saldo-estoq.qt-a-atender = 0 THEN
+                        ASSIGN tt-saldo-estoq.qt-a-atender = DECIMAL(oJsonSaldoEst:GetCharacter("quantidade")) NO-ERROR.
+                END.
             END.                   
         END.                                            
         

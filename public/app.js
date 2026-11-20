@@ -4872,6 +4872,7 @@ const App = (() => {
 
     // Tentar consulta online se dispositivo conectado e não estiver simulando offline
     if (isOnline()) {
+      mostrarLoading('Consultando ERP TOTVS', 'Buscando requisições no PASOE Datasul... Aguarde.');
       const payloadItem = {
         nrReqIni: nrBusca !== null ? nrBusca : 0,
         nrReqFim: nrBusca !== null ? nrBusca : 0,
@@ -4917,6 +4918,8 @@ const App = (() => {
         }
       } catch (err) {
         console.warn('Falha na consulta online de fcGetRequisicao. Tentando cache offline:', err.message);
+      } finally {
+        ocultarLoading();
       }
     }
 
@@ -5207,14 +5210,16 @@ const App = (() => {
 
         <div style="display: flex; flex-direction: column; gap: 6px;">
           ${itensReq.map(it => {
-            const isSel = itemAtual && Number(itemAtual.Sequencia) === Number(it.Sequencia) && itemAtual.itCodigo === it.itCodigo;
+            const seqIt = it.Sequencia ?? it.sequencia ?? it.nrSequencia ?? 1;
+            const seqAtual = itemAtual ? (itemAtual.Sequencia ?? itemAtual.sequencia ?? itemAtual.nrSequencia ?? 1) : null;
+            const isSel = itemAtual && Number(seqAtual) === Number(seqIt) && String(itemAtual.itCodigo).trim() === String(it.itCodigo).trim();
             return `
-              <div onclick="App.onSelecionarItemAtendimento('${it.Sequencia}', '${it.itCodigo}')"
+              <div onclick="App.onSelecionarItemAtendimento('${seqIt}', '${it.itCodigo}')"
                    style="border: 1.5px solid ${isSel ? '#0284c7' : '#e2e8f0'}; background: ${isSel ? '#f0f9ff' : '#ffffff'}; border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.15s;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                   <div style="flex: 1;">
                     <div style="font-size: 13px; font-weight: 800; color: ${isSel ? '#0369a1' : '#1e293b'};">
-                      Seq ${it.Sequencia} • ${escapeHtml(it.itCodigo)}
+                      Seq ${seqIt} • ${escapeHtml(it.itCodigo)}
                     </div>
                     <div style="font-size: 11.5px; color: #475569; margin-top: 1px;">
                       ${escapeHtml(it.descItem || '')}
@@ -5365,10 +5370,10 @@ const App = (() => {
 
   function onSelecionarItemAtendimento(sequencia, itCodigo) {
     const at = stateRequisicoes.atendimento;
-    const item = (at.reqSelecionada?.itens || []).find(it =>
-      Number(it.Sequencia) === Number(sequencia) &&
-      it.itCodigo === itCodigo
-    );
+    const item = (at.reqSelecionada?.itens || []).find(it => {
+      const s = it.Sequencia ?? it.sequencia ?? it.nrSequencia ?? 1;
+      return Number(s) === Number(sequencia) && String(it.itCodigo).trim() === String(itCodigo).trim();
+    });
     if (item) {
       at.itemSelecionado = item;
       at.saldosEstoque = [];
@@ -5553,16 +5558,22 @@ const App = (() => {
       return;
     }
 
+    const nrReq = parseInt(req.nrRequisicao || req.nrRequis || 0, 10);
+    const itCod = String(it.itCodigo || '').trim();
+    const seq = parseInt(it.Sequencia ?? it.sequencia ?? it.nrSequencia ?? 1, 10);
+    const usr = state.session.codUsuario || 'operador';
+
+    const payloadItem = {
+      nrRequisicao: nrReq,
+      itCodigo: itCod,
+      sequencia: seq,
+      codUsuario: usr,
+      estoque: linhasEstoque
+    };
+
     const payload = {
-      payload: [
-        {
-          nrRequisicao: Number(req.nrRequisicao),
-          itCodigo: it.itCodigo,
-          sequencia: Number(it.Sequencia),
-          codUsuario: state.session.codUsuario || 'operador',
-          estoque: linhasEstoque
-        }
-      ]
+      payload: [payloadItem],
+      ...payloadItem
     };
 
     // Fluxo ONLINE
@@ -5792,6 +5803,7 @@ const App = (() => {
     let offline = false;
 
     if (isOnline()) {
+      mostrarLoading('Consultando ERP TOTVS', 'Buscando devoluções e movimentos no PASOE Datasul... Aguarde.');
       const payload = {
         dtCorte: dev.dtCorte,
         payload: [{ dtCorte: dev.dtCorte }]
@@ -5834,6 +5846,8 @@ const App = (() => {
         }
       } catch (err) {
         console.warn('Falha na consulta online de fcGetRequisDevol. Tentando cache offline:', err.message);
+      } finally {
+        ocultarLoading();
       }
     }
 
@@ -6116,14 +6130,16 @@ const App = (() => {
 
         <div style="display: flex; flex-direction: column; gap: 6px;">
           ${itensReq.map(it => {
-            const isSel = itemAtual && Number(itemAtual.Sequencia) === Number(it.Sequencia) && itemAtual.itCodigo === it.itCodigo;
+            const seqIt = it.Sequencia ?? it.sequencia ?? it.nrSequencia ?? 1;
+            const seqAtual = itemAtual ? (itemAtual.Sequencia ?? itemAtual.sequencia ?? itemAtual.nrSequencia ?? 1) : null;
+            const isSel = itemAtual && Number(seqAtual) === Number(seqIt) && String(itemAtual.itCodigo).trim() === String(it.itCodigo).trim();
             return `
-              <div onclick="App.onSelecionarItemDevolucao('${it.Sequencia}', '${it.itCodigo}')"
+              <div onclick="App.onSelecionarItemDevolucao('${seqIt}', '${it.itCodigo}')"
                    style="border: 1.5px solid ${isSel ? '#7c3aed' : '#e2e8f0'}; background: ${isSel ? '#faf5ff' : '#ffffff'}; border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.15s;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                   <div style="flex: 1;">
                     <div style="font-size: 13px; font-weight: 800; color: ${isSel ? '#6d28d9' : '#1e293b'};">
-                      Seq ${it.Sequencia} • ${escapeHtml(it.itCodigo)}
+                      Seq ${seqIt} • ${escapeHtml(it.itCodigo)}
                     </div>
                     <div style="font-size: 11.5px; color: #475569; margin-top: 1px;">
                       ${escapeHtml(it.descItem || '')}
@@ -6256,10 +6272,10 @@ const App = (() => {
 
   function onSelecionarItemDevolucao(sequencia, itCodigo) {
     const dev = stateRequisicoes.devolucao;
-    const item = (dev.reqSelecionada?.itens || []).find(it =>
-      Number(it.Sequencia) === Number(sequencia) &&
-      it.itCodigo === itCodigo
-    );
+    const item = (dev.reqSelecionada?.itens || []).find(it => {
+      const s = it.Sequencia ?? it.sequencia ?? it.nrSequencia ?? 1;
+      return Number(s) === Number(sequencia) && String(it.itCodigo).trim() === String(itCodigo).trim();
+    });
     if (item) {
       dev.itemSelecionado = item;
       dev.movimentos = [];
@@ -6410,22 +6426,29 @@ const App = (() => {
       return;
     }
 
+    const nrReq = parseInt(req.nrRequisicao || req.nrRequis || 0, 10);
+    const itCod = String(it.itCodigo || '').trim();
+    const seq = parseInt(it.Sequencia ?? it.sequencia ?? it.nrSequencia ?? 1, 10);
+    const usr = state.session.codUsuario || 'operador';
+    const locEnt = (mov.codLocaliz || '').trim().toUpperCase() === 'BRANCO' ? '' : (mov.codLocaliz || '').trim();
+
+    const payloadItem = {
+      nrRequisicao: nrReq,
+      itCodigo: itCod,
+      sequencia: seq,
+      codUsuario: usr,
+      codEstabel: mov.codEstabel || state.session.codEstabel || '101',
+      qtDevol: Number(qtdDevol),
+      dtDevol: dtDevol,
+      codDeposEnt: String(mov.codDepos || '').trim(),
+      codLocalizEnt: locEnt,
+      loteEnt: String(mov.lote || '').trim(),
+      codReferEnt: String(mov.codRefer || '').trim()
+    };
+
     const payload = {
-      payload: [
-        {
-          nrRequisicao: Number(req.nrRequisicao),
-          itCodigo: it.itCodigo,
-          sequencia: Number(it.Sequencia),
-          codUsuario: state.session.codUsuario || 'operador',
-          codEstabel: mov.codEstabel || state.session.codEstabel || '101',
-          qtDevol: qtdDevol,
-          dtDevol: dtDevol,
-          codDeposEnt: mov.codDepos,
-          codLocalizEnt: mov.codLocaliz || '',
-          loteEnt: mov.lote || '',
-          codReferEnt: mov.codRefer || ''
-        }
-      ]
+      payload: [payloadItem],
+      ...payloadItem
     };
 
     // Fluxo ONLINE
@@ -6825,6 +6848,7 @@ const App = (() => {
     let offline = false;
 
     if (isOnline()) {
+      mostrarLoading('Consultando ERP TOTVS', 'Buscando ordens de produção no PASOE Datasul... Aguarde.');
       const payload = {
         codEstabel,
         dtCorte: rep.dtCorte,
@@ -6842,6 +6866,8 @@ const App = (() => {
         }
       } catch (err) {
         console.warn('Falha na consulta online de fcGetOrdemProdEst. Tentando cache offline:', err.message);
+      } finally {
+        ocultarLoading();
       }
     }
 
@@ -7425,28 +7451,32 @@ const App = (() => {
       return;
     }
 
+    const nrOrd = parseInt(ord.nrOrdProdu || ord.nrOrdem || 0, 10);
+    const dtValiSafe = dtValiLoteEnt || '';
+
+    const payloadItem = {
+      nrOrdProdu: nrOrd,
+      itCodigo: ord.itCodigo,
+      codEstabel: ord.codEstabel || state.session.codEstabel || '101',
+      codDepos: codDeposEnt,
+      codLocaliz: codLocalizEnt,
+      lote: loteEnt,
+      codRefer: codReferEnt,
+      dtValiLote: dtValiSafe || dtReporte || new Date().toISOString().slice(0, 10),
+      qtReporte: Number(qtdReporte),
+      qtRefugada: Number(qtdRefugada),
+      dtReporte: dtReporte,
+      ctRefugo: ord.ctRefugo || '',
+      scRefugo: ord.scRefugo || '',
+      nroDocto: nroDocto || String(nrOrd),
+      serie: serie || '',
+      codDeposSai: codDeposSai,
+      codLocalSai: codLocalSai
+    };
+
     const payload = {
-      payload: [
-        {
-          nrOrdProdu: Number(ord.nrOrdProdu),
-          itCodigo: ord.itCodigo,
-          codEstabel: ord.codEstabel || state.session.codEstabel || '101',
-          codDepos: codDeposEnt,
-          codLocaliz: codLocalizEnt,
-          lote: loteEnt,
-          codRefer: codReferEnt,
-          dtValiLote: dtValiLoteEnt,
-          qtReporte: qtdReporte,
-          qtRefugada: qtdRefugada,
-          dtReporte: dtReporte,
-          ctRefugo: ord.ctRefugo || '',
-          scRefugo: ord.scRefugo || '',
-          nroDocto: nroDocto,
-          serie: serie,
-          codDeposSai: codDeposSai,
-          codLocalSai: codLocalSai
-        }
-      ]
+      payload: [payloadItem],
+      ...payloadItem
     };
 
     // Fluxo ONLINE
@@ -8110,7 +8140,11 @@ const App = (() => {
     const stEl = document.getElementById('carga-mestres-status');
     const detEl = document.getElementById('carga-mestres-detalhes');
     const btnFechar = document.getElementById('btn-fechar-carga-mestres');
+    const spinner = document.getElementById('carga-mestres-spinner');
+    const aviso = document.getElementById('carga-mestres-aviso');
 
+    if (spinner) spinner.style.display = 'block';
+    if (aviso) aviso.textContent = 'Buscando dados no PASOE TOTVS... Por favor, aguarde.';
     if (subEl && tituloSub) subEl.textContent = tituloSub;
     if (btnFechar) btnFechar.style.display = 'none';
 
@@ -8127,12 +8161,16 @@ const App = (() => {
         if (detEl) detEl.textContent = det || '';
       },
       onComplete: () => {
+        if (spinner) spinner.style.display = 'none';
+        if (aviso) aviso.textContent = '✅ Carga concluída com sucesso no aparelho!';
         if (btnFechar) btnFechar.style.display = 'inline-flex';
         setTimeout(() => {
           fecharModalCargaInicial();
         }, 900);
       },
       onError: (err) => {
+        if (spinner) spinner.style.display = 'none';
+        if (aviso) aviso.textContent = '❌ Falha durante a carga dos dados';
         if (stEl) stEl.textContent = 'Erro: ' + err.message;
         if (btnFechar) {
           btnFechar.textContent = 'Fechar';

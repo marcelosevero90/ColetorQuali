@@ -105,6 +105,256 @@ function sanitizarPayloadTransferencia(obj, req) {
   return resObj;
 }
 
+// Sanitização e complementação defensiva completa para fcSetRequisicao (CD1409 / ceapi001k):
+function sanitizarPayloadRequisicao(obj, req) {
+  if (!obj || typeof obj !== 'object') return obj;
+  let itens = [];
+  if (Array.isArray(obj.payload)) {
+    itens = obj.payload;
+  } else if (Array.isArray(obj)) {
+    itens = obj;
+  } else {
+    itens = [obj];
+  }
+
+  const codUsuarioPadrao = (() => {
+    try {
+      const auth = req.headers['authorization'] || '';
+      if (auth.startsWith('Basic ')) {
+        const dec = Buffer.from(auth.replace('Basic ', ''), 'base64').toString('utf8');
+        return dec.split(':')[0] || 'matheus.st';
+      }
+    } catch (e) {}
+    return 'matheus.st';
+  })();
+
+  const normalizarLoc = (loc) => {
+    if (!loc) return '';
+    const v = String(loc).trim().toUpperCase();
+    if (v === 'BRANCO' || v === '(EM BRANCO)' || v === 'EM BRANCO' || v === 'PADRAO' || v === 'PADRÃO' || v === '-') {
+      return '';
+    }
+    return String(loc).trim();
+  };
+
+  const itensSanitizados = itens.map(it => {
+    const nrReq = parseInt(it.nrRequisicao || it.nrRequis || it['nr-requis'] || 0, 10) || 0;
+    const itCod = String(it.itCodigo || it['it-codigo'] || '').trim();
+    const seq = parseInt(it.sequencia ?? it.Sequencia ?? it.nrSequencia ?? 1, 10) || 1;
+    const usr = String(it.codUsuario || it.usuario || codUsuarioPadrao).trim() || codUsuarioPadrao;
+
+    let estoqueLinhas = [];
+    if (Array.isArray(it.estoque)) {
+      estoqueLinhas = it.estoque;
+    } else if (Array.isArray(it.saldosEstoque)) {
+      estoqueLinhas = it.saldosEstoque;
+    }
+
+    const estoqueSanitizado = estoqueLinhas.map(s => ({
+      codEstabel: String(s.codEstabel || req.headers['codestabel'] || '101').trim() || '101',
+      codDepos: String(s.codDepos || s.codDep || '').trim(),
+      codLocaliz: normalizarLoc(s.codLocaliz || s.codLocal),
+      lote: String(s.lote || '').trim(),
+      codRefer: String(s.codRefer || '').trim(),
+      itCodigo: String(s.itCodigo || itCod).trim(),
+      qtAAtender: Number(s.qtAAtender || s.quantidade || 0)
+    }));
+
+    return {
+      nrRequisicao: nrReq,
+      itCodigo: itCod,
+      sequencia: seq,
+      codUsuario: usr,
+      estoque: estoqueSanitizado
+    };
+  });
+
+  const resObj = {
+    payload: itensSanitizados,
+    ...(itensSanitizados[0] || {})
+  };
+  return resObj;
+}
+
+// Sanitização e complementação defensiva completa para fcSetRequisDevol (CD1410 / ceapi001k):
+function sanitizarPayloadDevolucao(obj, req) {
+  if (!obj || typeof obj !== 'object') return obj;
+  let itens = [];
+  if (Array.isArray(obj.payload)) {
+    itens = obj.payload;
+  } else if (Array.isArray(obj)) {
+    itens = obj;
+  } else {
+    itens = [obj];
+  }
+
+  const codUsuarioPadrao = (() => {
+    try {
+      const auth = req.headers['authorization'] || '';
+      if (auth.startsWith('Basic ')) {
+        const dec = Buffer.from(auth.replace('Basic ', ''), 'base64').toString('utf8');
+        return dec.split(':')[0] || 'matheus.st';
+      }
+    } catch (e) {}
+    return 'matheus.st';
+  })();
+
+  const normalizarDataIso = (dt) => {
+    if (!dt) return new Date().toISOString().slice(0, 10);
+    const s = String(dt).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    if (s.includes('/')) {
+      const p = s.split('/');
+      if (p.length === 3) {
+        if (p[2].length === 4) return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+        if (p[0].length === 4) return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
+      }
+    }
+    return new Date().toISOString().slice(0, 10);
+  };
+
+  const normalizarLoc = (loc) => {
+    if (!loc) return '';
+    const v = String(loc).trim().toUpperCase();
+    if (v === 'BRANCO' || v === '(EM BRANCO)' || v === 'EM BRANCO' || v === 'PADRAO' || v === 'PADRÃO' || v === '-') {
+      return '';
+    }
+    return String(loc).trim();
+  };
+
+  const itensSanitizados = itens.map(it => {
+    const nrReq = parseInt(it.nrRequisicao || it.nrRequis || it['nr-requis'] || 0, 10) || 0;
+    const itCod = String(it.itCodigo || it['it-codigo'] || '').trim();
+    const seq = parseInt(it.sequencia ?? it.Sequencia ?? it.nrSequencia ?? 1, 10) || 1;
+    const usr = String(it.codUsuario || it.usuario || codUsuarioPadrao).trim() || codUsuarioPadrao;
+    const codEst = String(it.codEstabel || req.headers['codestabel'] || '101').trim() || '101';
+    const qtd = Number(it.qtDevol || it.quantidade || 0);
+    const dt = normalizarDataIso(it.dtDevol);
+
+    return {
+      nrRequisicao: nrReq,
+      itCodigo: itCod,
+      sequencia: seq,
+      codUsuario: usr,
+      codEstabel: codEst,
+      qtDevol: qtd,
+      dtDevol: dt,
+      codDeposEnt: String(it.codDeposEnt || it.codDepos || '').trim(),
+      codLocalizEnt: normalizarLoc(it.codLocalizEnt || it.codLocaliz),
+      loteEnt: String(it.loteEnt || it.lote || '').trim(),
+      codReferEnt: String(it.codReferEnt || it.codRefer || '').trim()
+    };
+  });
+
+  const resObj = {
+    payload: itensSanitizados,
+    ...(itensSanitizados[0] || {})
+  };
+  return resObj;
+}
+
+
+// Sanitização e complementação defensiva completa para fcSetReporteOrdProd (CP0311 / cpapi001):
+function sanitizarPayloadReporteOrdProd(obj, req) {
+  if (!obj || typeof obj !== 'object') return obj;
+  let itens = [];
+  if (Array.isArray(obj.payload)) itens = obj.payload;
+  else if (Array.isArray(obj)) itens = obj;
+  else itens = [obj];
+
+  const normalizarDataIso = (dt) => {
+    if (!dt) return '';
+    const s = String(dt).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    if (s.includes('/')) {
+      const p = s.split('/');
+      if (p.length === 3) {
+        if (p[2].length === 4) return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+        if (p[0].length === 4) return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
+      }
+    }
+    return '';
+  };
+
+  const normalizarLoc = (loc) => {
+    if (!loc) return '';
+    const v = String(loc).trim().toUpperCase();
+    if (v === 'BRANCO' || v === '(EM BRANCO)' || v === 'EM BRANCO' || v === 'PADRAO' || v === 'PADRÃO' || v === '-') {
+      return '';
+    }
+    return String(loc).trim();
+  };
+
+  const itensSanitizados = itens.map(it => {
+    const nrOrd = parseInt(it.nrOrdProdu || it['nr-ord-produ'] || it.nrOrdem || it.nrOrdemProd || 0, 10) || 0;
+    const itCod = String(it.itCodigo || it['it-codigo'] || '').trim();
+    const codEst = String(it.codEstabel || req.headers['codestabel'] || '101').trim() || '101';
+    const depEnt = String(it.codDepos || it.codDeposEnt || 'ACA').trim();
+    const locEnt = normalizarLoc(it.codLocaliz || it.codLocalizEnt);
+    const depSai = String(it.codDeposSai || 'PRO').trim();
+    const locSai = normalizarLoc(it.codLocalSai || it.codLocalizSai);
+    const lote = String(it.lote || it.loteEnt || '').trim();
+    const refer = String(it.codRefer || it.codReferEnt || '').trim();
+    const dtVali = it.dtValiLote ? normalizarDataIso(it.dtValiLote) : '';
+    const qtRep = Number(it.qtReporte || it.quantidade || 0);
+    const qtRef = Number(it.qtRefugada || 0);
+    const dtRep = normalizarDataIso(it.dtReporte) || new Date().toISOString().slice(0, 10);
+    const ctRef = String(it.ctRefugo || '').trim();
+    const scRef = String(it.scRefugo || '').trim();
+    const nroDoc = String(it.nroDocto || (nrOrd ? String(nrOrd) : '')).trim();
+    const serie = String(it.serie || '').trim();
+
+    return {
+      nrOrdProdu: nrOrd,
+      itCodigo: itCod,
+      codEstabel: codEst,
+      codDepos: depEnt,
+      codLocaliz: locEnt,
+      lote: lote,
+      codRefer: refer,
+      dtValiLote: dtVali || dtRep,
+      qtReporte: qtRep,
+      qtRefugada: qtRef,
+      dtReporte: dtRep,
+      ctRefugo: ctRef,
+      scRefugo: scRef,
+      nroDocto: nroDoc,
+      serie: serie,
+      codDeposSai: depSai,
+      codLocalSai: locSai
+    };
+  });
+
+  const resObj = {
+    payload: itensSanitizados,
+    ...(itensSanitizados[0] || {})
+  };
+  return resObj;
+}
+
+// Sanitização e complementação defensiva para fcSetEstornoOrdProd:
+function sanitizarPayloadEstornoOrdProd(obj, req) {
+  if (!obj || typeof obj !== 'object') return obj;
+  let itens = [];
+  if (Array.isArray(obj.payload)) itens = obj.payload;
+  else if (Array.isArray(obj)) itens = obj;
+  else itens = [obj];
+
+  const itensSanitizados = itens.map(it => {
+    const nrRep = parseInt(it.nrReporte || it['nr-reporte'] || 0, 10) || 0;
+    const dtRep = (it.dtReporte || it.dtEstorno || new Date().toISOString().slice(0, 10)).slice(0, 10);
+    return {
+      nrReporte: nrRep,
+      dtReporte: dtRep
+    };
+  });
+
+  return {
+    payload: itensSanitizados,
+    ...(itensSanitizados[0] || {})
+  };
+}
+
 function sanitizarLocalizDatasul(obj) {
   if (!obj || typeof obj !== 'object') return obj;
   if (Array.isArray(obj)) {
@@ -188,6 +438,14 @@ app.all('/api/pasoe-proxy', async (req, res) => {
       let bodyEnvio;
       if (String(targetUrl).toLowerCase().includes('fcsettransfmaterial')) {
         bodyEnvio = sanitizarPayloadTransferencia(req.body, req);
+      } else if (String(targetUrl).toLowerCase().includes('fcsetrequisdevol')) {
+        bodyEnvio = sanitizarPayloadDevolucao(req.body, req);
+      } else if (String(targetUrl).toLowerCase().includes('fcsetrequisicao')) {
+        bodyEnvio = sanitizarPayloadRequisicao(req.body, req);
+      } else if (String(targetUrl).toLowerCase().includes('fcsetreporteordprod')) {
+        bodyEnvio = sanitizarPayloadReporteOrdProd(req.body, req);
+      } else if (String(targetUrl).toLowerCase().includes('fcsetestornoordprod')) {
+        bodyEnvio = sanitizarPayloadEstornoOrdProd(req.body, req);
       } else {
         bodyEnvio = sanitizarLocalizDatasul(req.body);
         if (Array.isArray(bodyEnvio.payload) && bodyEnvio.payload.length > 0 && typeof bodyEnvio.payload[0] === 'object' && bodyEnvio.payload[0] !== null) {
