@@ -453,6 +453,19 @@ const App = (() => {
       .replace(/'/g, '&#39;');
   }
 
+  // Normalização do código de localização Datasul:
+  // No Datasul CE0105/CE0206, a localização vazia tem código "" (vazio) e descrição "BRANCO".
+  // Nunca deve ser enviado "BRANCO" no campo codLocaliz / codLocalizSai / codLocalizEnt.
+  function normalizarCodLocaliz(loc) {
+    if (!loc) return '';
+    const s = String(loc).trim();
+    const u = s.toUpperCase();
+    if (u === 'BRANCO' || u === '(EM BRANCO)' || u === 'EM BRANCO' || u === 'PADRÃO' || u === 'PADRAO' || u === '(PADRÃO)' || u === '(PADRAO)' || u === '-') {
+      return '';
+    }
+    return s;
+  }
+
   function formatarDataBr(dtStr) {
     if (!dtStr) return '';
     const s = String(dtStr).trim();
@@ -3383,7 +3396,7 @@ const App = (() => {
         }
       } else if (tipo === 'LOCALIZ') {
         const inp = document.getElementById('transf-sai-localiz');
-        if (inp) inp.value = reg.codLocaliz || '';
+        if (inp) inp.value = normalizarCodLocaliz(reg.codLocaliz);
       } else if (tipo === 'LOTE') {
         const inp = document.getElementById('transf-sai-lote');
         if (inp) {
@@ -3398,7 +3411,7 @@ const App = (() => {
     } else if (origem === 'transf_entrada') {
       if (tipo === 'LOCALIZ') {
         const inp = document.getElementById('transf-ent-localiz');
-        if (inp) inp.value = reg.codLocaliz || '';
+        if (inp) inp.value = normalizarCodLocaliz(reg.codLocaliz);
       } else if (tipo === 'LOTE') {
         const inp = document.getElementById('transf-ent-lote');
         if (inp) {
@@ -3419,7 +3432,7 @@ const App = (() => {
         }
       } else if (tipo === 'LOCALIZ') {
         const inp = document.getElementById('avulsa-localiz');
-        if (inp) inp.value = reg.codLocaliz || '';
+        if (inp) inp.value = normalizarCodLocaliz(reg.codLocaliz);
       } else if (tipo === 'LOTE') {
         const inpL = document.getElementById('avulsa-lote');
         if (inpL) inpL.value = reg.lote;
@@ -3429,7 +3442,7 @@ const App = (() => {
         }
         if (reg.codLocaliz) {
           const inpLoc = document.getElementById('avulsa-localiz');
-          if (inpLoc && !inpLoc.value) inpLoc.value = reg.codLocaliz;
+          if (inpLoc && !inpLoc.value) inpLoc.value = normalizarCodLocaliz(reg.codLocaliz);
         }
         if (reg.codRefer) {
           const inpRef = document.getElementById('avulsa-refer');
@@ -3595,7 +3608,7 @@ const App = (() => {
               <span style="width: 14px; text-align: center; font-size: 11px;">🔴</span>
               <strong style="color: #991b1b; min-width: 44px;">Saída:</strong>
               <span>Dep <strong>${escapeHtml(t.codDeposSai)}</strong></span>
-              ${t.codLocalizSai ? `<span>• Loc <strong>${escapeHtml(t.codLocalizSai)}</strong></span>` : ''}
+              ${normalizarCodLocaliz(t.codLocalizSai) ? `<span>• Loc <strong>${escapeHtml(normalizarCodLocaliz(t.codLocalizSai))}</strong></span>` : ''}
               ${t.loteSai ? `<span>• Lote <strong>${escapeHtml(t.loteSai)}</strong></span>` : ''}
               ${t.dtValiLote ? `<span style="color:#64748b;">(${formatarDataBr(t.dtValiLote)})</span>` : ''}
               ${t.codReferSai ? `<span>• Ref <strong>${escapeHtml(t.codReferSai)}</strong></span>` : ''}
@@ -3607,7 +3620,7 @@ const App = (() => {
               <strong style="color: #166534; min-width: 44px;">Entrada:</strong>
               ${t.codDeposEnt ? `
                 <span>Dep <strong>${escapeHtml(t.codDeposEnt)}</strong></span>
-                ${t.codLocalizEnt ? `<span>• Loc <strong>${escapeHtml(t.codLocalizEnt)}</strong></span>` : ''}
+                ${normalizarCodLocaliz(t.codLocalizEnt) ? `<span>• Loc <strong>${escapeHtml(normalizarCodLocaliz(t.codLocalizEnt))}</strong></span>` : ''}
                 ${t.loteEnt ? `<span>• Lote <strong>${escapeHtml(t.loteEnt)}</strong></span>` : ''}
                 ${t.dtValiLoteEnt ? `<span style="color:#64748b;">(${formatarDataBr(t.dtValiLoteEnt)})</span>` : ''}
                 ${t.codReferEnt ? `<span>• Ref <strong>${escapeHtml(t.codReferEnt)}</strong></span>` : ''}
@@ -3763,7 +3776,7 @@ const App = (() => {
             <div class="form-group" style="margin: 0;">
               <label class="form-label" for="transf-sai-localiz">Localização Saída</label>
               <div style="display: flex; gap: 4px;">
-                <input type="text" id="transf-sai-localiz" class="form-input" placeholder="ex: BRANCO" value="${escapeHtml(locSaiVal)}">
+                <input type="text" id="transf-sai-localiz" class="form-input" placeholder="Padrão (Em Branco)" value="${escapeHtml(normalizarCodLocaliz(locSaiVal))}">
                 <button type="button" id="transf-sai-btn-lupa-loc" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLocalizInterna('transf_saida')" title="Buscar Localização">🔍</button>
               </div>
               <div id="transf-sai-loc-tip" style="display: none; font-size: 10.5px; color: #475569; margin-top: 3px; font-weight: 600;"></div>
@@ -3932,18 +3945,18 @@ const App = (() => {
 
     if (inpLocaliz) {
       if (isLocUnica) {
-        const locPadrao = item?.codLocaliz || 'BRANCO';
+        const locPadrao = normalizarCodLocaliz(item?.codLocaliz);
         inpLocaliz.value = locPadrao;
         inpLocaliz.readOnly = true;
         inpLocaliz.style.background = '#f1f5f9';
         inpLocaliz.style.color = '#334155';
         if (btnLupaLoc) btnLupaLoc.disabled = true;
         if (tipLoc) {
-          tipLoc.textContent = `🔒 Localização única do item (${locPadrao}).`;
+          tipLoc.textContent = `🔒 Localização única do item (${locPadrao ? locPadrao : 'Padrão / Em Branco'}).`;
           tipLoc.style.display = 'block';
         }
       } else {
-        inpLocaliz.value = item ? (item.codLocaliz || '') : '';
+        inpLocaliz.value = normalizarCodLocaliz(item?.codLocaliz);
         inpLocaliz.readOnly = false;
         inpLocaliz.style.background = '#ffffff';
         inpLocaliz.style.color = '';
@@ -3990,7 +4003,7 @@ const App = (() => {
 
       const itCodigo = document.getElementById('transf-sai-item')?.value.trim() || '';
       const codDeposSai = document.getElementById('transf-sai-depos')?.value.trim() || '';
-      const codLocalizSai = document.getElementById('transf-sai-localiz')?.value.trim() || '';
+      const codLocalizSai = normalizarCodLocaliz(document.getElementById('transf-sai-localiz')?.value);
       let loteSai = document.getElementById('transf-sai-lote')?.value.trim() || '';
       let dtValiSai = document.getElementById('transf-sai-dt-valid')?.value.trim() || '';
       let codReferSai = document.getElementById('transf-sai-refer')?.value.trim() || '';
@@ -4100,7 +4113,7 @@ const App = (() => {
       depEntPadrao = outro ? outro.codDepos : (depositos[0]?.codDepos || '');
     }
 
-    const locEntPadrao = isLocUnica ? (item?.codLocaliz || transf.codLocalizEnt || '') : (transf.codLocalizEnt || '');
+    const locEntPadrao = normalizarCodLocaliz(isLocUnica ? (item?.codLocaliz || transf.codLocalizEnt || '') : (transf.codLocalizEnt || ''));
     const loteEntPadrao = ehLote ? (transf.loteEnt || transf.loteSai || '') : '';
     const dtValiEntPadrao = ehLote ? (transf.dtValiLoteEnt || transf.dtValiLote || '') : '';
     const refEntPadrao = ehRefer ? (transf.codReferEnt || transf.codReferSai || '') : '';
@@ -4126,7 +4139,7 @@ const App = (() => {
         <div style="display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; color: #334155;">
           <span>Qtd: <strong style="color: #0284c7;">${transf.quantidade}</strong> ${escapeHtml(transf.un || 'UN')}</span>
           <span>• Dep Origem: <strong>${escapeHtml(transf.codDeposSai)}</strong></span>
-          ${transf.codLocalizSai ? `<span>• Loc: <strong>${escapeHtml(transf.codLocalizSai)}</strong></span>` : ''}
+          <span>• Loc: <strong>${escapeHtml(normalizarCodLocaliz(transf.codLocalizSai) || 'Padrão (Em Branco)')}</strong></span>
           ${transf.loteSai ? `<span>• Lote: <strong>${escapeHtml(transf.loteSai)}</strong></span>` : ''}
           ${transf.dtValiLote ? `<span style="color:#64748b;">(${formatarDataBr(transf.dtValiLote)})</span>` : ''}
         </div>
@@ -4151,10 +4164,10 @@ const App = (() => {
           <div class="form-group" style="margin-bottom: 10px;">
             <label class="form-label" for="transf-ent-localiz">Localização Entrada</label>
             <div style="display: flex; gap: 4px;">
-              <input type="text" id="transf-ent-localiz" class="form-input" placeholder="ex: BRANCO" value="${escapeHtml(locEntPadrao)}" ${isLocUnica ? 'readonly style="background:#f1f5f9; color:#334155;"' : ''}>
+              <input type="text" id="transf-ent-localiz" class="form-input" placeholder="Padrão (Em Branco)" value="${escapeHtml(normalizarCodLocaliz(locEntPadrao))}" ${isLocUnica ? 'readonly style="background:#f1f5f9; color:#334155;"' : ''}>
               <button type="button" id="transf-ent-btn-lupa-loc" class="btn btn-secondary" style="width: auto; padding: 0 8px;" onclick="App.abrirPesquisaLocalizInterna('transf_entrada')" title="Buscar Localização" ${isLocUnica ? 'disabled' : ''}>🔍</button>
             </div>
-            ${isLocUnica ? `<div id="transf-ent-loc-tip" style="font-size: 10.5px; color: #475569; margin-top: 3px; font-weight: 600;">🔒 Localização única do item (${escapeHtml(locEntPadrao || 'Padrão')}).</div>` : ''}
+            ${isLocUnica ? `<div id="transf-ent-loc-tip" style="font-size: 10.5px; color: #475569; margin-top: 3px; font-weight: 600;">🔒 Localização única do item (${escapeHtml(normalizarCodLocaliz(locEntPadrao) || 'Padrão / Em Branco')}).</div>` : ''}
           </div>
 
           <!-- Bloco Lote Entrada e Data de Validade com Regra Crítica -->
@@ -4269,7 +4282,7 @@ const App = (() => {
     const ehRefer = (tipoConEst === 4);
 
     const codDeposEnt = document.getElementById('transf-ent-depos')?.value.trim() || '';
-    const codLocalizEnt = document.getElementById('transf-ent-localiz')?.value.trim() || '';
+    const codLocalizEnt = normalizarCodLocaliz(document.getElementById('transf-ent-localiz')?.value);
     let loteEnt = document.getElementById('transf-ent-lote')?.value.trim() || '';
     let dtValiEnt = document.getElementById('transf-ent-dt-valid')?.value.trim() || '';
     let codReferEnt = document.getElementById('transf-ent-refer')?.value.trim() || '';
@@ -4302,6 +4315,8 @@ const App = (() => {
     }
 
     // Atualiza o objeto da transferência
+    transf.codDeposSai = transf.codDeposSai || '';
+    transf.codLocalizSai = normalizarCodLocaliz(transf.codLocalizSai);
     transf.codDeposEnt = codDeposEnt;
     transf.codLocalizEnt = codLocalizEnt;
     transf.loteEnt = loteEnt;
@@ -4354,12 +4369,12 @@ const App = (() => {
         serie: transf.serie || '',
         quantidade: Number(transf.quantidade),
         codDeposSai: transf.codDeposSai,
-        codLocalizSai: transf.codLocalizSai || '',
+        codLocalizSai: normalizarCodLocaliz(transf.codLocalizSai),
         loteSai: transf.loteSai || '',
         dtValiLote: transf.dtValiLote || '',
         codReferSai: transf.codReferSai || '',
         codDeposEnt: transf.codDeposEnt,
-        codLocalizEnt: transf.codLocalizEnt || '',
+        codLocalizEnt: normalizarCodLocaliz(transf.codLocalizEnt),
         loteEnt: transf.loteEnt || '',
         dtValiLoteEnt: transf.dtValiLoteEnt || '',
         codReferEnt: transf.codReferEnt || ''
@@ -4473,7 +4488,7 @@ const App = (() => {
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 11.5px;">
             <div style="color: #991b1b; font-weight: 800; margin-bottom: 4px;">🔴 Saída (Origem)</div>
             <div>Depósito: <strong>${escapeHtml(transf.codDeposSai)}</strong></div>
-            <div>Localiz: <strong>${escapeHtml(transf.codLocalizSai || '-')}</strong></div>
+            <div>Localiz: <strong>${escapeHtml(normalizarCodLocaliz(transf.codLocalizSai) || 'Padrão (Em Branco)')}</strong></div>
             <div>Lote: <strong>${escapeHtml(transf.loteSai || '-')}</strong></div>
             <div>Validade: <strong>${transf.dtValiLote ? formatarDataBr(transf.dtValiLote) : '-'}</strong></div>
             <div>Ref: <strong>${escapeHtml(transf.codReferSai || '-')}</strong></div>
@@ -4483,7 +4498,7 @@ const App = (() => {
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; font-size: 11.5px;">
             <div style="color: #166534; font-weight: 800; margin-bottom: 4px;">🟢 Entrada (Destino)</div>
             <div>Depósito: <strong>${escapeHtml(transf.codDeposEnt)}</strong></div>
-            <div>Localiz: <strong>${escapeHtml(transf.codLocalizEnt || '-')}</strong></div>
+            <div>Localiz: <strong>${escapeHtml(normalizarCodLocaliz(transf.codLocalizEnt) || 'Padrão (Em Branco)')}</strong></div>
             <div>Lote: <strong>${escapeHtml(transf.loteEnt || '-')}</strong></div>
             <div>Validade: <strong>${transf.dtValiLoteEnt ? formatarDataBr(transf.dtValiLoteEnt) : '-'}</strong></div>
             <div>Ref: <strong>${escapeHtml(transf.codReferEnt || '-')}</strong></div>
@@ -6934,7 +6949,7 @@ const App = (() => {
 
     // Inicializa valores da Aba 2 (Entrada Acabado)
     rep.codDeposEnt = ord.codDepos || 'ACA';
-    rep.codLocalizEnt = ord.locUnica ? (ord.codLocaliz || 'BRANCO') : '';
+    rep.codLocalizEnt = ord.locUnica ? normalizarCodLocaliz(ord.codLocaliz) : '';
     rep.codReferEnt = ord.codRefer || '';
     rep.loteEnt = ord.loteSerie || '';
     rep.dtValiLoteEnt = ord.dtValiLote ? ord.dtValiLote.slice(0, 10) : '';
@@ -7134,7 +7149,7 @@ const App = (() => {
             <div>
               <label class="form-label" style="font-size: 11.5px;">Localização Entrada:</label>
               <input type="text" id="rep-input-loc-ent" class="form-input" style="font-size: 12.5px; ${isLocUnica ? 'background:#f1f5f9; color:#475569;' : ''}"
-                     value="${escapeHtml(rep.codLocalizEnt || (isLocUnica ? 'BRANCO' : ''))}"
+                     value="${escapeHtml(normalizarCodLocaliz(rep.codLocalizEnt))}" placeholder="Padrão (Em Branco)"
                      ${isLocUnica ? 'readonly' : ''}
                      oninput="stateProducao.reporte.codLocalizEnt = this.value">
               ${isLocUnica ? '<div style="font-size: 10px; color: #64748b; margin-top: 2px;">🔒 Localização única do item</div>' : ''}
@@ -7278,9 +7293,9 @@ const App = (() => {
     const nroDocto = inpDoc ? inpDoc.value.trim() : (rep.nroDocto || String(ord.nrOrdProdu));
     const serie = inpSerie ? inpSerie.value.trim() : (rep.serie || '');
     const codDeposSai = inpDepSai ? inpDepSai.value.trim() : (rep.codDeposSai || 'PRO');
-    const codLocalSai = inpLocSai ? inpLocSai.value.trim() : (rep.codLocalSai || '');
+    const codLocalSai = normalizarCodLocaliz(inpLocSai ? inpLocSai.value : (rep.codLocalSai || ''));
     const codDeposEnt = inpDepEnt ? inpDepEnt.value.trim() : (rep.codDeposEnt || ord.codDepos || 'ACA');
-    const codLocalizEnt = inpLocEnt ? inpLocEnt.value.trim() : (rep.codLocalizEnt || '');
+    const codLocalizEnt = normalizarCodLocaliz(inpLocEnt ? inpLocEnt.value : (rep.codLocalizEnt || ''));
     const codReferEnt = inpReferEnt ? inpReferEnt.value.trim() : (rep.codReferEnt || ord.codRefer || '');
     const loteEnt = inpLoteEnt ? inpLoteEnt.value.trim() : (rep.loteEnt || ord.loteSerie || '');
     const dtValiLoteEnt = inpDtValidEnt ? inpDtValidEnt.value : (rep.dtValiLoteEnt || null);

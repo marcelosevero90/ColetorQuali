@@ -93,7 +93,13 @@ PROCEDURE pi-find:
             ASSIGN c-codDeposEnt    = oJsonPayloadObject:GetCharacter("codDeposEnt")
                    c-codLocalizEnt  = oJsonPayloadObject:GetCharacter("codLocalizEnt")
                    c-loteEnt        = oJsonPayloadObject:GetCharacter("loteEnt") 
-                   c-codReferEnt    = oJsonPayloadObject:GetCharacter("codReferEnt").                      
+                   c-codReferEnt    = oJsonPayloadObject:GetCharacter("codReferEnt").
+
+            /* Normalizacao de localizacao: BRANCO eh descricao, codigo Datasul eh string vazia */
+            IF c-codLocalizSai = "BRANCO" OR c-codLocalizSai = "(EM BRANCO)" OR c-codLocalizSai = "PADRAO" OR c-codLocalizSai = ? THEN
+                ASSIGN c-codLocalizSai = "".
+            IF c-codLocalizEnt = "BRANCO" OR c-codLocalizEnt = "(EM BRANCO)" OR c-codLocalizEnt = "PADRAO" OR c-codLocalizEnt = ? THEN
+                ASSIGN c-codLocalizEnt = "".                      
                                                 
         END.                                            
         

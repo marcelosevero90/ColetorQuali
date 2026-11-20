@@ -1,10 +1,22 @@
 {
   "name": "Coletor Quali",
   "short_name": "Coletor Quali",
-  "description": "Aplicativo Coletor Móvel Quali — Inventário Físico Offline-First",
+  "description": "Aplicativo Coletor Móvel Quali — Operações Mobile TOTVS Datasul Offline-First",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f1f5f9",
+  "background_color": "#0b1329",
   "theme_color": "#0284c7",
-  "orientation": "portrait"
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
 }

@@ -20,6 +20,29 @@ const datasulApi = require('./routes/datasulApi');
 app.use('/api/discovery', aliasService);
 app.use('/api/datasul', datasulApi);
 
+// Sanitização defensiva de localização Datasul:
+// No Datasul CE0105/CE0206, código vazio "" tem descrição "BRANCO".
+// Nunca permitir que a string "BRANCO" chegue ao Progress/PASOE.
+function sanitizarLocalizDatasul(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizarLocalizDatasul);
+  }
+  const chavesLoc = ['codlocaliz', 'codlocalizsai', 'codlocalizent', 'codlocalsai', 'localiz', 'cod-localiz', 'codlocal'];
+  const novo = { ...obj };
+  for (const k of Object.keys(novo)) {
+    if (chavesLoc.includes(k.toLowerCase()) && typeof novo[k] === 'string') {
+      const v = novo[k].trim().toUpperCase();
+      if (v === 'BRANCO' || v === '(EM BRANCO)' || v === 'EM BRANCO' || v === 'PADRAO' || v === 'PADRÃO' || v === '(PADRAO)' || v === '(PADRÃO)' || v === '-') {
+        novo[k] = '';
+      }
+    } else if (typeof novo[k] === 'object' && novo[k] !== null) {
+      novo[k] = sanitizarLocalizDatasul(novo[k]);
+    }
+  }
+  return novo;
+}
+
 // Proxy seguro para conexões ao PASOE externo (evita problemas de CORS / VPN / SSL / redirects no browser)
 app.all('/api/pasoe-proxy', async (req, res) => {
   let targetUrl = req.query.url;
@@ -80,7 +103,7 @@ app.all('/api/pasoe-proxy', async (req, res) => {
     };
 
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.body && Object.keys(req.body).length > 0) {
-      const bodyEnvio = { ...req.body };
+      let bodyEnvio = sanitizarLocalizDatasul(req.body);
       // Compatibilidade Progress ABL: se payload for array com objeto, espelha propriedades na raiz para programas legados que leem do root
       if (Array.isArray(bodyEnvio.payload) && bodyEnvio.payload.length > 0 && typeof bodyEnvio.payload[0] === 'object' && bodyEnvio.payload[0] !== null) {
         Object.keys(bodyEnvio.payload[0]).forEach(k => {

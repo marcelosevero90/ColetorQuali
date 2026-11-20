@@ -21,6 +21,29 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Sanitização defensiva de localização Datasul:
+// No Datasul CE0105/CE0206, código vazio "" tem descrição "BRANCO".
+// Nunca permitir que a string "BRANCO" chegue ao Progress/PASOE.
+function sanitizarLocalizDatasul(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizarLocalizDatasul);
+  }
+  const chavesLoc = ['codlocaliz', 'codlocalizsai', 'codlocalizent', 'codlocalsai', 'localiz', 'cod-localiz', 'codlocal'];
+  const novo = { ...obj };
+  for (const k of Object.keys(novo)) {
+    if (chavesLoc.includes(k.toLowerCase()) && typeof novo[k] === 'string') {
+      const v = novo[k].trim().toUpperCase();
+      if (v === 'BRANCO' || v === '(EM BRANCO)' || v === 'EM BRANCO' || v === 'PADRAO' || v === 'PADRÃO' || v === '(PADRAO)' || v === '(PADRÃO)' || v === '-') {
+        novo[k] = '';
+      }
+    } else if (typeof novo[k] === 'object' && novo[k] !== null) {
+      novo[k] = sanitizarLocalizDatasul(novo[k]);
+    }
+  }
+  return novo;
+}
+
 // Obter o IP local do notebook na rede Wi-Fi / LAN
 function getLocalIp() {
   const interfaces = os.networkInterfaces();
@@ -106,7 +129,7 @@ app.all('*', async (req, res) => {
     };
 
     if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body && Object.keys(req.body).length > 0) {
-      const bodyEnvio = { ...req.body };
+      let bodyEnvio = sanitizarLocalizDatasul(req.body);
       // Compatibilidade Progress ABL: espelha payload na raiz se necessário
       if (Array.isArray(bodyEnvio.payload) && bodyEnvio.payload.length > 0 && typeof bodyEnvio.payload[0] === 'object') {
         Object.keys(bodyEnvio.payload[0]).forEach(k => {
