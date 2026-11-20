@@ -11,15 +11,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=3.2">
   <script>
-    // Detecção imediata de ambiente nativo Android (Capacitor) ou tela móvel
+    // Ativa modo nativo apenas se estiver realmente no APK Android (Capacitor/Cordova) ou explicitamente com ?native=true
     (function() {
+      const urlParams = new URLSearchParams(window.location.search);
       const isNative = Boolean(
         window.Capacitor ||
         window.cordova ||
         window.location.protocol === 'capacitor:' ||
         window.location.protocol === 'file:' ||
-        /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ||
-        window.innerWidth <= 768
+        urlParams.get('native') === 'true'
       );
       if (isNative) {
         document.documentElement.classList.add('is-native-app');
@@ -107,6 +107,9 @@
 
           <div style="display: flex; gap: 5px; align-items: center;">
             <span class="status-badge-network online" id="status-rede-badge-header" style="font-size: 10px; padding: 2px 7px; display: none;">● Online</span>
+            <button class="header-action-icon-btn" type="button" onclick="Datasul.solicitarLoginAdmin('erp')" title="Painel Admin TOTVS ERP (Configurar ALIAS & Logs)">
+              ⚙️
+            </button>
             <button class="header-action-icon-btn" type="button" onclick="App.abrirModalContingencia()" title="Exportar Contingência (CSV/TXT/JSON)">
               💾
             </button>
@@ -150,9 +153,14 @@
     <div class="erp-container" id="erp-container" style="display: none;">
 
       <div class="totvs-desktop-topbar">
-        <div class="totvs-desktop-logo">
-          <span>🏢</span>
-          <span>TOTVS Datasul 12 — Gestão e Configuração PASOE</span>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button type="button" class="btn btn-secondary" style="background:#0284c7; color:#fff; border:none; padding:4px 10px; font-size:11.5px; font-weight:700; border-radius:4px; cursor:pointer;" onclick="App.setModoVisualizacao('app')">
+            ‹ Voltar ao Coletor
+          </button>
+          <div class="totvs-desktop-logo">
+            <span>🏢</span>
+            <span>TOTVS Datasul 12 — Gestão e Configuração PASOE</span>
+          </div>
         </div>
         <div style="display: flex; gap: 10px; align-items: center; font-size: 11.5px;">
           <label for="erp-company-select" style="color: #bae6fd; font-weight: 700;">Empresa (companyId):</label>

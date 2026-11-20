@@ -141,6 +141,11 @@ const App = (() => {
 
     atualizarBarraStatus();
     navegar('login');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('view') === 'erp') {
+      setTimeout(() => setModoVisualizacao('erp'), 200);
+    }
   }
 
   function atualizarRelogio() {
@@ -561,6 +566,9 @@ const App = (() => {
         <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
           <button type="submit" class="btn btn-primary" id="btn-submit-login">
             Acessar Sistema ➔
+          </button>
+          <button type="button" class="btn btn-secondary" style="font-size: 11.5px; padding: 7px; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-weight: 700;" onclick="Datasul.solicitarLoginAdmin('erp')">
+            ⚙️ Painel Admin Totvs (Gerenciar ALIAS / Logs PASOE)
           </button>
         </div>
       </form>
@@ -1074,6 +1082,12 @@ const App = (() => {
           <div class="home-card-icon-wrap icon-wrap-purple">🔍</div>
           <div class="home-card-title">Histórico & Auditoria</div>
           <div class="home-card-desc">Consultar leituras gravadas no dispositivo</div>
+        </button>
+
+        <button type="button" class="home-service-card" onclick="Datasul.solicitarLoginAdmin('erp')">
+          <div class="home-card-icon-wrap" style="background:#f1f5f9; color:#0f172a; font-size:22px;">⚙️</div>
+          <div class="home-card-title">Painel Admin (PASOE)</div>
+          <div class="home-card-desc">Gerenciar ALIAS, endpoints e logs</div>
         </button>
       </div>
 
