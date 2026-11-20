@@ -319,10 +319,15 @@ function sanitizarPayloadReporteOrdProd(obj, req) {
     const locSai = normalizarLoc(it.codLocalSai || it.codLocalizSai);
     const lote = String(it.lote || it.loteEnt || '').trim();
     const refer = String(it.codRefer || it.codReferEnt || '').trim();
-    const dtVali = it.dtValiLote ? normalizarDataIso(it.dtValiLote) : '';
+    let dtVali = it.dtValiLote ? normalizarDataIso(it.dtValiLote) : '';
     const qtRep = Number(it.qtReporte || it.quantidade || 0);
     const qtRef = Number(it.qtRefugada || 0);
     const dtRep = normalizarDataIso(it.dtReporte) || new Date().toISOString().slice(0, 10);
+    if (lote && (!dtVali || dtVali <= dtRep)) {
+      const dF = new Date(dtRep);
+      dF.setDate(dF.getDate() + 365);
+      dtVali = dF.toISOString().slice(0, 10);
+    }
     const ctRef = String(it.ctRefugo || '').trim();
     const scRef = String(it.scRefugo || '').trim();
     const nroDoc = String(it.nroDocto || (nrOrd ? String(nrOrd) : '')).trim();
@@ -336,7 +341,7 @@ function sanitizarPayloadReporteOrdProd(obj, req) {
       codLocaliz: locEnt,
       lote: lote,
       codRefer: refer,
-      dtValiLote: dtVali || dtRep,
+      dtValiLote: dtVali || '',
       qtReporte: qtRep,
       qtRefugada: qtRef,
       dtReporte: dtRep,

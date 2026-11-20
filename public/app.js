@@ -7070,7 +7070,9 @@ const App = (() => {
     rep.codLocalizEnt = ord.locUnica ? normalizarCodLocaliz(ord.codLocaliz) : '';
     rep.codReferEnt = ord.codRefer || '';
     rep.loteEnt = ord.loteSerie || '';
-    rep.dtValiLoteEnt = ord.dtValiLote ? ord.dtValiLote.slice(0, 10) : '';
+    const dVali365 = new Date();
+    dVali365.setDate(dVali365.getDate() + 365);
+    rep.dtValiLoteEnt = ord.dtValiLote ? ord.dtValiLote.slice(0, 10) : dVali365.toISOString().slice(0, 10);
 
     renderizarTela2DetalheReporte();
 
@@ -7100,6 +7102,7 @@ const App = (() => {
     const saldo = Math.max(0, Number(ord.qtOrdem || 0) - Number(ord.qtProduzida || 0));
     const ehLote = Number(ord.tipoConEst) === 3;
     const ehRefer = Number(ord.tipoConEst) === 4;
+    const exigeLote = (ehLote || ehRefer);
     const isLocUnica = Boolean(ord.locUnica === true || ord.locUnica === 1 || ord.locUnica === 'true');
 
     container.innerHTML = `
@@ -7284,30 +7287,30 @@ const App = (() => {
           ` : ''}
 
           <!-- Bloco de Controle de Lote -->
-          <div id="rep-bloco-lote" style="background: ${ehLote ? '#fffbeb' : '#f8fafc'}; border: 1px solid ${ehLote ? '#fde68a' : '#cbd5e1'}; border-radius: 8px; padding: 10px; margin-bottom: 10px;">
-            <div style="font-size: 12px; font-weight: 700; color: ${ehLote ? '#b45309' : '#64748b'}; margin-bottom: 6px;">
-              ${ehLote ? 'Controle de Lote (tipoConEst 3)' : 'Item sem controle de lote'}
+          <div id="rep-bloco-lote" style="background: ${exigeLote ? '#fffbeb' : '#f8fafc'}; border: 1px solid ${exigeLote ? '#fde68a' : '#cbd5e1'}; border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+            <div style="font-size: 12px; font-weight: 700; color: ${exigeLote ? '#b45309' : '#64748b'}; margin-bottom: 6px;">
+              ${ehLote ? 'Controle de Lote (tipoConEst 3)' : (ehRefer ? 'Controle por Referência e Lote (tipoConEst 4)' : 'Item sem controle de lote')}
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px;">
               <div>
-                <label class="form-label" style="font-size: 11.5px;">Lote/Série ${ehLote ? '<span style="color:#dc2626;">*</span>' : ''}:</label>
+                <label class="form-label" style="font-size: 11.5px;">Lote/Série ${exigeLote ? '<span style="color:#dc2626;">*</span>' : ''}:</label>
                 <input type="text" id="rep-input-lote-ent" class="form-input" style="font-size: 12.5px; font-weight: 700;"
-                       value="${escapeHtml(rep.loteEnt || ord.loteSerie || '')}" placeholder="Lote..."
-                       ${!ehLote ? 'disabled' : ''}
+                       value="${escapeHtml(rep.loteEnt || ord.loteSerie || '')}" placeholder="Informe o Lote..."
+                       ${!exigeLote ? 'disabled' : ''}
                        oninput="App.onLoteReporteAlterado(this.value)">
               </div>
               <div>
-                <label class="form-label" style="font-size: 11.5px;">Validade Lote <span id="rep-lote-valid-req" style="display:none; color:#dc2626;">*</span>:</label>
+                <label class="form-label" style="font-size: 11.5px;">Validade Lote <span id="rep-lote-valid-req" style="${exigeLote ? 'display:inline;' : 'display:none;'} color:#dc2626;">*</span>:</label>
                 <input type="date" id="rep-input-dt-valid-ent" class="form-input" style="font-size: 12.5px;"
                        value="${rep.dtValiLoteEnt || ''}"
-                       ${!ehLote ? 'disabled' : ''}
+                       ${!exigeLote ? 'disabled' : ''}
                        onchange="stateProducao.reporte.dtValiLoteEnt = this.value">
               </div>
             </div>
 
             <div id="rep-lote-tip" style="font-size: 10.5px; color: #64748b; line-height: 1.3;">
-              ${ehLote ? 'Informe o lote para verificação automática de validade.' : 'Este item não utiliza controle por lote.'}
+              ${exigeLote ? 'Informe o lote e a data de validade futura (+365 dias) para o acabamento da ordem.' : 'Este item não utiliza controle por lote.'}
             </div>
           </div>
         </div>
@@ -7429,18 +7432,24 @@ const App = (() => {
     }
 
     const ehLote = Number(ord.tipoConEst) === 3;
-    if (ehLote && !loteEnt) {
-      alert('Item controlado por lote (tipoConEst 3). É obrigatório informar o Lote na aba Entrada Acabado.');
+    const ehRefer = Number(ord.tipoConEst) === 4;
+    const exigeLote = (ehLote || ehRefer);
+
+    if (exigeLote && !loteEnt) {
+      alert(`Item controlado por ${ehRefer ? 'referência/lote (tipoConEst 4)' : 'lote (tipoConEst 3)'}. É obrigatório informar o Lote na aba Entrada Acabado.`);
+      alternarAbaReporte('entrada');
+      setTimeout(() => document.getElementById('rep-input-lote-ent')?.focus(), 100);
       return;
     }
 
-    if (ehLote && !rep.loteExiste && !dtValiLoteEnt) {
-      alert('Lote novo! É obrigatório informar a data de validade na aba Entrada Acabado.');
-      return;
+    let dtValiSafe = dtValiLoteEnt || '';
+    if (exigeLote && (!dtValiSafe || dtValiSafe <= dtReporte)) {
+      const dFut = new Date(dtReporte || new Date());
+      dFut.setDate(dFut.getDate() + 365);
+      dtValiSafe = dFut.toISOString().slice(0, 10);
     }
 
     const nrOrd = parseInt(ord.nrOrdProdu || ord.nrOrdem || 0, 10);
-    const dtValiSafe = dtValiLoteEnt || '';
 
     const payloadItem = {
       nrOrdProdu: nrOrd,
@@ -7450,7 +7459,7 @@ const App = (() => {
       codLocaliz: codLocalizEnt,
       lote: loteEnt,
       codRefer: codReferEnt,
-      dtValiLote: dtValiSafe || dtReporte || new Date().toISOString().slice(0, 10),
+      dtValiLote: dtValiSafe,
       qtReporte: Number(qtdReporte),
       qtRefugada: Number(qtdRefugada),
       dtReporte: dtReporte,

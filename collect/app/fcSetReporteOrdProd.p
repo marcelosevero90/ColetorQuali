@@ -1,4 +1,4 @@
-{utp/ut-api.i}
+ï»¿{utp/ut-api.i}
 {utp/ut-api-utils.i}
 {utp/ut-api-action.i pi-find PUT /~*}
 {utp/ut-api-notfound.i}
@@ -217,14 +217,14 @@ PROCEDURE pi-find:
             jsonOutput = NEW JsonObject().
             jsonOutput:ADD('detailedMessage',   c-erros-lista).
             jsonOutput:ADD('code',              '17006').
-            jsonOutput:ADD('message',           'Ordem Prod nÆo encontrada: ' + STRING(i-nrOrdProdu)).
+            jsonOutput:ADD('message',           'Ordem Prod nï¿½o encontrada: ' + STRING(i-nrOrdProdu)).
             jsonOutput:ADD('type',              'ERROR').   
             
             RETURN "OK".
             
         END.
         
-        FIND FIRST ITEM OF ord-prod NO-LOCK NO-ERROR.
+        FIND FIRST item NO-LOCK WHERE item.it-codigo = ord-prod.it-codigo NO-ERROR.
         FIND FIRST param-cp NO-LOCK NO-ERROR.
                 
         
@@ -259,8 +259,10 @@ PROCEDURE pi-find:
                tt-rep-prod.sc-refugo             = c-scRefugo            
                .        
         
-        IF c-lote <> '' AND ITEM.tipo-con-est = 3 THEN DO:
-            ASSIGN tt-rep-prod.dt-vali-lote = d-dtValiLote.    
+        IF c-lote <> '' AND (ITEM.tipo-con-est = 3 OR ITEM.tipo-con-est = 4) THEN DO:
+            IF d-dtValiLote = ? OR d-dtValiLote <= d-dtReporte THEN
+                ASSIGN d-dtValiLote = d-dtReporte + 365.
+            ASSIGN tt-rep-prod.dt-vali-lote = d-dtValiLote.
         END.
                         
         RUN cpp/cpapi001.p  (INPUT-OUTPUT TABLE tt-rep-prod,
@@ -305,7 +307,7 @@ PROCEDURE pi-find:
         jsonOutput = NEW JsonObject().
         jsonOutput:ADD('detailedMessage',   ERROR-STATUS:GET-MESSAGE(1)).
         jsonOutput:ADD('code',              '0').
-        jsonOutput:ADD('message',           'Requisi‡Æo efetuada com sucesso no Datasul!').
+        jsonOutput:ADD('message',           'Requisiï¿½ï¿½o efetuada com sucesso no Datasul!').
         jsonOutput:ADD('type',              'OK').           
         END FINALLY.*/
               
