@@ -534,7 +534,7 @@ const App = (() => {
           </div>
           <datalist id="alias-options-list">
             <option value="demo">demo - Simulador Local Offline-First</option>
-            <option value="teste">teste - PASOE Real (10.15.1.20:8180)</option>
+            <option value="teste">teste - PASOE Real (Cloudflare Tunnel)</option>
             <option value="blanver">blanver - CYG Biotech</option>
             <option value="santacolomba">santacolomba - Santa Colomba (Emp 002)</option>
           </datalist>
@@ -619,27 +619,22 @@ const App = (() => {
     state.aliasInput = alias;
     if (!alias) return;
 
-    // 1. Checa se há override salvo no dispositivo (localStorage do navegador/app)
-    let overrideAlias = null;
-    try {
-      const customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
-      if (customMap[alias]) overrideAlias = customMap[alias];
-    } catch (e) {}
-
-    if (overrideAlias) {
-      if ((overrideAlias.status || 'ativo').toLowerCase() === 'inativo') {
+    const aplicarDadosAlias = async (dados, ehOffline = false) => {
+      if ((dados.status || 'ativo').toLowerCase() === 'inativo') {
         infoTag.textContent = `✕ O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`;
         infoTag.style.color = '#dc2626';
         mostrarAviso(`O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`, 'error');
-        return;
+        return false;
       }
-      state.session.pasoeUrl = overrideAlias.pasoeUrl;
-      state.session.alias = overrideAlias.alias;
-      await DB.putConfig(`alias_${alias}`, overrideAlias);
-      infoTag.textContent = `✓ ${overrideAlias.nomeEmpresa || alias} (${overrideAlias.pasoeUrl})`;
-      infoTag.style.color = '#059669';
+      state.session.pasoeUrl = dados.pasoeUrl;
+      state.session.alias = dados.alias;
+      await DB.putConfig(`alias_${alias}`, dados);
+      infoTag.textContent = ehOffline
+        ? `● Offline: ${dados.nomeEmpresa || alias} (${dados.pasoeUrl})`
+        : `✓ ${dados.nomeEmpresa || alias} (${dados.pasoeUrl})`;
+      infoTag.style.color = ehOffline ? '#d97706' : '#059669';
 
-      const empDefault = DB.normalizarEmpresa(overrideAlias.empresaPrincipal || '001');
+      const empDefault = DB.normalizarEmpresa(dados.empresaPrincipal || '001');
       if (empresaEl) {
         const existeOpt = Array.from(empresaEl.options).some(o => o.value === empDefault);
         if (!existeOpt) {
@@ -651,59 +646,50 @@ const App = (() => {
         empresaEl.value = empDefault;
         state.empresaInput = empDefault;
       }
-      return;
-    }
+      return true;
+    };
 
-    if (!isOnline()) {
-      const aliasSalvo = await DB.getConfig(`alias_${alias}`);
-      if (aliasSalvo) {
-        state.session.pasoeUrl = aliasSalvo.pasoeUrl;
-        infoTag.textContent = `● Offline: usando ALIAS '${alias}' em cache local.`;
-        infoTag.style.color = '#d97706';
-      } else {
-        infoTag.textContent = '● Offline: tente entrar com último login sincronizado.';
-        infoTag.style.color = '#dc2626';
-      }
-      return;
-    }
-
-    try {
-      infoTag.textContent = `Consultando Discovery '${alias}'...`;
-      const res = await fetch(`/api/discovery/resolve?alias=${encodeURIComponent(alias)}`);
-      const data = await res.json();
-      if (data.success) {
-        if (data.status === 'inativo') {
-          infoTag.textContent = `✕ O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`;
+    // 1. Se estiver ONLINE, busca OBRIGATORIAMENTE no servidor oficial Vercel / Discovery
+    if (isOnline()) {
+      try {
+        infoTag.textContent = `Consultando Discovery '${alias}'...`;
+        const urlDisc = window.ColetorGateway
+          ? window.ColetorGateway.getDiscoveryUrl(alias)
+          : `/api/discovery/resolve?alias=${encodeURIComponent(alias)}`;
+        const res = await fetch(urlDisc);
+        const data = await res.json();
+        if (data.success) {
+          await aplicarDadosAlias(data, false);
+          return;
+        } else {
+          infoTag.textContent = `✕ ${data.mensagem || 'ALIAS não encontrado.'}`;
           infoTag.style.color = '#dc2626';
-          mostrarAviso(`O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`, 'error');
           return;
         }
-        state.session.pasoeUrl = data.pasoeUrl;
-        state.session.alias = data.alias;
-        await DB.putConfig(`alias_${alias}`, data);
-        infoTag.textContent = `✓ ${data.nomeEmpresa} (${data.pasoeUrl})`;
-        infoTag.style.color = '#059669';
-
-        const empDefault = DB.normalizarEmpresa(data.empresaPrincipal || '001');
-        if (empresaEl) {
-          const existeOpt = Array.from(empresaEl.options).some(o => o.value === empDefault);
-          if (!existeOpt) {
-            const opt = document.createElement('option');
-            opt.value = empDefault;
-            opt.textContent = `Empresa ${empDefault}`;
-            empresaEl.appendChild(opt);
-          }
-          empresaEl.value = empDefault;
-          state.empresaInput = empDefault;
-        }
-      } else {
-        infoTag.textContent = `✕ ${data.mensagem}`;
-        infoTag.style.color = '#dc2626';
+      } catch (e) {
+        console.warn('Falha ao consultar Discovery na nuvem, tentando cache local:', e);
       }
-    } catch (e) {
-      infoTag.textContent = 'Aviso: Discovery indisponível, operando via cache.';
-      infoTag.style.color = '#d97706';
     }
+
+    // 2. MODO OFFLINE ou contingência: consulta cache local do dispositivo
+    const aliasCache = await DB.getConfig(`alias_${alias}`);
+    if (aliasCache) {
+      await aplicarDadosAlias(aliasCache, true);
+      return;
+    }
+
+    let overrideAlias = null;
+    try {
+      const customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
+      if (customMap[alias]) overrideAlias = customMap[alias];
+    } catch (e) {}
+    if (overrideAlias) {
+      await aplicarDadosAlias(overrideAlias, true);
+      return;
+    }
+
+    infoTag.textContent = isOnline() ? `✕ ALIAS '${alias}' não encontrado.` : '● Offline: tente entrar com último login sincronizado.';
+    infoTag.style.color = '#dc2626';
   }
 
   function onLoginEmpresaChange() {
@@ -754,7 +740,8 @@ const App = (() => {
       // Validação de status do ALIAS no Discovery (se online)
       if (isOnline()) {
         try {
-          const resCheck = await fetch(`/api/discovery/resolve?alias=${encodeURIComponent(alias)}`);
+          const urlDisc = window.ColetorGateway ? window.ColetorGateway.getDiscoveryUrl(alias) : `/api/discovery/resolve?alias=${encodeURIComponent(alias)}`;
+          const resCheck = await fetch(urlDisc);
           if (resCheck.ok) {
             const dataCheck = await resCheck.json();
             if (dataCheck.status === 'inativo' || dataCheck.inativo) {
@@ -827,8 +814,9 @@ const App = (() => {
       }
 
       // MODO ONLINE:
-      // 1. Resolve ALIAS
-      const resDisc = await fetch(`/api/discovery/resolve?alias=${encodeURIComponent(alias)}`);
+      // 1. Resolve ALIAS obrigatoriamente no Discovery oficial (Vercel ou Gateway)
+      const urlDisc = window.ColetorGateway ? window.ColetorGateway.getDiscoveryUrl(alias) : `/api/discovery/resolve?alias=${encodeURIComponent(alias)}`;
+      const resDisc = await fetch(urlDisc);
       const dataDisc = await resDisc.json();
       if (!dataDisc.success) {
         throw new Error(dataDisc.mensagem || 'ALIAS inválido.');

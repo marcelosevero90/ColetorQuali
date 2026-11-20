@@ -15,7 +15,7 @@ function carregarAliases() {
       nomeEmpresa: 'AMBIENTE REAL PASOE (PROMOB)',
       empresaPrincipal: '001',
       codEstabelPadrao: '101',
-      pasoeUrl: 'http://10.15.1.20:8180/api/promob/v1',
+      pasoeUrl: 'https://jazz-yale-bra-stomach.trycloudflare.com',
       usuarioIntegracao: 'matheus.st',
       senhaIntegracao: 'qwe8451',
       status: 'ativo',
