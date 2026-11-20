@@ -150,11 +150,14 @@ const App = (() => {
 
   function atualizarStatusRede() {
     const badge = document.getElementById('status-rede-badge');
+    const badgeHeader = document.getElementById('status-rede-badge-header');
     const online = isOnline();
-    if (badge) {
-      badge.className = `status-badge-network ${online ? 'online' : 'offline'}`;
-      badge.textContent = online ? '● Online' : '● Modo Offline';
-    }
+    [badge, badgeHeader].forEach(el => {
+      if (el) {
+        el.className = `status-badge-network ${online ? 'online' : 'offline'}`;
+        el.textContent = online ? '● Online' : '● Modo Offline';
+      }
+    });
     atualizarBadgePendencias();
   }
 
