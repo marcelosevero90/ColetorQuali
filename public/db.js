@@ -1153,6 +1153,97 @@ const DB = (() => {
       }
     }
 
+        // FASE 6: Processa Transferências de Material (fcSetTransfMaterial.p / CE0206)
+    const pendentesTransf = pendentes.filter(p => p.tipo === 'TRANSFERENCIA_MATERIAL' || p.tipo === 'TRANSFERENCIA');
+    for (const p of pendentesTransf) {
+      try {
+        let itemTransf = p.payload;
+        if (itemTransf && Array.isArray(itemTransf.payload) && itemTransf.payload.length > 0) {
+          itemTransf = itemTransf.payload[0];
+        } else if (Array.isArray(itemTransf) && itemTransf.length > 0) {
+          itemTransf = itemTransf[0];
+        }
+
+        const codEstabelFinal = (itemTransf.codEstabel || '101').trim() || '101';
+        const usrFinal = (itemTransf.codUsuario || 'matheus.st').trim() || 'matheus.st';
+        const dtIso = normalizarDataIso(itemTransf.dtTransf || new Date());
+
+        const payloadEnvio = {
+          payload: [{
+            codEmpresa: emp,
+            itCodigo: String(itemTransf.itCodigo || '').trim(),
+            codEstabel: codEstabelFinal,
+            codUsuario: usrFinal,
+            dtTransf: dtIso,
+            nroDocto: String(itemTransf.nroDocto || '').trim(),
+            serie: String(itemTransf.serie || '').trim(),
+            quantidade: Number(itemTransf.quantidade || 0),
+            codDeposSai: String(itemTransf.codDeposSai || '').trim(),
+            codLocalizSai: String(itemTransf.codLocalizSai || '').trim(),
+            loteSai: String(itemTransf.loteSai || '').trim(),
+            dtValiLote: itemTransf.dtValiLote ? normalizarDataIso(itemTransf.dtValiLote) : '',
+            codReferSai: String(itemTransf.codReferSai || '').trim(),
+            codDeposEnt: String(itemTransf.codDeposEnt || '').trim(),
+            codLocalizEnt: String(itemTransf.codLocalizEnt || '').trim(),
+            loteEnt: String(itemTransf.loteEnt || '').trim(),
+            dtValiLoteEnt: itemTransf.dtValiLoteEnt ? normalizarDataIso(itemTransf.dtValiLoteEnt) : '',
+            codReferEnt: String(itemTransf.codReferEnt || '').trim()
+          }]
+        };
+
+        const data = await dispararApi('/fcSetTransfMaterial', payloadEnvio);
+        const isOk = (data.type === 'OK' || data.code === '0' || String(data.code) === '0') &&
+                     (!data.type || data.type.toUpperCase() !== 'ERROR');
+
+        if (isOk) {
+          await remove('fila_sync', p.id_uuid);
+          processados++;
+          try {
+            const idOrig = p.transfId || itemTransf.id_uuid;
+            if (idOrig) {
+              const tr = await get('transferencia_material', idOrig);
+              if (tr) {
+                tr.status = 'EFETIVADO';
+                tr.pendenteSync = false;
+                tr.mensagemRetorno = data.message || 'Transferência efetuada com sucesso!';
+                tr.efetivadoEm = new Date().toISOString();
+                tr.atualizadoEm = new Date().toISOString();
+                await put('transferencia_material', tr, emp);
+              }
+            }
+          } catch (eTr) {}
+
+          relatorio.push({
+            id_uuid: p.id_uuid,
+            tipo: p.tipo,
+            status: 'OK',
+            mensagem: `Transferência Item ${itemTransf.itCodigo} efetivada com sucesso no ERP!`
+          });
+        } else {
+          erros++;
+          const msgErro = data.detailedMessage || data.message || 'Erro ao efetivar transferência no Datasul';
+          p.ultimoErro = msgErro;
+          await put('fila_sync', p, emp);
+          relatorio.push({
+            id_uuid: p.id_uuid,
+            tipo: p.tipo,
+            status: 'ERROR',
+            mensagem: msgErro
+          });
+        }
+      } catch (err) {
+        erros++;
+        p.ultimoErro = err.message;
+        await put('fila_sync', p, emp);
+        relatorio.push({
+          id_uuid: p.id_uuid,
+          tipo: p.tipo,
+          status: 'ERROR',
+          mensagem: err.message
+        });
+      }
+    }
+
     return {
       success: erros === 0,
       processados,

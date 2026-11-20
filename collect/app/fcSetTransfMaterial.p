@@ -74,33 +74,68 @@ PROCEDURE pi-find:
         DO iContPayload = 1 TO aJsonPayloadArray:LENGTH ON ERROR UNDO, LEAVE:
             //-- Cabecalho
             oJsonPayloadObject = aJsonPayloadArray:GetJsonObject(iContPayload).
-                       
-            ASSIGN c-itCodigo    = oJsonPayloadObject:GetCharacter("itCodigo")
-                   c-codEstabel  = oJsonPayloadObject:GetCharacter("codEstabel")
-                   c-usuario     = oJsonPayloadObject:GetCharacter("codUsuario")
-                   dt-transf     = oJsonPayloadObject:GetDate("dtTransf") 
-                   c-nroDocto    = oJsonPayloadObject:GetCharacter("nroDocto")
-                   c-serie       = oJsonPayloadObject:GetCharacter("serie")
-                   d-quantidade  = oJsonPayloadObject:GetDecimal("quantidade")
-                   
-                   . 
-   
-            ASSIGN c-codDeposSai    = oJsonPayloadObject:GetCharacter("codDeposSai")
-                   c-codLocalizSai  = oJsonPayloadObject:GetCharacter("codLocalizSai")
-                   c-loteSai        = oJsonPayloadObject:GetCharacter("loteSai") 
-                   c-codReferSai    = oJsonPayloadObject:GetCharacter("codReferSai").  
-                   
-            ASSIGN c-codDeposEnt    = oJsonPayloadObject:GetCharacter("codDeposEnt")
-                   c-codLocalizEnt  = oJsonPayloadObject:GetCharacter("codLocalizEnt")
-                   c-loteEnt        = oJsonPayloadObject:GetCharacter("loteEnt") 
-                   c-codReferEnt    = oJsonPayloadObject:GetCharacter("codReferEnt").
+
+            IF oJsonPayloadObject:Has("itCodigo") THEN
+                ASSIGN c-itCodigo = TRIM(oJsonPayloadObject:GetCharacter("itCodigo")) NO-ERROR.
+            IF oJsonPayloadObject:Has("codEstabel") THEN
+                ASSIGN c-codEstabel = TRIM(oJsonPayloadObject:GetCharacter("codEstabel")) NO-ERROR.
+            IF oJsonPayloadObject:Has("codUsuario") THEN
+                ASSIGN c-usuario = TRIM(oJsonPayloadObject:GetCharacter("codUsuario")) NO-ERROR.
+
+            IF oJsonPayloadObject:Has("dtTransf") THEN DO:
+                ASSIGN dt-transf = oJsonPayloadObject:GetDate("dtTransf") NO-ERROR.
+                IF dt-transf = ? OR ERROR-STATUS:ERROR THEN DO:
+                    DEFINE VAR c-dt-str AS CHAR NO-UNDO.
+                    ASSIGN c-dt-str = oJsonPayloadObject:GetCharacter("dtTransf") NO-ERROR.
+                    IF c-dt-str <> ? AND c-dt-str <> "" THEN DO:
+                        IF NUM-ENTRIES(c-dt-str, "-") = 3 THEN
+                            ASSIGN dt-transf = DATE(INTEGER(ENTRY(2, c-dt-str, "-")),
+                                                    INTEGER(ENTRY(3, c-dt-str, "-")),
+                                                    INTEGER(ENTRY(1, c-dt-str, "-"))) NO-ERROR.
+                        ELSE IF NUM-ENTRIES(c-dt-str, "/") = 3 THEN
+                            ASSIGN dt-transf = DATE(INTEGER(ENTRY(2, c-dt-str, "/")),
+                                                    INTEGER(ENTRY(1, c-dt-str, "/")),
+                                                    INTEGER(ENTRY(3, c-dt-str, "/"))) NO-ERROR.
+                    END.
+                END.
+            END.
+            IF dt-transf = ? THEN ASSIGN dt-transf = TODAY.
+
+            IF oJsonPayloadObject:Has("nroDocto") THEN
+                ASSIGN c-nroDocto = TRIM(oJsonPayloadObject:GetCharacter("nroDocto")) NO-ERROR.
+            IF oJsonPayloadObject:Has("serie") THEN
+                ASSIGN c-serie = TRIM(oJsonPayloadObject:GetCharacter("serie")) NO-ERROR.
+            IF oJsonPayloadObject:Has("quantidade") THEN
+                ASSIGN d-quantidade = oJsonPayloadObject:GetDecimal("quantidade") NO-ERROR.
+
+            IF oJsonPayloadObject:Has("codDeposSai") THEN
+                ASSIGN c-codDeposSai = TRIM(oJsonPayloadObject:GetCharacter("codDeposSai")) NO-ERROR.
+            IF oJsonPayloadObject:Has("codLocalizSai") THEN
+                ASSIGN c-codLocalizSai = TRIM(oJsonPayloadObject:GetCharacter("codLocalizSai")) NO-ERROR.
+            IF oJsonPayloadObject:Has("loteSai") THEN
+                ASSIGN c-loteSai = TRIM(oJsonPayloadObject:GetCharacter("loteSai")) NO-ERROR.
+            IF oJsonPayloadObject:Has("codReferSai") THEN
+                ASSIGN c-codReferSai = TRIM(oJsonPayloadObject:GetCharacter("codReferSai")) NO-ERROR.
+
+            IF oJsonPayloadObject:Has("codDeposEnt") THEN
+                ASSIGN c-codDeposEnt = TRIM(oJsonPayloadObject:GetCharacter("codDeposEnt")) NO-ERROR.
+            IF oJsonPayloadObject:Has("codLocalizEnt") THEN
+                ASSIGN c-codLocalizEnt = TRIM(oJsonPayloadObject:GetCharacter("codLocalizEnt")) NO-ERROR.
+            IF oJsonPayloadObject:Has("loteEnt") THEN
+                ASSIGN c-loteEnt = TRIM(oJsonPayloadObject:GetCharacter("loteEnt")) NO-ERROR.
+            IF oJsonPayloadObject:Has("codReferEnt") THEN
+                ASSIGN c-codReferEnt = TRIM(oJsonPayloadObject:GetCharacter("codReferEnt")) NO-ERROR.
 
             /* Normalizacao de localizacao: BRANCO eh descricao, codigo Datasul eh string vazia */
             IF c-codLocalizSai = "BRANCO" OR c-codLocalizSai = "(EM BRANCO)" OR c-codLocalizSai = "PADRAO" OR c-codLocalizSai = ? THEN
                 ASSIGN c-codLocalizSai = "".
             IF c-codLocalizEnt = "BRANCO" OR c-codLocalizEnt = "(EM BRANCO)" OR c-codLocalizEnt = "PADRAO" OR c-codLocalizEnt = ? THEN
-                ASSIGN c-codLocalizEnt = "".                      
-                                                
+                ASSIGN c-codLocalizEnt = "".
+
+            /* Fallbacks seguros */
+            IF c-codEstabel = "" OR c-codEstabel = ? THEN ASSIGN c-codEstabel = "101".
+            IF c-usuario = "" OR c-usuario = ? THEN ASSIGN c-usuario = "matheus.st".
+
         END.                                            
         
         
@@ -148,7 +183,7 @@ PROCEDURE pi-find:
                tt-movto.usuario               = c-usuario
                tt-movto.cod-depos             = c-codDeposSai
                tt-movto.cod-estabel           = c-codEstabel
-               tt-movto.dt-trans              = TODAY
+               tt-movto.dt-trans              = IF dt-transf <> ? THEN dt-transf ELSE TODAY
                tt-movto.ct-codigo             = param-estoq.ct-tr-transf
                tt-movto.sc-codigo             = param-estoq.sc-tr-transf
                tt-movto.it-codigo             = ITEM.it-codigo
@@ -169,11 +204,11 @@ PROCEDURE pi-find:
     
         FOR FIRST b-saldo-estoq-ent FIELDS(dt-vali-lote) NO-LOCK
             WHERE b-saldo-estoq-ent.cod-estabel   = c-codEstabel
-              AND b-saldo-estoq-ent.cod-depos     = c-codDeposSai
-              AND b-saldo-estoq-ent.cod-localiz   = c-codLocalizSai
-              AND b-saldo-estoq-ent.cod-refer     = c-codReferSai
+              AND b-saldo-estoq-ent.cod-depos     = c-codDeposEnt
+              AND b-saldo-estoq-ent.cod-localiz   = c-codLocalizEnt
+              AND b-saldo-estoq-ent.cod-refer     = c-codReferEnt
               AND b-saldo-estoq-ent.it-codigo     = ITEM.it-codigo
-              AND b-saldo-estoq-ent.lote          = c-loteSai.            
+              AND b-saldo-estoq-ent.lote          = c-loteEnt.            
         END.        
     
          /* ENTRADA NO DEP…SITO DESTINO */  
@@ -184,7 +219,7 @@ PROCEDURE pi-find:
                 tt-movto.cod-estabel            = c-codEstabel
                 tt-movto.ct-codigo              = param-estoq.ct-tr-transf
                 tt-movto.sc-codigo              = param-estoq.sc-tr-transf
-                tt-movto.dt-trans               = TODAY
+                tt-movto.dt-trans               = IF dt-transf <> ? THEN dt-transf ELSE TODAY
                 tt-movto.esp-docto              = 33 /* TRA */
                 tt-movto.it-codigo              = ITEM.it-codigo
                 tt-movto.cod-localiz            = c-codLocalizEnt

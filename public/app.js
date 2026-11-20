@@ -1609,7 +1609,8 @@ const App = (() => {
       const nrContagAtiva = Number(param.nrContagAtiva || param.nr_contag_ativa || 1);
       const rodadaFiltro = (nrContagAtiva >= 1 && nrContagAtiva <= 3) ? nrContagAtiva : 1;
       const fichasData = todasFichas.filter(f => normalizarDataIso(f.dtSaldo) === dt && Number(f.nrContagem) === rodadaFiltro);
-      const baseResumo = fichasData.length > 0 ? fichasData : todasFichas.filter(f => normalizarDataIso(f.dtSaldo) === dt);
+      const baseRaw = fichasData.length > 0 ? fichasData : todasFichas.filter(f => normalizarDataIso(f.dtSaldo) === dt);
+      const baseResumo = filtrarFichasElegiveisRodada(baseRaw, rodadaFiltro, todasFichas, param.permContgUsFc, state.session.codUsuario);
 
       const total = baseResumo.length;
       const contadas = baseResumo.filter(f => f.qtApurada !== null && f.qtApurada !== undefined).length;
@@ -1709,6 +1710,105 @@ const App = (() => {
       `;
       listDiv.appendChild(card);
     });
+  }
+
+  
+  // Regra canônica de elegibilidade de fichas por rodada (CE0712 / fcGetInventariosFichas.p / FMSC0102)
+  function filtrarFichasElegiveisRodada(fichas, rodada, todasFichas, permMesmoUsuario, codUsuario) {
+    const rod = Number(rodada || 1);
+    const codUs = String(codUsuario || '').toLowerCase().trim();
+    const mapaF1 = new Map();
+    (todasFichas || fichas || []).forEach(f => {
+      if (Number(f.nrContagem) === 1 && !mapaF1.has(Number(f.nrFicha))) {
+        mapaF1.set(Number(f.nrFicha), f);
+      }
+    });
+
+    return (fichas || []).filter(f => {
+      if (f.avulsa) return false;
+      if (Number(f.situacao) === 3) return false; // Rejeitada / Cancelada
+      if (Number(f.nrContagem || 1) !== rod) return false;
+
+      if (rod > 1) {
+        const f1 = mapaF1.get(Number(f.nrFicha));
+        const v1 = f.valApurado1 ?? f1?.valApurado1 ?? f1?.qtApurada ?? null;
+        const qt = Number(f.qtidadeAtu || 0);
+
+        // Se a contagem 1 bateu exatamente com o saldo de estoque, CE0712 dispensa 2ª/3ª contagem
+        if (v1 !== null && v1 !== undefined && Math.abs(Number(v1) - qt) < 0.0001) {
+          return false;
+        }
+
+        // Segregação de conferente por fmsc-inventario.permContgUsFc
+        if (!permMesmoUsuario && codUs) {
+          const u1 = String(f.codConfteContag1 || f1?.codConfteContag1 || '').toLowerCase().trim();
+          const u2 = String(f.codConfteContag2 || '').toLowerCase().trim();
+          if (u1 === codUs || (rod === 3 && u2 === codUs)) {
+            return false;
+          }
+        }
+      }
+
+      if (rod === 3) {
+        // Regra do CE0712: se valApurado1 e valApurado2 são iguais, a ficha NÃO vai para a 3ª contagem
+        const v1 = f.valApurado1;
+        const v2 = f.valApurado2;
+        if (v1 !== null && v1 !== undefined && v2 !== null && v2 !== undefined && Math.abs(Number(v1) - Number(v2)) < 0.0001) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  async function calcularDepositosInventario(dtSaldo) {
+    const codEmpresa = state.session.codEmpresa || '001';
+    const codEstabel = state.session.codEstabel || '';
+    const codUsuario = state.session.codUsuario || '';
+    const paramAtual = await DB.obterParamInventarioLocal(codEmpresa, dtSaldo);
+    const inv = state.inventarioSelecionado;
+    const nrAtiva = Number(paramAtual?.nrContagAtiva || inv?.nrContagAtiva || 1);
+    const rodada = (nrAtiva >= 1 && nrAtiva <= 3) ? nrAtiva : 1;
+    const permMesmoUsuario = Boolean(paramAtual?.permContgUsFc ?? inv?.permContgUsFc);
+
+    const todasFichasEmpresa = await DB.getAllByEmpresa('fichas_inventario', codEmpresa);
+    const deposMestres = await DB.getAllByEmpresa('deposito', codEmpresa);
+
+    const fichasFilial = todasFichasEmpresa.filter(f =>
+      normalizarDataIso(f.dtSaldo) === dtSaldo &&
+      (!codEstabel || String(f.codEstabel || '').trim() === String(codEstabel).trim())
+    );
+
+    const fichasRodada = fichasFilial.filter(f => Number(f.nrContagem || 1) === rodada);
+    const fichasValidas = filtrarFichasElegiveisRodada(fichasRodada, rodada, fichasFilial, permMesmoUsuario, codUsuario);
+
+    const mapa = new Map();
+    fichasValidas.forEach(f => {
+      const dep = (f.codDepos || '').trim();
+      if (!dep) return;
+      if (!mapa.has(dep)) {
+        const mestre = deposMestres.find(d => (d.codDepos || '').trim() === dep);
+        mapa.set(dep, {
+          codDepos: dep,
+          nome: mestre ? (mestre.nome || mestre.descricao || dep) : dep,
+          fichas: [],
+          total: 0,
+          contadas: 0,
+          pendentes: 0
+        });
+      }
+      const reg = mapa.get(dep);
+      reg.fichas.push(f);
+      reg.total++;
+      if (f.qtApurada !== null && f.qtApurada !== undefined && f.qtApurada !== '') {
+        reg.contadas++;
+      } else {
+        reg.pendentes++;
+      }
+    });
+
+    return Array.from(mapa.values()).sort((a, b) => a.codDepos.localeCompare(b.codDepos));
   }
 
   async function entrarNoInventario(dtSaldo) {
@@ -4359,30 +4459,34 @@ const App = (() => {
 
     try {
       const codEmpresaReq = transf.codEmpresa || state.session.codEmpresa || '001';
+      const codEstabelFinal = (transf.codEstabel || state.session.codEstabel || '101').trim() || '101';
+      const codUsuarioFinal = (state.session.codUsuario || transf.codUsuario || 'matheus.st').trim() || 'matheus.st';
+      const dtTransfFinal = normalizarDataIso(transf.dtTransf || new Date());
+
       const payloadItem = {
         codEmpresa: codEmpresaReq,
         itCodigo: (transf.itCodigo || '').trim(),
-        codEstabel: transf.codEstabel || state.session.codEstabel || '101',
-        codUsuario: state.session.codUsuario || transf.codUsuario,
-        dtTransf: transf.dtTransf || new Date().toISOString().slice(0, 10),
-        nroDocto: transf.nroDocto || '',
-        serie: transf.serie || '',
-        quantidade: Number(transf.quantidade),
-        codDeposSai: transf.codDeposSai,
+        codEstabel: codEstabelFinal,
+        codUsuario: codUsuarioFinal,
+        dtTransf: dtTransfFinal,
+        nroDocto: (transf.nroDocto || '').trim(),
+        serie: (transf.serie || '').trim(),
+        quantidade: Number(transf.quantidade || 0),
+        codDeposSai: (transf.codDeposSai || '').trim(),
         codLocalizSai: normalizarCodLocaliz(transf.codLocalizSai),
-        loteSai: transf.loteSai || '',
-        dtValiLote: transf.dtValiLote || '',
-        codReferSai: transf.codReferSai || '',
-        codDeposEnt: transf.codDeposEnt,
+        loteSai: (transf.loteSai || '').trim(),
+        dtValiLote: transf.dtValiLote ? normalizarDataIso(transf.dtValiLote) : '',
+        codReferSai: (transf.codReferSai || '').trim(),
+        codDeposEnt: (transf.codDeposEnt || '').trim(),
         codLocalizEnt: normalizarCodLocaliz(transf.codLocalizEnt),
-        loteEnt: transf.loteEnt || '',
-        dtValiLoteEnt: transf.dtValiLoteEnt || '',
-        codReferEnt: transf.codReferEnt || ''
+        loteEnt: (transf.loteEnt || '').trim(),
+        dtValiLoteEnt: transf.dtValiLoteEnt ? normalizarDataIso(transf.dtValiLoteEnt) : '',
+        codReferEnt: (transf.codReferEnt || '').trim()
       };
 
       const res = await pasoeFetch('/fcSetTransfMaterial', {
         method: 'PUT',
-        body: JSON.stringify({ payload: [payloadItem] })
+        body: JSON.stringify(payloadItem)
       });
 
       ocultarLoading();

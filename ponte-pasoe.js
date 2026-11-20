@@ -44,6 +44,89 @@ function sanitizarLocalizDatasul(obj) {
   return novo;
 }
 
+// Sanitização e complementação defensiva completa para fcSetTransfMaterial (CE0206 / ceapi001k):
+// O OpenEdge ABL requer que todas as 16 propriedades existam no JsonObject com tipos estritos
+// para não disparar exceção no bloco DO ON ERROR UNDO, LEAVE.
+function sanitizarPayloadTransferencia(obj, req) {
+  if (!obj || typeof obj !== 'object') return obj;
+  let itens = [];
+  if (Array.isArray(obj.payload)) {
+    itens = obj.payload;
+  } else if (Array.isArray(obj)) {
+    itens = obj;
+  } else {
+    itens = [obj];
+  }
+
+  const codUsuarioPadrao = (() => {
+    try {
+      const auth = req.headers['authorization'] || '';
+      if (auth.startsWith('Basic ')) {
+        const dec = Buffer.from(auth.replace('Basic ', ''), 'base64').toString('utf8');
+        return dec.split(':')[0] || 'matheus.st';
+      }
+    } catch (e) {}
+    return 'matheus.st';
+  })();
+
+  const normalizarDataIso = (dt) => {
+    if (!dt) return new Date().toISOString().slice(0, 10);
+    const s = String(dt).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    if (s.includes('/')) {
+      const p = s.split('/');
+      if (p.length === 3) {
+        if (p[2].length === 4) return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+        if (p[0].length === 4) return `${p[0]}-${p[1].padStart(2, '0')}-${p[2].padStart(2, '0')}`;
+      }
+    }
+    return new Date().toISOString().slice(0, 10);
+  };
+
+  const normalizarLoc = (loc) => {
+    if (!loc) return '';
+    const v = String(loc).trim().toUpperCase();
+    if (v === 'BRANCO' || v === '(EM BRANCO)' || v === 'EM BRANCO' || v === 'PADRAO' || v === 'PADRÃO' || v === '-') {
+      return '';
+    }
+    return String(loc).trim();
+  };
+
+  const itensSanitizados = itens.map(it => {
+    const codEst = String(it.codEstabel || req.headers['codestabel'] || '101').trim() || '101';
+    const usr = String(it.codUsuario || codUsuarioPadrao).trim() || codUsuarioPadrao;
+    const dt = normalizarDataIso(it.dtTransf);
+
+    return {
+      itCodigo: String(it.itCodigo || '').trim(),
+      codEstabel: codEst,
+      codUsuario: usr,
+      dtTransf: dt,
+      nroDocto: String(it.nroDocto || '').trim(),
+      serie: String(it.serie || '').trim(),
+      quantidade: Number(it.quantidade || 0),
+      codDeposSai: String(it.codDeposSai || '').trim(),
+      codLocalizSai: normalizarLoc(it.codLocalizSai),
+      loteSai: String(it.loteSai || '').trim(),
+      dtValiLote: it.dtValiLote ? normalizarDataIso(it.dtValiLote) : '',
+      codReferSai: String(it.codReferSai || '').trim(),
+      codDeposEnt: String(it.codDeposEnt || '').trim(),
+      codLocalizEnt: normalizarLoc(it.codLocalizEnt),
+      loteEnt: String(it.loteEnt || '').trim(),
+      dtValiLoteEnt: it.dtValiLoteEnt ? normalizarDataIso(it.dtValiLoteEnt) : '',
+      codReferEnt: String(it.codReferEnt || '').trim()
+    };
+  });
+
+  const resObj = { ...(itensSanitizados[0] || {}) };
+  if (itensSanitizados.length > 0) {
+    Object.keys(itensSanitizados[0]).forEach(k => {
+      resObj[k] = itensSanitizados[0][k];
+    });
+  }
+  return resObj;
+}
+
 // Obter o IP local do notebook na rede Wi-Fi / LAN
 function getLocalIp() {
   const interfaces = os.networkInterfaces();
@@ -129,12 +212,16 @@ app.all('*', async (req, res) => {
     };
 
     if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body && Object.keys(req.body).length > 0) {
-      let bodyEnvio = sanitizarLocalizDatasul(req.body);
-      // Compatibilidade Progress ABL: espelha payload na raiz se necessário
-      if (Array.isArray(bodyEnvio.payload) && bodyEnvio.payload.length > 0 && typeof bodyEnvio.payload[0] === 'object') {
-        Object.keys(bodyEnvio.payload[0]).forEach(k => {
-          if (bodyEnvio[k] === undefined) bodyEnvio[k] = bodyEnvio.payload[0][k];
-        });
+      let bodyEnvio;
+      if (endpointLimpo.toLowerCase().includes('fcsettransfmaterial')) {
+        bodyEnvio = sanitizarPayloadTransferencia(req.body, req);
+      } else {
+        bodyEnvio = sanitizarLocalizDatasul(req.body);
+        if (Array.isArray(bodyEnvio.payload) && bodyEnvio.payload.length > 0 && typeof bodyEnvio.payload[0] === 'object') {
+          Object.keys(bodyEnvio.payload[0]).forEach(k => {
+            if (bodyEnvio[k] === undefined) bodyEnvio[k] = bodyEnvio.payload[0][k];
+          });
+        }
       }
       fetchOptions.body = JSON.stringify(bodyEnvio);
     }
