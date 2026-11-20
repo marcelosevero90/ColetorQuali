@@ -341,6 +341,13 @@ const App = (() => {
   }
 
   function navegar(tela, params = {}) {
+    if (tela !== 'login' && (!state.session || !state.session.codUsuario)) {
+      if (state.telaAtual !== 'login') {
+        state.telaAtual = 'login';
+        renderTelaLogin();
+      }
+      return;
+    }
     if (tela.startsWith('estoque') && !temPermissaoEstoque()) {
       bloquearAcesso('Módulo de Estoque', 'permEstoque');
       if (state.telaAtual !== 'menu') navegar('menu');
