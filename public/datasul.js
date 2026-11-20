@@ -22,6 +22,28 @@ const Datasul = (() => {
     return sessionStorage.getItem('painel_admin_auth') === 'true';
   }
 
+  function initAdminPage() {
+    const loginScreen = document.getElementById('admin-login-screen');
+    const erpContainer = document.getElementById('erp-container');
+    const topActions = document.getElementById('admin-top-actions');
+
+    if (isAdminAutenticado()) {
+      if (loginScreen) loginScreen.style.display = 'none';
+      if (erpContainer) erpContainer.style.display = 'flex';
+      if (topActions) topActions.style.display = 'flex';
+      init();
+    } else {
+      if (loginScreen) loginScreen.style.display = 'block';
+      if (erpContainer) erpContainer.style.display = 'none';
+      if (topActions) topActions.style.display = 'none';
+      const passEl = document.getElementById('admin-login-senha');
+      if (passEl) {
+        passEl.value = '';
+        setTimeout(() => passEl.focus(), 150);
+      }
+    }
+  }
+
   function solicitarLoginAdmin(modoDesejado = 'erp') {
     modoPendenteAdmin = modoDesejado;
     const modal = document.getElementById('modal-login-admin');
@@ -39,7 +61,9 @@ const Datasul = (() => {
   function cancelarLoginAdmin() {
     const modal = document.getElementById('modal-login-admin');
     if (modal) modal.style.display = 'none';
-    App.setModoVisualizacao('app');
+    if (window.App && typeof App.setModoVisualizacao === 'function') {
+      App.setModoVisualizacao('app');
+    }
   }
 
   function confirmarLoginAdmin() {
@@ -57,16 +81,34 @@ const Datasul = (() => {
     }
 
     sessionStorage.setItem('painel_admin_auth', 'true');
+
+    const loginScreen = document.getElementById('admin-login-screen');
+    if (loginScreen) {
+      initAdminPage();
+      return;
+    }
+
     const modal = document.getElementById('modal-login-admin');
     if (modal) modal.style.display = 'none';
 
-    App.setModoVisualizacao(modoPendenteAdmin || 'erp');
+    if (window.App && typeof App.setModoVisualizacao === 'function') {
+      App.setModoVisualizacao(modoPendenteAdmin || 'erp');
+    }
   }
 
   function logoutAdmin() {
-    if (!confirm('Deseja encerrar a sessão do Painel Totvs ERP?')) return;
+    if (!confirm('Deseja encerrar a sessão do Painel Administrativo?')) return;
     sessionStorage.removeItem('painel_admin_auth');
-    App.setModoVisualizacao('app');
+
+    const loginScreen = document.getElementById('admin-login-screen');
+    if (loginScreen) {
+      initAdminPage();
+      return;
+    }
+
+    if (window.App && typeof App.setModoVisualizacao === 'function') {
+      App.setModoVisualizacao('app');
+    }
   }
 
   function alternarVisibilidadeSenhaAdmin() {
@@ -143,9 +185,9 @@ const Datasul = (() => {
     });
 
     const groupAlias = document.getElementById('group-alias');
-    const groupModulos = document.getElementById('group-modulos_erp');
+    const groupModulos = document.getElementById('group-modulos-erp') || document.getElementById('group-modulos_erp');
     if (groupAlias) groupAlias.style.display = grupo === 'alias' ? 'block' : 'none';
-    if (groupModulos) groupModulos.style.display = grupo === 'modulos_erp' ? 'block' : 'none';
+    if (groupModulos) groupModulos.style.display = (grupo === 'modulos_erp' || grupo === 'modulos-erp') ? 'block' : 'none';
 
     if (grupo === 'alias') {
       carregarAliasManager();
@@ -157,11 +199,12 @@ const Datasul = (() => {
   function mudarSubPrograma(prog) {
     subProgramaAtivo = prog;
 
-    document.querySelectorAll('.totvs-sub-tab-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.subProg === prog);
+    document.querySelectorAll('.totvs-subtab-btn, .totvs-sub-tab-btn').forEach(btn => {
+      const sp = btn.dataset.prog || btn.dataset.subprog || btn.dataset.subProg;
+      btn.classList.toggle('active', sp === prog);
     });
 
-    document.querySelectorAll('#group-modulos_erp .totvs-prog-screen').forEach(sc => {
+    document.querySelectorAll('#group-modulos-erp .totvs-prog-screen, #group-modulos_erp .totvs-prog-screen').forEach(sc => {
       sc.style.display = sc.id === `prog-${prog}` ? 'block' : 'none';
     });
 
@@ -549,8 +592,10 @@ const Datasul = (() => {
 
   return {
     init,
+    initAdminPage,
     trocarEmpresaERP,
     mudarPrograma,
+    trocarPrograma: mudarSubPrograma,
     mudarAbaPrincipal,
     mudarSubPrograma,
     isAdminAutenticado,

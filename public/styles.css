@@ -178,22 +178,17 @@ body {
   flex: 1;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding: 16px;
-  gap: 20px;
-  max-width: 1600px;
-}
-
-.main-viewport.split-mode {
-  display: grid;
-  grid-template-columns: 430px 1fr;
   align-items: stretch;
+  padding: 0;
+  margin: 0;
+  min-height: 100vh;
 }
 
-/* Invólucro do Coletor */
+/* Invólucro do Coletor Móvel */
 .coletor-device-container {
   width: 100%;
-  max-width: 420px;
+  max-width: 520px;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   margin: 0 auto;
@@ -202,27 +197,20 @@ body {
 .device-frame {
   width: 100%;
   background: #ffffff;
-  border: 8px solid #0f172a;
-  border-radius: 42px;
-  box-shadow: 0 25px 60px -10px rgba(15,23,42,0.25);
+  border: none;
+  border-radius: 0;
+  box-shadow: 0 0 25px rgba(0,0,0,0.06);
   overflow: hidden;
   position: relative;
-  min-height: 740px;
-  max-height: 830px;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.device-frame.fullscreen {
-  max-width: 100% !important;
-  border-radius: 0;
-  border: none;
-  max-height: 100vh;
-  min-height: 100vh;
+.device-notch,
+.device-status-bar {
+  display: none !important;
 }
-
-.device-notch {
-  background: #ffffff;
   padding-top: 8px;
   padding-bottom: 2px;
   display: flex;

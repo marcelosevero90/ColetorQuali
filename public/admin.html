@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+  <title>Painel Administrativo — TOTVS Datasul PASOE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=3.3">
+  <style>
+    body {
+      background: #f1f5f9;
+      color: #0f172a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    .admin-navbar {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-bottom: 2px solid #0284c7;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .admin-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 280px;
+    }
+    .admin-brand-icon {
+      width: 38px;
+      height: 38px;
+      background: #0284c7;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+    .admin-brand-title {
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .admin-brand-sub {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    #erp-company-select {
+      background: #ffffff !important;
+      color: #0f172a !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 6px !important;
+      padding: 5px 10px !important;
+      font-size: 12px !important;
+      font-weight: 700 !important;
+      cursor: pointer;
+    }
+    #erp-company-select option {
+      background: #ffffff;
+      color: #0f172a;
+    }
+    .admin-container {
+      max-width: 1400px;
+      width: 100%;
+      margin: 20px auto;
+      padding: 0 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .admin-login-box {
+      max-width: 420px;
+      margin: 60px auto;
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 10px 30px -5px rgba(0,0,0,0.1);
+      padding: 32px 28px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BARRA DE NAVEGAÇÃO DO PAINEL ADMIN -->
+  <header class="admin-navbar">
+    <div class="admin-brand">
+      <div class="admin-brand-icon">⚙️</div>
+      <div>
+        <div class="admin-brand-title">Painel Administrativo — TOTVS Datasul</div>
+        <div class="admin-brand-sub">Gerenciador de ALIAS PASOE & Simulador ERP</div>
+      </div>
+    </div>
+    <div id="admin-top-actions" style="display: none; align-items: center; gap: 14px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px;">
+        <label for="erp-company-select" style="color: #94a3b8; font-weight: 700;">Empresa Ativa:</label>
+        <select id="erp-company-select" class="totvs-input-classic" style="padding: 4px 8px; font-weight: 700;" onchange="Datasul.trocarEmpresaERP(this.value)">
+          <option value="001">001 - Empresa Matriz</option>
+          <option value="002">002 - Santa Colomba</option>
+        </select>
+      </div>
+      <button type="button" class="btn btn-secondary" style="background:#dc2626; color:#fff; border:none; padding:6px 14px; font-size:11.5px; font-weight:700; border-radius:6px; cursor:pointer;" onclick="Datasul.logoutAdmin()" title="Sair do Painel">
+        🔒 Sair do Admin
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL DO PAINEL ADMIN -->
+  <main class="admin-container" id="admin-main-container">
+
+    <!-- 1. TELA DE LOGIN DO ADMINISTRADOR (Exibida se não autenticado) -->
+    <div id="admin-login-screen" class="admin-login-box">
+      <div style="width: 56px; height: 56px; background: #e0f2fe; border: 2px solid #bae6fd; border-radius: 16px; margin: 0 auto 12px auto; display: flex; align-items: center; justify-content: center; font-size: 28px;">
+        🔐
+      </div>
+      <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Acesso Restrito ao Admin</h3>
+      <p style="font-size: 12px; color: #64748b; margin-bottom: 20px;">
+        Painel exclusivo para administradores e equipe de TI gerenciarem os ALIAS do PASOE e parâmetros.
+      </p>
+
+      <form id="form-login-admin" onsubmit="event.preventDefault(); Datasul.confirmarLoginAdmin();" style="text-align: left;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" for="admin-login-usuario">Usuário Administrador *</label>
+          <input type="text" id="admin-login-usuario" class="form-input" placeholder="admin" value="admin" autocomplete="username" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" for="admin-login-senha">Senha *</label>
+          <div class="password-wrap">
+            <input type="password" id="admin-login-senha" class="form-input" placeholder="Senha" autocomplete="current-password" required>
+            <button type="button" class="btn-toggle-pass" onclick="Datasul.alternarVisibilidadeSenhaAdmin()">Mostrar</button>
+          </div>
+        </div>
+
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 12px; font-size: 11.5px; color: #1e40af; margin-bottom: 16px;">
+          💡 <strong>Credenciais Padrão:</strong> Usuário <code>admin</code> • Senha <code>admin</code>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="btn-submit-admin-login" style="width: 100%; padding: 10px; font-weight: 800;">
+          Entrar no Painel ➔
+        </button>
+      </form>
+    </div>
+
+    <!-- 2. PAINEL DE GESTÃO DO ERP / ALIAS PASOE (Exibido após login) -->
+    <div id="erp-container" class="erp-container" style="display: none; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.06); background: #ffffff;">
+
+      <!-- ABAS PRINCIPAIS: 1. ALIAS PASOE | 2. SIMULADOR ERP -->
+      <div class="totvs-program-tabs" style="border-bottom: 2px solid #e2e8f0; background: #f8fafc; padding: 8px 16px 0 16px;">
+        <button class="totvs-tab-btn active" data-tab-group="alias" onclick="Datasul.mudarAbaPrincipal('alias')">
+          <span>🔑</span> ALIAS PASOE (Configuração de Ambientes)
+        </button>
+        <button class="totvs-tab-btn" data-tab-group="modulos_erp" onclick="Datasul.mudarAbaPrincipal('modulos_erp')">
+          <span>📦</span> Simulador / Módulos Datasul ERP
+        </button>
+      </div>
+
+      <div class="totvs-program-viewport" style="padding: 16px; flex: 1;">
+
+        <!-- ABA PRINCIPAL 1: GERENCIADOR DE ALIAS -->
+        <div class="totvs-main-group-screen" id="group-alias" style="display: block;">
+          <div class="totvs-window-header" style="background: #0284c7; color: #fff; padding: 8px 12px; border-radius: 6px; font-weight: 800; font-size: 13px;">
+            <span>WebService Discovery — Catálogo e Configuração de ALIAS PASOE</span>
+          </div>
+
+          <div class="card-modern" style="margin-top: 14px;">
+            <div style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #cbd5e1; margin-bottom: 14px;">
+              <div style="font-size: 12.5px; font-weight: 800; color: #0f172a; margin-bottom: 8px;">
+                Adicionar / Editar Conexão PASOE
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1.8fr 2.2fr 0.9fr; gap: 10px; margin-bottom: 10px;">
+                <div>
+                  <label class="form-label" for="alias-input-nome">ALIAS *</label>
+                  <input type="text" id="alias-input-nome" class="form-input" placeholder="ex: teste">
+                </div>
+                <div>
+                  <label class="form-label" for="alias-input-empresa">Nome Empresa *</label>
+                  <input type="text" id="alias-input-empresa" class="form-input" placeholder="Nome da empresa">
+                </div>
+                <div>
+                  <label class="form-label" for="alias-input-url">URL PASOE *</label>
+                  <input type="text" id="alias-input-url" class="form-input" placeholder="http://10.15.1.20:8180/api/promob/v1">
+                </div>
+                <div>
+                  <label class="form-label" for="alias-input-emp-padrao">Empresa Padrão</label>
+                  <input type="text" id="alias-input-emp-padrao" class="form-input" placeholder="001">
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1.1fr 1.1fr 1.6fr 1fr auto; gap: 10px; align-items: end;">
+                <div>
+                  <label class="form-label" for="alias-input-user-integ">Usuário Técnico</label>
+                  <input type="text" id="alias-input-user-integ" class="form-input" placeholder="Opcional">
+                </div>
+                <div>
+                  <label class="form-label" for="alias-input-pass-integ">Senha Técnica</label>
+                  <input type="password" id="alias-input-pass-integ" class="form-input" placeholder="Opcional">
+                </div>
+                <div>
+                  <label class="form-label" for="alias-input-desc">Descrição</label>
+                  <input type="text" id="alias-input-desc" class="form-input" placeholder="Descrição do ambiente">
+                </div>
+                <div>
+                  <label class="form-label" for="alias-input-status">Situação *</label>
+                  <select id="alias-input-status" class="form-input" style="background:#fff; font-weight:700;">
+                    <option value="ativo" selected>✓ Ativo</option>
+                    <option value="inativo">✕ Inativo</option>
+                  </select>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                  <button class="btn btn-primary" style="width: auto; padding: 10px 16px; font-weight: 700;" onclick="Datasul.salvarNovoAlias()">💾 Salvar</button>
+                  <button class="btn btn-secondary" style="width: auto; padding: 10px 12px;" onclick="Datasul.limparFormAlias()">✕</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="totvs-grid-table-container table-wrapper" tabindex="0" role="region" aria-label="Aliases PASOE">
+              <table class="totvs-table">
+                <thead>
+                  <tr>
+                    <th>ALIAS</th>
+                    <th>Situação</th>
+                    <th>Empresa</th>
+                    <th>URL PASOE</th>
+                    <th>Emp. Padrão</th>
+                    <th style="text-align: center;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="alias-grid-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ABA PRINCIPAL 2: SIMULADOR ERP E MÓDULOS DATASUL -->
+        <div class="totvs-main-group-screen" id="group-modulos-erp" style="display: none;">
+          <div class="totvs-subprogram-nav">
+            <button class="totvs-subtab-btn active" data-prog="ce0712" onclick="Datasul.trocarPrograma('ce0712')">
+              📋 CE0712 (Acompanhamento)
+            </button>
+            <button class="totvs-subtab-btn" data-prog="fmsc0102" onclick="Datasul.trocarPrograma('fmsc0102')">
+              ⚙️ FMSC0102 (Parâmetros)
+            </button>
+            <button class="totvs-subtab-btn" data-prog="fmsc0101" onclick="Datasul.trocarPrograma('fmsc0101')">
+              👤 FMSC0101 (Usuários)
+            </button>
+            <button class="totvs-subtab-btn" data-prog="ce0701" onclick="Datasul.trocarPrograma('ce0701')">
+              ⚡ CE0701 (Geração)
+            </button>
+          </div>
+
+          <!-- TELA ERP 1: CE0712 -->
+          <div class="totvs-prog-screen" id="prog-ce0712">
+            <div class="totvs-window-header">
+              <span>CE0712 - Digitação e Acompanhamento de Inventário</span>
+              <button class="totvs-icon-btn" style="padding: 1px 6px;" onclick="Datasul.carregarCE0712()">🔄 Atualizar</button>
+            </div>
+
+            <div class="totvs-filters-panel">
+              <div class="filter-item">
+                <label for="ce0712-filtro-estab">Estabel:</label>
+                <select id="ce0712-filtro-estab" class="totvs-input-classic" onchange="Datasul.carregarCE0712()"></select>
+              </div>
+              <div class="filter-item">
+                <label for="ce0712-filtro-data">Data Saldo:</label>
+                <input type="date" id="ce0712-filtro-data" class="totvs-input-classic" value="" onchange="Datasul.carregarCE0712()">
+              </div>
+              <div class="filter-item">
+                <span>Nr Contagem:</span>
+                <div style="display: flex; gap: 8px; background: #fff; padding: 2px 8px; border-radius: 4px; border: 1px solid #94a3b8;">
+                  <label style="cursor: pointer;"><input type="radio" name="ce0712-contagem" value="1" checked onchange="Datasul.carregarCE0712()"> 1</label>
+                  <label style="cursor: pointer;"><input type="radio" name="ce0712-contagem" value="2" onchange="Datasul.carregarCE0712()"> 2</label>
+                  <label style="cursor: pointer;"><input type="radio" name="ce0712-contagem" value="3" onchange="Datasul.carregarCE0712()"> 3</label>
+                </div>
+              </div>
+              <div class="filter-item">
+                <label for="ce0712-filtro-ficha">Ficha:</label>
+                <input type="text" id="ce0712-filtro-ficha" class="totvs-input-classic" style="width: 65px;" placeholder="Todas" oninput="Datasul.carregarCE0712()">
+              </div>
+            </div>
+
+            <div class="totvs-grid-table-container table-wrapper" tabindex="0" role="region" aria-label="Fichas de Inventário CE0712">
+              <table class="totvs-table">
+                <thead>
+                  <tr>
+                    <th style="width: 55px; text-align: center;">Ficha</th>
+                    <th style="width: 90px;">Data</th>
+                    <th style="width: 50px;">Est</th>
+                    <th style="width: 50px;">Dep</th>
+                    <th style="width: 85px;">Localiz</th>
+                    <th style="width: 95px;">Lote</th>
+                    <th style="width: 95px;">Item</th>
+                    <th style="width: 80px; text-align: right;">Contábil</th>
+                    <th style="width: 85px; text-align: right; background: #e0f2fe; color: #0369a1;">Apurada</th>
+                    <th style="width: 90px;">Conferente</th>
+                    <th style="width: 110px;">Situação</th>
+                  </tr>
+                </thead>
+                <tbody id="ce0712-grid-body"></tbody>
+              </table>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 4px; padding: 6px 12px; margin-top: 8px;">
+              <div style="font-size: 12px; font-weight: 700; color: #0f172a;">
+                Item: <span id="ce0712-desc-item-footer" style="color: #0284c7; font-weight: 800;">-</span>
+              </div>
+              <div style="font-size: 11px; color: #0369a1;" id="ce0712-info-linhas">0 fichas exibidas</div>
+            </div>
+          </div>
+
+          <!-- TELA ERP 2: FMSC0102 -->
+          <div class="totvs-prog-screen" id="prog-fmsc0102" style="display: none;">
+            <div class="totvs-window-header">
+              <span>FMSC0102 - Parâmetros do Inventário (fmsc-inventario / fms002.df)</span>
+            </div>
+            <div class="card-modern" style="margin-top: 10px;">
+              <p style="font-size: 12px; color: #64748b; margin-bottom: 12px;">
+                Controla se o inventário da data de saldo está <strong>Liberado (1)</strong> ou <strong>Bloqueado (2)</strong> e se permite apuração do mesmo usuário em contagens diferentes.
+              </p>
+              <div class="totvs-grid-table-container table-wrapper">
+                <table class="totvs-table">
+                  <thead>
+                    <tr>
+                      <th>Estab</th>
+                      <th>Data Saldo</th>
+                      <th>Descrição</th>
+                      <th>Situação</th>
+                      <th>Permite Mesmo Usuário?</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fmsc0102-grid-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TELA ERP 3: FMSC0101 -->
+          <div class="totvs-prog-screen" id="prog-fmsc0101" style="display: none;">
+            <div class="totvs-window-header">
+              <span>FMSC0101 - Cadastro de Usuários e Permissões (fmsc-usuar-mestre / fms001.df)</span>
+            </div>
+            <div class="card-modern" style="margin-top: 10px;">
+              <div class="totvs-grid-table-container table-wrapper">
+                <table class="totvs-table">
+                  <thead>
+                    <tr>
+                      <th>Usuário</th>
+                      <th>Nome</th>
+                      <th>Estab. Padrão</th>
+                      <th>Situação</th>
+                      <th>Estoque</th>
+                      <th>Produção</th>
+                      <th>Reporte OP</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fmsc0101-grid-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TELA ERP 4: CE0701 -->
+          <div class="totvs-prog-screen" id="prog-ce0701" style="display: none;">
+            <div class="totvs-window-header">
+              <span>CE0701 - Geração de Fichas de Inventário</span>
+            </div>
+            <div class="card-modern" style="margin-top: 10px;">
+              <div style="grid-template-columns: 1fr 1fr; gap: 12px; display: grid;">
+                <div class="form-group">
+                  <label class="form-label" for="ce0701-dt-saldo">Data Saldo Inventariar *</label>
+                  <input type="date" id="ce0701-dt-saldo" class="form-input" value="2026-11-16">
+                </div>
+                <div class="form-group" style="display: flex; align-items: center; margin-top: 22px;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
+                    <input type="checkbox" id="ce0701-chk-zero" checked> Gera saldo zero
+                  </label>
+                </div>
+              </div>
+              <button class="btn btn-primary" style="width: auto; padding: 10px 20px; margin-top: 10px;" onclick="Datasul.executarCE0701()">
+                ⚡ Gerar Fichas (CE0701)
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="gateway.js?v=3.3"></script>
+  <script src="datasul.js?v=3.3"></script>
+  <script>
+    // Inicialização da página de Administração
+    window.addEventListener('DOMContentLoaded', () => {
+      Datasul.initAdminPage();
+    });
+  </script>
+</body>
+</html>

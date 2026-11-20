@@ -190,6 +190,11 @@ app.all('/api/pasoe-proxy', async (req, res) => {
 // Servir frontend estático PWA
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Rota exclusiva para o Painel Administrativo TOTVS Datasul / PASOE
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api')) return next();
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
