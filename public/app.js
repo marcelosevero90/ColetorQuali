@@ -213,13 +213,16 @@ const App = (() => {
       : `${pasoeUrl.replace(/\/+$/, '')}/${endpoint.replace(/^\/+/, '')}`;
 
     let finalUrl = rawUrl;
-    const gatewayBase = window.ColetorGateway ? window.ColetorGateway.getBaseUrl() : '';
-    const isExternalUrl = (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) &&
-      (!gatewayBase || !rawUrl.startsWith(gatewayBase)) &&
-      (!window.location.host || !rawUrl.includes(window.location.host));
+    const isPrivateIp = /^(https?:\/\/)?(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.|localhost)/i.test(rawUrl);
 
-    if (isExternalUrl) {
-      finalUrl = `/api/pasoe-proxy?url=${encodeURIComponent(rawUrl)}`;
+    // Se for URL externa completa:
+    // Se for IP privado (ex: ponte local 192.168.0.8:3333 ou 10.x.x.x) ou túnel de ponte:
+    // Chama DIRETAMENTE o endpoint, pois o webservice da ponte já possui CORS liberado
+    // e o proxy da Vercel (nuvem) não possui acesso à rede interna Wi-Fi do usuário.
+    if (isPrivateIp) {
+      finalUrl = rawUrl;
+    } else if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      finalUrl = rawUrl;
     }
 
     const headers = {
@@ -547,15 +550,6 @@ const App = (() => {
               ? empresasCache.map(emp => `<option value="${emp}" ${emp === state.empresaInput ? 'selected' : ''}>Empresa ${emp}</option>`).join('')
               : '<option value="001">Empresa 001 (Padrão)</option><option value="002">Empresa 002</option>'}
           </select>
-        </div>
-
-        <div class="form-group" style="margin-top: 10px; padding: 6px 10px; background: #f8fafc; border-radius: 8px; border: 1px dashed #cbd5e1;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11px; color: #475569; font-weight: 700;">🔗 Servidor Gateway:</span>
-            <a href="javascript:void(0)" onclick="App.configurarGateway()" style="font-size: 11px; color: #0284c7; text-decoration: underline; font-weight: 700;" id="link-gateway-atual" title="Clique para alterar o IP do notebook">
-              ${window.ColetorGateway ? (window.ColetorGateway.getBaseUrl() || 'Mesmo Host') : 'http://192.168.0.8:3000'}
-            </a>
-          </div>
         </div>
 
         <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">

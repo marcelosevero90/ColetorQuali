@@ -17,8 +17,8 @@ window.ColetorGateway = {
       return '';
     }
 
-    // IP padrão do notebook para testes em APK nativo
-    return 'http://192.168.0.8:3000';
+    // Servidor oficial em nuvem para descoberta de ALIAS no APK Android
+    return 'https://coletorquali.vercel.app';
   },
 
   setBaseUrl(url) {
