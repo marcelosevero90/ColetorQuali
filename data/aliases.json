@@ -29,18 +29,6 @@
     "status": "ativo",
     "descricao": "Base Blanver / CYG Biotech - Taboão da Serra e Indaiatuba"
   },
-  "consigaz": {
-    "alias": "consigaz",
-    "nomeEmpresa": "CONSIGAZ DISTRIBUIDORA DE GAS LTDA",
-    "empresaPrincipal": "001",
-    "codEstabelPadrao": "101",
-    "pasoeUrl": "http://localhost:3000/api/datasul",
-    "usuarioIntegracao": "",
-    "senhaIntegracao": "",
-    "descricao": "Base Consigaz Homologação (CE0712)",
-    "status": "ativo",
-    "atualizadoEm": "2026-11-18T19:16:11.487Z"
-  },
   "santacolomba": {
     "alias": "santacolomba",
     "nomeEmpresa": "SANTA COLOMBA AGROPECUARIA S/A",

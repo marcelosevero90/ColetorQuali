@@ -7,6 +7,26 @@ const path = require('path');
 
 const ALIASES_FILE = path.join(__dirname, '..', 'data', 'aliases.json');
 const TMP_ALIASES_FILE = path.join(require('os').tmpdir(), 'aliases.json');
+const TMP_DELETED_FILE = path.join(require('os').tmpdir(), 'aliases_deleted.json');
+let memoriaDeleted = new Set();
+
+function carregarDeleted() {
+  const set = new Set(memoriaDeleted);
+  try {
+    if (fs.existsSync(TMP_DELETED_FILE)) {
+      const lista = JSON.parse(fs.readFileSync(TMP_DELETED_FILE, 'utf8') || '[]');
+      lista.forEach(k => set.add(String(k).toLowerCase()));
+    }
+  } catch (e) {}
+  return set;
+}
+
+function salvarDeleted(set) {
+  memoriaDeleted = new Set(set);
+  try {
+    fs.writeFileSync(TMP_DELETED_FILE, JSON.stringify(Array.from(set)), 'utf8');
+  } catch (e) {}
+}
 
 function carregarAliases() {
   const padrao = {
@@ -53,11 +73,18 @@ function carregarAliases() {
     console.error('Erro ao ler /tmp/aliases.json:', errTmp);
   }
 
+  // Remove explicitamente qualquer alias marcado como deletado
+  const deleted = carregarDeleted();
+  deleted.forEach(k => {
+    delete aliases[k];
+  });
+
   return aliases;
 }
 
 function salvarAliases(aliases) {
   let gravou = false;
+
   // 1. Tentar gravar no arquivo oficial do projeto (funciona em localhost / servidores com disco gravável)
   try {
     const dir = path.dirname(ALIASES_FILE);
@@ -161,6 +188,12 @@ router.post('/aliases', (req, res) => {
   }
 
   const chave = alias.trim().toLowerCase();
+  const deleted = carregarDeleted();
+  if (deleted.has(chave)) {
+    deleted.delete(chave);
+    salvarDeleted(deleted);
+  }
+
   const aliases = carregarAliases();
   const existente = aliases[chave] || {};
 
@@ -189,33 +222,40 @@ router.post('/aliases', (req, res) => {
 });
 
 // 4. Exclusão de ALIAS
-router.delete('/aliases/:alias', (req, res) => {
-  const chave = (req.params.alias || '').trim().toLowerCase();
-  const aliases = carregarAliases();
-
-  if (!aliases[chave]) {
-    return res.status(404).json({ success: false, mensagem: 'ALIAS não encontrado.' });
+function excluirAliasHandler(req, res) {
+  const chave = (req.params.alias || req.body?.alias || req.query?.alias || '').trim().toLowerCase();
+  if (!chave) {
+    return res.status(400).json({ success: false, mensagem: 'ALIAS não informado.' });
   }
 
-  delete aliases[chave];
-  salvarAliases(aliases);
+  // 1. Marca explicitamente no Set de deletados
+  const deleted = carregarDeleted();
+  deleted.add(chave);
+  salvarDeleted(deleted);
 
-  return res.json({ success: true, mensagem: `Empresa / ALIAS '${chave}' removida com sucesso.` });
-});
-
-router.post(['/aliases/:alias/delete', '/aliases/delete/:alias'], (req, res) => {
-  const chave = (req.params.alias || '').trim().toLowerCase();
+  // 2. Remove do mapa de aliases
   const aliases = carregarAliases();
-
-  if (!aliases[chave]) {
-    return res.status(404).json({ success: false, mensagem: 'ALIAS não encontrado.' });
-  }
-
   delete aliases[chave];
-  salvarAliases(aliases);
 
-  return res.json({ success: true, mensagem: `Empresa / ALIAS '${chave}' removida com sucesso.` });
-});
+  // 3. Persiste no arquivo oficial (se gravável) e no /tmp/
+  try {
+    const dir = path.dirname(ALIASES_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(ALIASES_FILE, JSON.stringify(aliases, null, 2), 'utf8');
+  } catch (err) {}
+
+  try {
+    fs.writeFileSync(TMP_ALIASES_FILE, JSON.stringify(aliases, null, 2), 'utf8');
+  } catch (errTmp) {}
+
+  return res.json({
+    success: true,
+    mensagem: `Empresa / ALIAS '${chave}' removida com sucesso.`
+  });
+}
+
+router.delete(['/aliases/:alias', '/aliases/:alias/delete'], excluirAliasHandler);
+router.post(['/aliases/:alias/delete', '/aliases/delete/:alias', '/aliases/delete'], excluirAliasHandler);
 
 // 5. Teste de Conexão com Endpoint do PASOE
 router.post('/test-connection', async (req, res) => {

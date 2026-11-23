@@ -455,12 +455,27 @@ const Datasul = (() => {
         customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
       } catch (e) {}
 
+      // Lista de ALIAS excluídos pelo usuário localmente
+      let deletedList = [];
+      try {
+        deletedList = JSON.parse(localStorage.getItem('coletor_deleted_aliases') || '[]');
+      } catch (e) {}
+      deletedList = deletedList.map(x => String(x).toLowerCase());
+
       const aliasMap = {};
       serverAliases.forEach(a => {
-        if (a && a.alias) aliasMap[a.alias.toLowerCase()] = a;
+        if (a && a.alias) {
+          const key = a.alias.toLowerCase();
+          if (!deletedList.includes(key)) {
+            aliasMap[key] = a;
+          }
+        }
       });
       Object.keys(customMap).forEach(k => {
-        aliasMap[k.toLowerCase()] = { ...(aliasMap[k.toLowerCase()] || {}), ...customMap[k] };
+        const key = k.toLowerCase();
+        if (!deletedList.includes(key)) {
+          aliasMap[key] = { ...(aliasMap[key] || {}), ...customMap[k] };
+        }
       });
 
       aliasesCache = Object.values(aliasMap);
@@ -536,31 +551,47 @@ const Datasul = (() => {
       return;
     }
 
+    const chave = alias.trim().toLowerCase();
+
+    // 1. Marca imediatamente como deletado no localStorage do navegador
     try {
-      const res = await fetch(`/api/discovery/aliases/${encodeURIComponent(alias)}`, {
+      let deletedList = JSON.parse(localStorage.getItem('coletor_deleted_aliases') || '[]');
+      if (!deletedList.includes(chave)) {
+        deletedList.push(chave);
+        localStorage.setItem('coletor_deleted_aliases', JSON.stringify(deletedList));
+      }
+      let customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
+      if (customMap[chave]) {
+        delete customMap[chave];
+        localStorage.setItem('coletor_custom_aliases', JSON.stringify(customMap));
+      }
+      if (window.DB && typeof DB.deleteConfig === 'function') {
+        await DB.deleteConfig(`alias_${chave}`);
+      }
+    } catch (errLocal) {
+      console.warn('Erro ao atualizar localStorage na exclusão:', errLocal);
+    }
+
+    // 2. Chama a API do servidor (DELETE e POST fallback)
+    let msgRetorno = `Empresa / ALIAS '${alias}' excluída com sucesso!`;
+    try {
+      let res = await fetch(`/api/discovery/aliases/${encodeURIComponent(alias)}`, {
         method: 'DELETE'
       });
+      if (!res.ok) {
+        res = await fetch(`/api/discovery/aliases/${encodeURIComponent(alias)}/delete`, {
+          method: 'POST'
+        });
+      }
       const data = await res.json();
-
-      // Limpa dados locais se existirem
-      try {
-        const chave = alias.trim().toLowerCase();
-        let customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
-        if (customMap[chave]) {
-          delete customMap[chave];
-          localStorage.setItem('coletor_custom_aliases', JSON.stringify(customMap));
-        }
-        if (window.DB && typeof DB.deleteConfig === 'function') {
-          await DB.deleteConfig(`alias_${chave}`);
-        }
-      } catch (errLocal) {}
-
-      alert(data.mensagem || `Empresa '${alias}' excluída com sucesso!`);
-      limparFormAlias();
-      await carregarAliasManager();
-    } catch (e) {
-      alert('Erro ao excluir empresa: ' + e.message);
+      if (data && data.mensagem) msgRetorno = data.mensagem;
+    } catch (errServidor) {
+      console.warn('Aviso na exclusão via servidor:', errServidor);
     }
+
+    alert(msgRetorno);
+    limparFormAlias();
+    await carregarAliasManager();
   }
 
   async function salvarNovoAlias() {
@@ -577,6 +608,15 @@ const Datasul = (() => {
       alert('ALIAS e URL do PASOE são obrigatórios.');
       return;
     }
+
+    const chave = alias.trim().toLowerCase();
+
+    // Se estava na lista de excluídos, reabilita
+    try {
+      let deletedList = JSON.parse(localStorage.getItem('coletor_deleted_aliases') || '[]');
+      deletedList = deletedList.filter(k => String(k).toLowerCase() !== chave);
+      localStorage.setItem('coletor_deleted_aliases', JSON.stringify(deletedList));
+    } catch (e) {}
 
     const res = await fetch('/api/discovery/aliases', {
       method: 'POST',
