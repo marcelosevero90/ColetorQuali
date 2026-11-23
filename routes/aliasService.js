@@ -200,7 +200,21 @@ router.delete('/aliases/:alias', (req, res) => {
   delete aliases[chave];
   salvarAliases(aliases);
 
-  return res.json({ success: true, mensagem: `ALIAS '${chave}' removido.` });
+  return res.json({ success: true, mensagem: `Empresa / ALIAS '${chave}' removida com sucesso.` });
+});
+
+router.post(['/aliases/:alias/delete', '/aliases/delete/:alias'], (req, res) => {
+  const chave = (req.params.alias || '').trim().toLowerCase();
+  const aliases = carregarAliases();
+
+  if (!aliases[chave]) {
+    return res.status(404).json({ success: false, mensagem: 'ALIAS não encontrado.' });
+  }
+
+  delete aliases[chave];
+  salvarAliases(aliases);
+
+  return res.json({ success: true, mensagem: `Empresa / ALIAS '${chave}' removida com sucesso.` });
 });
 
 // 5. Teste de Conexão com Endpoint do PASOE

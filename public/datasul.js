@@ -479,9 +479,10 @@ const Datasul = (() => {
           <td>${escapeHtml(a.nomeEmpresa || '-')}</td>
           <td><code>${escapeHtml(a.pasoeUrl)}</code></td>
           <td style="text-align:center;">${escapeHtml(a.empresaPrincipal || '001')}</td>
-          <td style="text-align:center;">
-            <button class="btn-topbar-action" onclick="Datasul.editarAlias('${escapeHtml(a.alias)}')">✏️</button>
-            <button class="btn-topbar-action" onclick="Datasul.testarAlias('${escapeHtml(a.alias)}')">📡</button>
+          <td style="text-align:center; white-space:nowrap;">
+            <button class="btn-topbar-action" onclick="Datasul.editarAlias('${escapeHtml(a.alias)}')" title="Editar Empresa">✏️</button>
+            <button class="btn-topbar-action" onclick="Datasul.testarAlias('${escapeHtml(a.alias)}')" title="Testar Conexão">📡</button>
+            <button class="btn-topbar-action" style="color:#dc2626;" onclick="Datasul.excluirAlias('${escapeHtml(a.alias)}')" title="Excluir Empresa">🗑️</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -501,6 +502,9 @@ const Datasul = (() => {
     document.getElementById('alias-input-desc').value = a.descricao || '';
     const stEl = document.getElementById('alias-input-status');
     if (stEl) stEl.value = (a.status || 'ativo').toLowerCase();
+
+    const btnExc = document.getElementById('btn-excluir-alias');
+    if (btnExc) btnExc.style.display = 'inline-block';
   }
 
   function limparFormAlias() {
@@ -510,6 +514,53 @@ const Datasul = (() => {
     });
     const stEl = document.getElementById('alias-input-status');
     if (stEl) stEl.value = 'ativo';
+
+    const btnExc = document.getElementById('btn-excluir-alias');
+    if (btnExc) btnExc.style.display = 'none';
+  }
+
+  function excluirAliasAtual() {
+    const alias = (document.getElementById('alias-input-nome')?.value || '').trim();
+    if (!alias) {
+      alert('Nenhuma empresa selecionada para exclusão.');
+      return;
+    }
+    excluirAlias(alias);
+  }
+
+  async function excluirAlias(alias) {
+    if (!alias) return;
+    const a = aliasesCache.find(x => x.alias === alias);
+    const nomeEmp = a ? (a.nomeEmpresa || a.alias) : alias;
+    if (!confirm(`Deseja realmente excluir o cadastro da empresa / ALIAS '${alias}' (${nomeEmp})?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/discovery/aliases/${encodeURIComponent(alias)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+
+      // Limpa dados locais se existirem
+      try {
+        const chave = alias.trim().toLowerCase();
+        let customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
+        if (customMap[chave]) {
+          delete customMap[chave];
+          localStorage.setItem('coletor_custom_aliases', JSON.stringify(customMap));
+        }
+        if (window.DB && typeof DB.deleteConfig === 'function') {
+          await DB.deleteConfig(`alias_${chave}`);
+        }
+      } catch (errLocal) {}
+
+      alert(data.mensagem || `Empresa '${alias}' excluída com sucesso!`);
+      limparFormAlias();
+      await carregarAliasManager();
+    } catch (e) {
+      alert('Erro ao excluir empresa: ' + e.message);
+    }
   }
 
   async function salvarNovoAlias() {
@@ -615,6 +666,8 @@ const Datasul = (() => {
     editarAlias,
     limparFormAlias,
     salvarNovoAlias,
+    excluirAlias,
+    excluirAliasAtual,
     testarAlias,
     resetarBaseDados
   };
