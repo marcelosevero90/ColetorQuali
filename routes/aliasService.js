@@ -8,6 +8,8 @@ const path = require('path');
 const ALIASES_FILE = path.join(__dirname, '..', 'data', 'aliases.json');
 const TMP_ALIASES_FILE = path.join(require('os').tmpdir(), 'aliases.json');
 const TMP_DELETED_FILE = path.join(require('os').tmpdir(), 'aliases_deleted.json');
+const VERCEL_ORIGIN = 'https://coletorquali.vercel.app';
+const IS_VERCEL = Boolean(process.env.VERCEL || process.env.AWS_REGION);
 let memoriaDeleted = new Set();
 
 function carregarDeleted() {
@@ -35,7 +37,7 @@ function carregarAliases() {
       nomeEmpresa: 'AMBIENTE REAL PASOE (PROMOB)',
       empresaPrincipal: '001',
       codEstabelPadrao: '101',
-      pasoeUrl: 'https://gregory-graduation-forums-thirty.trycloudflare.com',
+      pasoeUrl: 'https://newly-officer-conclusions-homeland.trycloudflare.com',
       usuarioIntegracao: 'matheus.st',
       senhaIntegracao: 'qwe8451',
       status: 'ativo',
@@ -106,9 +108,169 @@ function salvarAliases(aliases) {
   return gravou;
 }
 
+function obterTunnelUrl(aliases) {
+  const candidato = (process.env.TUNNEL_URL || aliases?.teste?.pasoeUrl || aliases?.henn?.pasoeUrl || '').trim().replace(/\/+$/, '');
+  if (candidato && candidato.includes('trycloudflare.com')) {
+    return candidato;
+  }
+  return '';
+}
+
+async function sincronizarRemotoLeitura(aliases, chaveAlvo = '') {
+  const deleted = carregarDeleted();
+  const alvos = [];
+
+  if (IS_VERCEL) {
+    const tunnelUrl = obterTunnelUrl(aliases);
+    if (tunnelUrl) alvos.push(`${tunnelUrl}/api/discovery/aliases?raw=1`);
+  } else {
+    alvos.push(`${VERCEL_ORIGIN}/api/discovery/aliases?raw=1`);
+  }
+
+  let alterou = false;
+  for (const url of alvos) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 2500);
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'x-alias-sync': '1' },
+        signal: ctrl.signal
+      });
+      clearTimeout(timer);
+      if (res.ok) {
+        const data = await res.json();
+        const remotos = Array.isArray(data.aliases) ? data.aliases : [];
+        remotos.forEach(rem => {
+          if (!rem || !rem.alias) return;
+          const k = String(rem.alias).trim().toLowerCase();
+          if (deleted.has(k)) return;
+          if (!aliases[k] || (chaveAlvo && k === chaveAlvo)) {
+            aliases[k] = {
+              ...(aliases[k] || {}),
+              ...rem,
+              senhaIntegracao: (rem.senhaIntegracao && rem.senhaIntegracao !== '********')
+                ? rem.senhaIntegracao
+                : (aliases[k]?.senhaIntegracao || 'qwe8451')
+            };
+            alterou = true;
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  if (alterou) {
+    salvarAliases(aliases);
+  }
+  return aliases;
+}
+
+async function replicarSalvamentoRemoto(registro, aliases) {
+  const alvos = [];
+  if (IS_VERCEL) {
+    const tunnelUrl = obterTunnelUrl(aliases);
+    if (tunnelUrl) alvos.push(`${tunnelUrl}/api/discovery/aliases`);
+  } else {
+    alvos.push(`${VERCEL_ORIGIN}/api/discovery/aliases`);
+  }
+
+  for (const url of alvos) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3000);
+      await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-alias-sync': '1'
+        },
+        body: JSON.stringify(registro),
+        signal: ctrl.signal
+      });
+      clearTimeout(timer);
+    } catch (e) {}
+  }
+}
+
+async function replicarExclusaoRemota(chave, aliases) {
+  const alvos = [];
+  if (IS_VERCEL) {
+    const tunnelUrl = obterTunnelUrl(aliases);
+    if (tunnelUrl) alvos.push(`${tunnelUrl}/api/discovery/aliases/${encodeURIComponent(chave)}`);
+  } else {
+    alvos.push(`${VERCEL_ORIGIN}/api/discovery/aliases/${encodeURIComponent(chave)}`);
+  }
+
+  for (const url of alvos) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3000);
+      await fetch(url, {
+        method: 'DELETE',
+        headers: { 'x-alias-sync': '1' },
+        signal: ctrl.signal
+      });
+      clearTimeout(timer);
+    } catch (e) {}
+  }
+}
+
+// 0. Ponte invisível de sincronização de localStorage entre Vercel e Localhost
+router.get('/sync-bridge', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><script>
+    (function() {
+      try {
+        var customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
+        var deletedList = JSON.parse(localStorage.getItem('coletor_deleted_aliases') || '[]');
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({
+            type: 'COLETOR_ALIAS_SYNC',
+            origin: window.location.origin,
+            customMap: customMap,
+            deletedList: deletedList
+          }, '*');
+        }
+        Object.keys(customMap).forEach(function(k) {
+          if (deletedList.indexOf(k.toLowerCase()) === -1 && customMap[k] && customMap[k].alias && customMap[k].pasoeUrl) {
+            fetch('/api/discovery/aliases', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(customMap[k])
+            }).catch(function(){});
+          }
+        });
+        window.addEventListener('message', function(ev) {
+          if (!ev.data || typeof ev.data !== 'object') return;
+          if (ev.data.type === 'COLETOR_PUSH_ALIAS' && ev.data.aliasObj) {
+            var obj = ev.data.aliasObj;
+            var key = String(obj.alias || '').toLowerCase();
+            if (!key) return;
+            var cm = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
+            cm[key] = obj;
+            localStorage.setItem('coletor_custom_aliases', JSON.stringify(cm));
+            var dl = JSON.parse(localStorage.getItem('coletor_deleted_aliases') || '[]');
+            dl = dl.filter(function(x) { return String(x).toLowerCase() !== key; });
+            localStorage.setItem('coletor_deleted_aliases', JSON.stringify(dl));
+          } else if (ev.data.type === 'COLETOR_DELETE_ALIAS' && ev.data.alias) {
+            var keyDel = String(ev.data.alias || '').toLowerCase();
+            var cmDel = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
+            delete cmDel[keyDel];
+            localStorage.setItem('coletor_custom_aliases', JSON.stringify(cmDel));
+            var dlDel = JSON.parse(localStorage.getItem('coletor_deleted_aliases') || '[]');
+            if (dlDel.indexOf(keyDel) === -1) dlDel.push(keyDel);
+            localStorage.setItem('coletor_deleted_aliases', JSON.stringify(dlDel));
+          }
+        });
+      } catch (e) {}
+    })();
+  </script></body></html>`);
+});
+
 // 1. Resolução de ALIAS
 // GET /api/discovery/resolve?alias=demo
-router.get(['/resolve', '/resolve/:alias'], (req, res) => {
+router.get(['/resolve', '/resolve/:alias'], async (req, res) => {
   const chave = (req.params.alias || req.query.alias || '').trim().toLowerCase();
 
   if (!chave) {
@@ -118,8 +280,13 @@ router.get(['/resolve', '/resolve/:alias'], (req, res) => {
     });
   }
 
-  const aliases = carregarAliases();
-  const registro = aliases[chave];
+  let aliases = carregarAliases();
+  let registro = aliases[chave];
+
+  if (!registro && !req.headers['x-alias-sync']) {
+    aliases = await sincronizarRemotoLeitura(aliases, chave);
+    registro = aliases[chave];
+  }
 
   if (!registro) {
     return res.status(404).json({
@@ -153,11 +320,15 @@ router.get(['/resolve', '/resolve/:alias'], (req, res) => {
 });
 
 // 2. Listagem de ALIAS cadastrados
-router.get('/aliases', (req, res) => {
-  const aliases = carregarAliases();
+router.get('/aliases', async (req, res) => {
+  let aliases = carregarAliases();
+  if (!req.headers['x-alias-sync']) {
+    aliases = await sincronizarRemotoLeitura(aliases);
+  }
+  const isRaw = req.query.raw === '1' && req.headers['x-alias-sync'] === '1';
   const lista = Object.values(aliases).map(a => ({
     ...a,
-    senhaIntegracao: a.senhaIntegracao ? '********' : ''
+    senhaIntegracao: isRaw ? (a.senhaIntegracao || '') : (a.senhaIntegracao ? '********' : '')
   }));
   return res.json({
     success: true,
@@ -167,7 +338,7 @@ router.get('/aliases', (req, res) => {
 });
 
 // 3. Cadastro / Atualização de ALIAS
-router.post('/aliases', (req, res) => {
+router.post('/aliases', async (req, res) => {
   const {
     alias,
     nomeEmpresa,
@@ -214,6 +385,10 @@ router.post('/aliases', (req, res) => {
 
   salvarAliases(aliases);
 
+  if (!req.headers['x-alias-sync']) {
+    await replicarSalvamentoRemoto(aliases[chave], aliases);
+  }
+
   return res.json({
     success: true,
     mensagem: `ALIAS '${chave}' salvo com sucesso!`,
@@ -222,7 +397,7 @@ router.post('/aliases', (req, res) => {
 });
 
 // 4. Exclusão de ALIAS
-function excluirAliasHandler(req, res) {
+async function excluirAliasHandler(req, res) {
   const chave = (req.params.alias || req.body?.alias || req.query?.alias || '').trim().toLowerCase();
   if (!chave) {
     return res.status(400).json({ success: false, mensagem: 'ALIAS não informado.' });
@@ -247,6 +422,10 @@ function excluirAliasHandler(req, res) {
   try {
     fs.writeFileSync(TMP_ALIASES_FILE, JSON.stringify(aliases, null, 2), 'utf8');
   } catch (errTmp) {}
+
+  if (!req.headers['x-alias-sync']) {
+    await replicarExclusaoRemota(chave, aliases);
+  }
 
   return res.json({
     success: true,

@@ -1,6 +1,10 @@
 // server.js - Gateway Intermediário e Simulador PASOE TOTVS Datasul (Offline-First)
 // Atua como proxy para o PASOE real (CORS, Basic Auth, companyId, timeouts) e serve o app Web/PWA.
 
+if (!process.env.VERCEL) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -464,7 +468,18 @@ app.all('/api/pasoe-proxy', async (req, res) => {
       fetchOptions.body = JSON.stringify(bodyEnvio);
     }
 
-    const response = await fetch(targetUrl, fetchOptions);
+    let response;
+    try {
+      response = await fetch(targetUrl, fetchOptions);
+    } catch (errFetch) {
+      // Se estiver rodando localmente e a URL do Cloudflare Tunnel mudou/falhou, roteia direto para a ponte local na porta 3333
+      if (!process.env.VERCEL && targetUrl.includes('trycloudflare.com')) {
+        const localBridgeUrl = targetUrl.replace(/^https?:\/\/[^/]+\.trycloudflare\.com/i, 'http://localhost:3333');
+        response = await fetch(localBridgeUrl, fetchOptions);
+      } else {
+        throw errFetch;
+      }
+    }
     clearTimeout(timer);
 
     // Tratamento de redirecionamento 302/307 do Tomcat/Spring Security quando Basic Auth é inválido ou ausente

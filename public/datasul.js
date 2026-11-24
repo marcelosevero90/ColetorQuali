@@ -438,6 +438,22 @@ const Datasul = (() => {
   }
 
   // 5. ALIAS Manager
+  function obterOrigensDiscoveryExtras() {
+    const extras = [];
+    const host = (typeof window !== 'undefined' && window.location) ? window.location.hostname : '';
+    const port = (typeof window !== 'undefined' && window.location) ? window.location.port : '';
+    if (host === 'coletorquali.vercel.app') {
+      extras.push('http://localhost:3000', 'http://localhost:3333');
+    } else if (port === '3000') {
+      extras.push('https://coletorquali.vercel.app', 'http://localhost:3333');
+    } else if (port === '3333') {
+      extras.push('https://coletorquali.vercel.app', 'http://localhost:3000');
+    } else {
+      extras.push('https://coletorquali.vercel.app', 'http://localhost:3000');
+    }
+    return extras;
+  }
+
   async function carregarAliasManager() {
     try {
       let serverAliases = [];
@@ -448,6 +464,20 @@ const Datasul = (() => {
       } catch (errApi) {
         console.warn('Aviso ao consultar aliases do servidor:', errApi);
       }
+
+      // Consulta servidores complementares (Vercel <-> Localhost) para unificar cadastros
+      const extras = obterOrigensDiscoveryExtras();
+      await Promise.all(extras.map(async (baseOrigin) => {
+        try {
+          const rExtra = await fetch(`${baseOrigin}/api/discovery/aliases`);
+          if (rExtra.ok) {
+            const dExtra = await rExtra.json();
+            if (Array.isArray(dExtra.aliases)) {
+              serverAliases = [...serverAliases, ...dExtra.aliases];
+            }
+          }
+        } catch (e) {}
+      }));
 
       // Mescla com modificações salvas no navegador / dispositivo do usuário (localStorage)
       let customMap = {};
@@ -467,14 +497,25 @@ const Datasul = (() => {
         if (a && a.alias) {
           const key = a.alias.toLowerCase();
           if (!deletedList.includes(key)) {
-            aliasMap[key] = a;
+            aliasMap[key] = { ...(aliasMap[key] || {}), ...a };
           }
         }
       });
       Object.keys(customMap).forEach(k => {
         const key = k.toLowerCase();
-        if (!deletedList.includes(key)) {
+        if (!deletedList.includes(key) && customMap[k]) {
           aliasMap[key] = { ...(aliasMap[key] || {}), ...customMap[k] };
+          // Sincroniza em background com o servidor atual e servidores locais/nuvem
+          const payloadSync = aliasMap[key];
+          if (payloadSync.alias && payloadSync.pasoeUrl) {
+            ['', ...extras].forEach(base => {
+              fetch(`${base}/api/discovery/aliases`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payloadSync)
+              }).catch(() => {});
+            });
+          }
         }
       });
 
@@ -572,7 +613,7 @@ const Datasul = (() => {
       console.warn('Erro ao atualizar localStorage na exclusão:', errLocal);
     }
 
-    // 2. Chama a API do servidor (DELETE e POST fallback)
+    // 2. Chama a API do servidor (DELETE e POST fallback) e replica entre Vercel e Localhost
     let msgRetorno = `Empresa / ALIAS '${alias}' excluída com sucesso!`;
     try {
       let res = await fetch(`/api/discovery/aliases/${encodeURIComponent(alias)}`, {
@@ -588,6 +629,13 @@ const Datasul = (() => {
     } catch (errServidor) {
       console.warn('Aviso na exclusão via servidor:', errServidor);
     }
+
+    // Replica exclusão nas origens complementares (Vercel <-> Localhost)
+    obterOrigensDiscoveryExtras().forEach(base => {
+      fetch(`${base}/api/discovery/aliases/${encodeURIComponent(alias)}`, {
+        method: 'DELETE'
+      }).catch(() => {});
+    });
 
     alert(msgRetorno);
     limparFormAlias();
@@ -618,12 +666,23 @@ const Datasul = (() => {
       localStorage.setItem('coletor_deleted_aliases', JSON.stringify(deletedList));
     } catch (e) {}
 
+    const payloadBody = { alias, nomeEmpresa, pasoeUrl, empresaPrincipal, usuarioIntegracao, senhaIntegracao, descricao, status };
+
     const res = await fetch('/api/discovery/aliases', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ alias, nomeEmpresa, pasoeUrl, empresaPrincipal, usuarioIntegracao, senhaIntegracao, descricao, status })
+      body: JSON.stringify(payloadBody)
     });
     const data = await res.json();
+
+    // Replica salvamento nas origens complementares (Vercel <-> Localhost 3000/3333)
+    obterOrigensDiscoveryExtras().forEach(base => {
+      fetch(`${base}/api/discovery/aliases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payloadBody)
+      }).catch(() => {});
+    });
 
     // Persistência local no dispositivo/navegador (garante que mesmo em cloud/Vercel readonly o alias fique gravado)
     try {

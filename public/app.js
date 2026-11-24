@@ -616,7 +616,86 @@ const App = (() => {
     }
   }
 
+  let ponteSyncIniciada = false;
+  function iniciarPonteSincronizacaoAlias() {
+    if (ponteSyncIniciada || typeof window === 'undefined' || typeof document === 'undefined') return;
+    ponteSyncIniciada = true;
+    try {
+      window.addEventListener('message', (ev) => {
+        if (!ev.data || ev.data.type !== 'COLETOR_ALIAS_SYNC') return;
+        const remoteMap = ev.data.customMap || {};
+        const remoteDel = (ev.data.deletedList || []).map(x => String(x).toLowerCase());
+        let localMap = {};
+        try { localMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}'); } catch (e) {}
+        let alterou = false;
+        Object.keys(remoteMap).forEach(k => {
+          const key = k.toLowerCase();
+          if (!remoteDel.includes(key) && remoteMap[k] && remoteMap[k].alias && remoteMap[k].pasoeUrl) {
+            localMap[key] = { ...(localMap[key] || {}), ...remoteMap[k] };
+            alterou = true;
+            fetch('/api/discovery/aliases', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(localMap[key])
+            }).catch(() => {});
+          }
+        });
+        if (alterou) {
+          localStorage.setItem('coletor_custom_aliases', JSON.stringify(localMap));
+          const aliasEl = document.getElementById('login-alias');
+          if (aliasEl && aliasEl.value) resolverAliasLogin();
+        }
+      });
+
+      const host = window.location.hostname;
+      if (host === 'localhost' || host === '127.0.0.1') {
+        const iframe = document.createElement('iframe');
+        iframe.src = 'https://coletorquali.vercel.app/api/discovery/sync-bridge';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+      }
+    } catch (e) {}
+  }
+
+  async function resolverAliasRemotoComFallback(alias) {
+    const chave = (alias || '').trim().toLowerCase();
+    const urlPrimaria = window.ColetorGateway
+      ? window.ColetorGateway.getDiscoveryUrl(chave)
+      : `/api/discovery/resolve?alias=${encodeURIComponent(chave)}`;
+
+    const urls = [urlPrimaria];
+    const host = (typeof window !== 'undefined' && window.location) ? window.location.hostname : '';
+    if (host === 'localhost' || host === '127.0.0.1') {
+      urls.push(`https://coletorquali.vercel.app/api/discovery/resolve?alias=${encodeURIComponent(chave)}`);
+      urls.push(`http://localhost:3333/api/discovery/resolve?alias=${encodeURIComponent(chave)}`);
+    } else if (host === 'coletorquali.vercel.app') {
+      urls.push(`http://localhost:3000/api/discovery/resolve?alias=${encodeURIComponent(chave)}`);
+      urls.push(`http://localhost:3333/api/discovery/resolve?alias=${encodeURIComponent(chave)}`);
+    }
+
+    let ultimoErro = null;
+    for (const u of urls) {
+      try {
+        const r = await fetch(u);
+        const d = await r.json();
+        if (d && (d.success || d.inativo)) {
+          if (u !== urlPrimaria && d.success) {
+            fetch('/api/discovery/aliases', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(d)
+            }).catch(() => {});
+          }
+          return d;
+        }
+        ultimoErro = d;
+      } catch (e) {}
+    }
+    return ultimoErro;
+  }
+
   async function resolverAliasLogin() {
+    iniciarPonteSincronizacaoAlias();
     const aliasEl = document.getElementById('login-alias');
     const infoTag = document.getElementById('alias-info-tag');
     const empresaEl = document.getElementById('login-empresa');
@@ -656,20 +735,16 @@ const App = (() => {
       return true;
     };
 
-    // 1. Se estiver ONLINE, busca OBRIGATORIAMENTE no servidor oficial Vercel / Discovery
+    // 1. Se estiver ONLINE, busca no Discovery (Local + Vercel + Ponte)
     if (isOnline()) {
       try {
         infoTag.textContent = `Consultando Discovery '${alias}'...`;
-        const urlDisc = window.ColetorGateway
-          ? window.ColetorGateway.getDiscoveryUrl(alias)
-          : `/api/discovery/resolve?alias=${encodeURIComponent(alias)}`;
-        const res = await fetch(urlDisc);
-        const data = await res.json();
-        if (data.success) {
+        const data = await resolverAliasRemotoComFallback(alias);
+        if (data && data.success) {
           await aplicarDadosAlias(data, false);
           return;
-        } else {
-          infoTag.textContent = `✕ ${data.mensagem || 'ALIAS não encontrado.'}`;
+        } else if (data && data.inativo) {
+          infoTag.textContent = `✕ ${data.mensagem || 'ALIAS inativo.'}`;
           infoTag.style.color = '#dc2626';
           return;
         }
@@ -821,12 +896,17 @@ const App = (() => {
       }
 
       // MODO ONLINE:
-      // 1. Resolve ALIAS obrigatoriamente no Discovery oficial (Vercel ou Gateway)
-      const urlDisc = window.ColetorGateway ? window.ColetorGateway.getDiscoveryUrl(alias) : `/api/discovery/resolve?alias=${encodeURIComponent(alias)}`;
-      const resDisc = await fetch(urlDisc);
-      const dataDisc = await resDisc.json();
-      if (!dataDisc.success) {
-        throw new Error(dataDisc.mensagem || 'ALIAS inválido.');
+      // 1. Resolve ALIAS no Discovery oficial (Local + Vercel + Ponte + Cache local)
+      let dataDisc = await resolverAliasRemotoComFallback(alias);
+      if (!dataDisc || !dataDisc.success) {
+        const customMap = JSON.parse(localStorage.getItem('coletor_custom_aliases') || '{}');
+        const cacheAlias = (await DB.getConfig(`alias_${alias}`)) || customMap[alias];
+        if (cacheAlias && cacheAlias.pasoeUrl) {
+          dataDisc = { ...cacheAlias, success: true };
+        }
+      }
+      if (!dataDisc || !dataDisc.success) {
+        throw new Error(dataDisc?.mensagem || 'ALIAS inválido.');
       }
 
       state.session.pasoeUrl = dataDisc.pasoeUrl;

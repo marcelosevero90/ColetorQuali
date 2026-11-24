@@ -1,6 +1,7 @@
 // ponte-pasoe.js - Serviço de Ponte Local entre Coletor Quali e o PASOE TOTVS Datasul Real
 // Executa no notebook com VPN conectada e permite que o celular acerte o PASOE diretamente.
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const express = require('express');
 const cors = require('cors');
 const os = require('os');
@@ -435,6 +436,9 @@ app.get('/ping', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+const aliasService = require('./routes/aliasService');
+app.use('/api/discovery', aliasService);
 
 // Proxy Transparente para todos os endpoints do PASOE
 app.all('*', async (req, res) => {
