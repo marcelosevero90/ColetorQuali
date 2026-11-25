@@ -25,6 +25,8 @@ PROCEDURE pi-find:
     // Criacao do Retorno 
     DEFINE VAR oJsonArray           AS JsonArray  NO-UNDO.
     DEFINE VAR oJsonOutput          AS JsonObject NO-UNDO.
+    DEFINE VAR oJsonEmpresas        AS JsonArray  NO-UNDO.
+    DEFINE VAR oJsonEmpresa         AS JsonObject NO-UNDO.
 
     DEFINE VAR c-ep-codigo          AS CHAR       NO-UNDO.
     DEFINE VAR c-EstabPad           AS CHAR       NO-UNDO.
@@ -69,6 +71,20 @@ PROCEDURE pi-find:
 
         ASSIGN oJsonArray  = NEW JsonArray()
                oJsonOutput = NEW JsonObject().
+
+        IF c-Usuario = "" OR c-Usuario = ? THEN
+            ASSIGN c-Usuario = jsonInput:GetCharacter("usuario") NO-ERROR.
+
+        ASSIGN oJsonEmpresas = NEW JsonArray().
+        IF c-Usuario <> "" AND c-Usuario <> ? THEN DO:
+            FOR EACH segur_empres_usuar NO-LOCK
+                WHERE segur_empres_usuar.cod_usuario = c-Usuario:
+                oJsonEmpresa = NEW JsonObject().
+                oJsonEmpresa:ADD("codUsuario", segur_empres_usuar.cod_usuario).
+                oJsonEmpresa:ADD("codEmpresa", segur_empres_usuar.cod_empresa).
+                oJsonEmpresas:ADD(oJsonEmpresa).
+            END.
+        END.
 
         ASSIGN c-EstabPad = "".
 
@@ -115,6 +131,7 @@ PROCEDURE pi-find:
             oJsonOutput:ADD("permCredAvCli",    fmsc-usuar-mestre.l-permis-credito[1]).
             oJsonOutput:ADD("permProducao",     fmsc-usuar-mestre.l-producao).
             oJsonOutput:ADD("permRepRepOrd",    fmsc-usuar-mestre.l-permis-rep-ordem-prod[1]).
+            oJsonOutput:ADD("empresas",         oJsonEmpresas).
             
             oJsonArray :ADD(oJsonOutput).
         END.
@@ -138,6 +155,7 @@ PROCEDURE pi-find:
             oJsonOutput:ADD("permCredAvCli",    NO).
             oJsonOutput:ADD("permProducao",     NO).
             oJsonOutput:ADD("permRepRepOrd",    NO).
+            oJsonOutput:ADD("empresas",         oJsonEmpresas).
             
             oJsonArray :ADD(oJsonOutput).
         END.

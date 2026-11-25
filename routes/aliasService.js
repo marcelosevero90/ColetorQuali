@@ -37,7 +37,7 @@ function carregarAliases() {
       nomeEmpresa: 'AMBIENTE REAL PASOE (PROMOB)',
       empresaPrincipal: '001',
       codEstabelPadrao: '101',
-      pasoeUrl: 'https://newly-officer-conclusions-homeland.trycloudflare.com',
+      pasoeUrl: 'https://realtors-broadcasting-badge-granny.trycloudflare.com',
       usuarioIntegracao: 'matheus.st',
       senhaIntegracao: 'qwe8451',
       status: 'ativo',
@@ -48,9 +48,9 @@ function carregarAliases() {
       nomeEmpresa: 'TOTVS DATASUL 12 - AMBIENTE DEMO OFFLINE-FIRST',
       empresaPrincipal: '001',
       codEstabelPadrao: '101',
-      pasoeUrl: 'http://localhost:3000/api/datasul',
+      pasoeUrl: '/api/datasul',
       status: 'ativo',
-      descricao: 'Ambiente Local de Testes e Homologação (Simulador Fiel collect/*.p)'
+      descricao: 'Ambiente Local/Nuvem de Testes e Homologação (Simulador Fiel collect/*.p)'
     }
   };
 

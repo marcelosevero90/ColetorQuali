@@ -5,9 +5,40 @@
 // - TODAS as demais stores possuem 'codEmpresa' vinculado na chave primária composta e índice dedicado.
 
 const DB = (() => {
-  const DB_NAME = 'ColetorDatasul_Offline_v1';
   const DB_VERSION = 2;
+  let currentAlias = (typeof localStorage !== 'undefined' && localStorage.getItem('coletor_db_alias')) || 'default';
   let dbInstance = null;
+  let openingPromise = null;
+
+  function normalizarAlias(alias) {
+    const clean = String(alias || 'default').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+    return clean || 'default';
+  }
+
+  function getDbName() {
+    return `ColetorDatasul_Offline_${normalizarAlias(currentAlias)}_v1`;
+  }
+
+  function getAlias() {
+    return normalizarAlias(currentAlias);
+  }
+
+  async function setAlias(alias) {
+    const novo = normalizarAlias(alias);
+    if (novo === currentAlias && dbInstance) {
+      return dbInstance;
+    }
+    if (dbInstance) {
+      try { dbInstance.close(); } catch (e) {}
+      dbInstance = null;
+    }
+    openingPromise = null;
+    currentAlias = novo;
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('coletor_db_alias', currentAlias);
+    }
+    return openDB();
+  }
 
   function normalizarEmpresa(ep) {
     const s = String(ep || '001').trim();
@@ -30,9 +61,11 @@ const DB = (() => {
 
   function openDB() {
     if (dbInstance) return Promise.resolve(dbInstance);
+    if (openingPromise) return openingPromise;
 
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const targetName = getDbName();
+    openingPromise = new Promise((resolve, reject) => {
+      const request = indexedDB.open(targetName, DB_VERSION);
 
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
@@ -154,6 +187,12 @@ const DB = (() => {
       };
 
       request.onsuccess = (event) => {
+        openingPromise = null;
+        if (targetName !== getDbName()) {
+          try { event.target.result.close(); } catch (e) {}
+          resolve(openDB());
+          return;
+        }
         dbInstance = event.target.result;
         dbInstance.onversionchange = () => {
           console.warn('Nova versão do IndexedDB detectada, fechando conexão antiga.');
@@ -164,6 +203,7 @@ const DB = (() => {
       };
 
       request.onblocked = (event) => {
+        openingPromise = null;
         console.warn('Abertura do IndexedDB bloqueada por outra aba/conexão aberta. Fechando instâncias antigas...');
         if (dbInstance) {
           dbInstance.close();
@@ -172,6 +212,7 @@ const DB = (() => {
       };
 
       request.onerror = (event) => {
+        openingPromise = null;
         console.error('Erro ao abrir IndexedDB:', event.target.error);
         reject(event.target.error);
       };
@@ -1452,6 +1493,9 @@ const DB = (() => {
   }
 
   return {
+    normalizarAlias,
+    getAlias,
+    setAlias,
     normalizarEmpresa,
     normalizarDataIso,
     matchEmpresa,

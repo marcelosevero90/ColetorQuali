@@ -131,13 +131,8 @@ const App = (() => {
       processarLeituraHardware(codigo, origem);
     });
 
-    // Carregar estabelecimentos já persistidos localmente para suportar login offline
-    try {
-      const estsLocais = await DB.getAll('estabelec');
-      if (estsLocais && estsLocais.length > 0) {
-        state.estabelecimentosGlobais = estsLocais;
-      }
-    } catch (e) {}
+    // Não pré-carrega estabelecimentos antes do login para impedir mistura de dados entre aliases
+    state.estabelecimentosGlobais = [];
 
     atualizarBarraStatus();
     navegar('login');
@@ -213,16 +208,31 @@ const App = (() => {
       : `${pasoeUrl.replace(/\/+$/, '')}/${endpoint.replace(/^\/+/, '')}`;
 
     let finalUrl = rawUrl;
-    const isPrivateIp = /^(https?:\/\/)?(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.|localhost)/i.test(rawUrl);
+    const hostAtual = (typeof window !== 'undefined' && window.location) ? window.location.hostname : '';
+    const portAtual = (typeof window !== 'undefined' && window.location) ? window.location.port : '';
+    const isLocalNode = (hostAtual === 'localhost' || hostAtual === '127.0.0.1') &&
+      (portAtual === '3000' || portAtual === '3333') &&
+      !(window.ColetorGateway && window.ColetorGateway.isNative());
 
-    // Se for URL externa completa:
-    // Se for IP privado (ex: ponte local 192.168.0.8:3333 ou 10.x.x.x) ou túnel de ponte:
-    // Chama DIRETAMENTE o endpoint, pois o webservice da ponte já possui CORS liberado
-    // e o proxy da Vercel (nuvem) não possui acesso à rede interna Wi-Fi do usuário.
-    if (isPrivateIp) {
-      finalUrl = rawUrl;
-    } else if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
-      finalUrl = rawUrl;
+    // Se o ALIAS apontar para localhost:3000 mas estiver rodando publicado (Vercel ou APK),
+    // converte para rota relativa /api/datasul (interceptada pelo ColetorGateway para a nuvem).
+    if (!isLocalNode && /^https?:\/\/(localhost|127\.0\.0\.1):3000\/api\/datasul/i.test(finalUrl)) {
+      finalUrl = finalUrl.replace(/^https?:\/\/(localhost|127\.0\.0\.1):3000/i, '');
+    }
+
+    const isPrivateIp = /^(https?:\/\/)?(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.|localhost)/i.test(finalUrl);
+    const isExternalHttp = finalUrl.startsWith('http://') || finalUrl.startsWith('https://');
+    const gatewayBase = window.ColetorGateway ? window.ColetorGateway.getBaseUrl() : '';
+
+    // URLs externas públicas (CloudTOTVS, Cloudflare Tunnel, etc.) ou ambiente dev local passam pelo /api/pasoe-proxy
+    // para evitar bloqueios CORS, manter sanitização e funcionar na Vercel e no APK.
+    // Apenas IPs privados em ambiente publicado (ex: ponte Wi-Fi 192.168.x.x direto do celular) chamam direto.
+    if (isExternalHttp &&
+        (!gatewayBase || !finalUrl.startsWith(gatewayBase)) &&
+        (!window.location.host || isLocalNode || !finalUrl.includes(window.location.host))) {
+      if (!isPrivateIp || isLocalNode) {
+        finalUrl = `/api/pasoe-proxy?url=${encodeURIComponent(finalUrl)}`;
+      }
     }
 
     const headers = {
@@ -512,16 +522,26 @@ const App = (() => {
     setTimeout(() => { if (toast.parentElement) toast.remove(); }, 5000);
   }
 
+  function extrairEmpresasPermitidas(paramObj) {
+    if (!paramObj || !Array.isArray(paramObj.empresas)) return [];
+    const set = new Set();
+    paramObj.empresas.forEach(item => {
+      const cod = typeof item === 'string'
+        ? item
+        : (item?.codEmpresa || item?.cod_empresa || item?.epCodigo || '');
+      if (cod) set.add(DB.normalizarEmpresa(cod));
+    });
+    return Array.from(set);
+  }
+
   // =========================================================================
-  // TELA 1: LOGIN COM ALIAS, USUÁRIO/SENHA TOTVS, EMPRESA E ESTABELECIMENTO
+  // TELA 1: LOGIN COM ALIAS E USUÁRIO/SENHA TOTVS (Empresa via Painel Admin)
   // Segue modern-web-guidance: autofill-sign-in-form
   // =========================================================================
   function renderTelaLogin() {
     if (!state.aliasInput) state.aliasInput = localStorage.getItem('coletor_ultimo_alias') || '';
     if (!state.usuarioInput) state.usuarioInput = localStorage.getItem('coletor_ultimo_usuario') || '';
     if (!state.empresaInput) state.empresaInput = localStorage.getItem('coletor_ultima_empresa') || localStorage.getItem('datasul_company_id') || '001';
-
-    const empresasCache = [...new Set((state.estabelecimentosGlobais || []).map(e => DB.normalizarEmpresa(e.codEmpresa)))].sort();
 
     container.innerHTML = `
       <div style="text-align: center; padding: 14px 0 6px 0;">
@@ -563,15 +583,6 @@ const App = (() => {
           </div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="login-empresa">Empresa (companyId) *</label>
-          <select id="login-empresa" name="companyId" class="form-input" onchange="App.onLoginEmpresaChange()">
-            ${empresasCache.length > 0
-              ? empresasCache.map(emp => `<option value="${emp}" ${emp === state.empresaInput ? 'selected' : ''}>Empresa ${emp}</option>`).join('')
-              : '<option value="001">Empresa 001 (Padrão)</option><option value="002">Empresa 002</option>'}
-          </select>
-        </div>
-
         <div style="margin-top: 14px; display: flex; flex-direction: column; gap: 8px;">
           <button type="submit" class="btn btn-primary" id="btn-submit-login">
             Acessar Sistema ➔
@@ -580,7 +591,7 @@ const App = (() => {
       </form>
 
       <div style="text-align: center; font-size: 10.5px; color: #94a3b8; margin-top: 8px;">
-        Autenticação HTTP Basic Auth + Header <code>companyId</code> por empresa
+        Autenticação HTTP Basic Auth • Empresa de validação parametrizada no Admin
       </div>
     `;
 
@@ -616,9 +627,18 @@ const App = (() => {
     }
   }
 
+  function isAmbienteLocalDev() {
+    if (typeof window === 'undefined' || !window.location) return false;
+    if (window.ColetorGateway && window.ColetorGateway.isNative()) return false;
+    const host = window.location.hostname;
+    const port = window.location.port;
+    return (host === 'localhost' || host === '127.0.0.1') && (port === '3000' || port === '3333');
+  }
+
   let ponteSyncIniciada = false;
   function iniciarPonteSincronizacaoAlias() {
     if (ponteSyncIniciada || typeof window === 'undefined' || typeof document === 'undefined') return;
+    if (!isAmbienteLocalDev()) return;
     ponteSyncIniciada = true;
     try {
       window.addEventListener('message', (ev) => {
@@ -647,13 +667,10 @@ const App = (() => {
         }
       });
 
-      const host = window.location.hostname;
-      if (host === 'localhost' || host === '127.0.0.1') {
-        const iframe = document.createElement('iframe');
-        iframe.src = 'https://coletorquali.vercel.app/api/discovery/sync-bridge';
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
-      }
+      const iframe = document.createElement('iframe');
+      iframe.src = 'https://coletorquali.vercel.app/api/discovery/sync-bridge';
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
     } catch (e) {}
   }
 
@@ -664,12 +681,8 @@ const App = (() => {
       : `/api/discovery/resolve?alias=${encodeURIComponent(chave)}`;
 
     const urls = [urlPrimaria];
-    const host = (typeof window !== 'undefined' && window.location) ? window.location.hostname : '';
-    if (host === 'localhost' || host === '127.0.0.1') {
+    if (isAmbienteLocalDev()) {
       urls.push(`https://coletorquali.vercel.app/api/discovery/resolve?alias=${encodeURIComponent(chave)}`);
-      urls.push(`http://localhost:3333/api/discovery/resolve?alias=${encodeURIComponent(chave)}`);
-    } else if (host === 'coletorquali.vercel.app') {
-      urls.push(`http://localhost:3000/api/discovery/resolve?alias=${encodeURIComponent(chave)}`);
       urls.push(`http://localhost:3333/api/discovery/resolve?alias=${encodeURIComponent(chave)}`);
     }
 
@@ -698,7 +711,6 @@ const App = (() => {
     iniciarPonteSincronizacaoAlias();
     const aliasEl = document.getElementById('login-alias');
     const infoTag = document.getElementById('alias-info-tag');
-    const empresaEl = document.getElementById('login-empresa');
     if (!aliasEl || !infoTag) return;
 
     const alias = aliasEl.value.trim().toLowerCase();
@@ -715,23 +727,14 @@ const App = (() => {
       state.session.pasoeUrl = dados.pasoeUrl;
       state.session.alias = dados.alias;
       await DB.putConfig(`alias_${alias}`, dados);
-      infoTag.textContent = ehOffline
-        ? `● Offline: ${dados.nomeEmpresa || alias} (${dados.pasoeUrl})`
-        : `✓ ${dados.nomeEmpresa || alias} (${dados.pasoeUrl})`;
-      infoTag.style.color = ehOffline ? '#d97706' : '#059669';
 
-      const empDefault = DB.normalizarEmpresa(dados.empresaPrincipal || '001');
-      if (empresaEl) {
-        const existeOpt = Array.from(empresaEl.options).some(o => o.value === empDefault);
-        if (!existeOpt) {
-          const opt = document.createElement('option');
-          opt.value = empDefault;
-          opt.textContent = `Empresa ${empDefault}`;
-          empresaEl.appendChild(opt);
-        }
-        empresaEl.value = empDefault;
-        state.empresaInput = empDefault;
-      }
+      const empAdmin = DB.normalizarEmpresa(dados.empresaPrincipal || '001');
+      state.empresaAdminAlias = empAdmin;
+
+      infoTag.textContent = ehOffline
+        ? `● Offline: ${dados.nomeEmpresa || alias} • Emp. ${empAdmin} (${dados.pasoeUrl})`
+        : `✓ ${dados.nomeEmpresa || alias} • Emp. ${empAdmin} (${dados.pasoeUrl})`;
+      infoTag.style.color = ehOffline ? '#d97706' : '#059669';
       return true;
     };
 
@@ -774,33 +777,18 @@ const App = (() => {
     infoTag.style.color = '#dc2626';
   }
 
-  function onLoginEmpresaChange() {
-    const el = document.getElementById('login-empresa');
-    if (el) {
-      state.empresaInput = DB.normalizarEmpresa(el.value);
-      localStorage.setItem('coletor_ultima_empresa', state.empresaInput);
-      localStorage.setItem('datasul_company_id', state.empresaInput);
-    }
-  }
-
   async function executarLogin() {
     const aliasEl = document.getElementById('login-alias');
     const usuarioEl = document.getElementById('login-usuario');
     const senhaEl = document.getElementById('login-senha');
-    const empresaEl = document.getElementById('login-empresa');
     const btn = document.getElementById('btn-submit-login');
 
     const alias = (aliasEl?.value || state.aliasInput || '').trim().toLowerCase();
     const usuario = (usuarioEl?.value || '').trim();
     const senha = (senhaEl?.value || '');
-    const codEmpresa = DB.normalizarEmpresa(empresaEl?.value || state.empresaInput || '001');
 
     if (alias) localStorage.setItem('coletor_ultimo_alias', alias);
     if (usuario) localStorage.setItem('coletor_ultimo_usuario', usuario);
-    if (codEmpresa) {
-      localStorage.setItem('coletor_ultima_empresa', codEmpresa);
-      localStorage.setItem('datasul_company_id', codEmpresa);
-    }
 
     if (!alias || !usuario || !senha) {
       mostrarAviso('Informe ALIAS, Usuário TOTVS e Senha TOTVS.', 'warning');
@@ -810,7 +798,9 @@ const App = (() => {
     state.aliasInput = alias;
     state.usuarioInput = usuario;
     state.senhaInput = senha;
-    state.empresaInput = codEmpresa;
+
+    // Isola imediatamente o banco IndexedDB por ALIAS (nunca mistura dados de outro cliente)
+    await DB.setAlias(alias);
 
     const authHeader = 'Basic ' + btoa(`${usuario}:${senha}`);
     if (btn) {
@@ -819,40 +809,24 @@ const App = (() => {
     }
 
     try {
-      // Validação de status do ALIAS no Discovery (se online)
-      if (isOnline()) {
-        try {
-          const urlDisc = window.ColetorGateway ? window.ColetorGateway.getDiscoveryUrl(alias) : `/api/discovery/resolve?alias=${encodeURIComponent(alias)}`;
-          const resCheck = await fetch(urlDisc);
-          if (resCheck.ok) {
-            const dataCheck = await resCheck.json();
-            if (dataCheck.status === 'inativo' || dataCheck.inativo) {
-              mostrarAviso(`O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso. Contate o administrador.`, 'error');
-              if (btn) { btn.disabled = false; btn.textContent = 'Acessar Sistema ➔'; }
-              return;
-            }
-          } else if (resCheck.status === 403) {
-            const errCheck = await resCheck.json();
-            mostrarAviso(errCheck.mensagem || `O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`, 'error');
-            if (btn) { btn.disabled = false; btn.textContent = 'Acessar Sistema ➔'; }
-            return;
-          }
-        } catch (eCheck) {
-          console.warn('Discovery offline ou inacessível no momento do login:', eCheck);
-        }
-      } else {
+      // MODO OFFLINE: autentica contra parâmetros/sessão armazenados no dispositivo
+      if (!isOnline()) {
         const aliasCache = await DB.getConfig(`alias_${alias}`);
         if (aliasCache && aliasCache.status === 'inativo') {
           mostrarAviso(`O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso.`, 'error');
           if (btn) { btn.disabled = false; btn.textContent = 'Acessar Sistema ➔'; }
           return;
         }
-      }
 
-      // MODO OFFLINE: autentica contra parâmetros/sessão armazenados no dispositivo
-      if (!isOnline()) {
-        const paramLocal = await DB.obterParamUsuarioLocal(codEmpresa, usuario);
         const sessaoSalva = await DB.getConfig(`credencial_${alias}_${usuario.toLowerCase()}`);
+        let empFallback = DB.normalizarEmpresa(
+          sessaoSalva?.codEmpresa || aliasCache?.empresaPrincipal || state.empresaInput || '001'
+        );
+        let paramLocal = await DB.obterParamUsuarioLocal(empFallback, usuario);
+        if (!paramLocal) {
+          const todosParams = await DB.getAll('fmsc_usuar_mestre');
+          paramLocal = todosParams.find(u => String(u.codUsuario || '').toLowerCase() === usuario.toLowerCase()) || null;
+        }
 
         if (!paramLocal && !sessaoSalva) {
           throw new Error('Sem conexão com o PASOE e este usuário ainda não realizou uma carga offline neste aparelho.');
@@ -871,25 +845,29 @@ const App = (() => {
           }
         }
 
-        const ests = (await DB.getAll('estabelec')).filter(e => DB.matchEmpresa(e.codEmpresa, codEmpresa));
-        state.estabelecimentosGlobais = await DB.getAll('estabelec');
+        const codEmpresa = DB.normalizarEmpresa(paramLocal?.codEmpresa || sessaoSalva?.codEmpresa || empFallback);
+        const estsAll = (await DB.getAll('estabelec')).filter(e => !e._alias || e._alias === alias);
+        const ests = estsAll.filter(e => DB.matchEmpresa(e.codEmpresa, codEmpresa));
+        state.estabelecimentosGlobais = estsAll;
         const estabPad = paramLocal?.codEstabPad || sessaoSalva?.codEstabel || ests[0]?.codEstabel || '101';
         const estabObj = ests.find(e => e.codEstabel === estabPad) || ests[0] || { codEstabel: estabPad, nome: `Filial ${estabPad}`, codEmpresa };
 
         state.session = {
           ...state.session,
-          codUsuario: usuario,
+          codUsuario: paramLocal?.codUsuario || usuario,
           nome: paramLocal?.nome || usuario.toUpperCase(),
           alias,
-          pasoeUrl: sessaoSalva?.pasoeUrl || state.session.pasoeUrl || '/api/datasul',
+          pasoeUrl: sessaoSalva?.pasoeUrl || aliasCache?.pasoeUrl || state.session.pasoeUrl || '/api/datasul',
           codEmpresa,
           codEstabel: estabObj.codEstabel,
           nomeEstabel: estabObj.nome,
           authHeader,
+          empresasPermitidas: extrairEmpresasPermitidas(paramLocal),
           paramUsuario: paramLocal || { permEstoque: true, permEstoqReqInv: true, codEstabPad: estabObj.codEstabel }
         };
 
         localStorage.setItem('datasul_company_id', codEmpresa);
+        localStorage.setItem('coletor_ultima_empresa', codEmpresa);
         atualizarBarraStatus();
         navegar('menu');
         return;
@@ -908,17 +886,25 @@ const App = (() => {
       if (!dataDisc || !dataDisc.success) {
         throw new Error(dataDisc?.mensagem || 'ALIAS inválido.');
       }
+      if (dataDisc.status === 'inativo' || dataDisc.inativo) {
+        mostrarAviso(`O ambiente ALIAS '${alias}' está INATIVO e não está apto para o uso. Contate o administrador.`, 'error');
+        if (btn) { btn.disabled = false; btn.textContent = 'Acessar Sistema ➔'; }
+        return;
+      }
+
+      // Empresa parametrizada no Painel do Admin: usada SOMENTE em fcLogin e fcParamUsuario (fcGetParamUsuario)
+      const empresaAdmin = DB.normalizarEmpresa(dataDisc.empresaPrincipal || state.empresaAdminAlias || '001');
+      state.empresaAdminAlias = empresaAdmin;
 
       state.session.pasoeUrl = dataDisc.pasoeUrl;
       state.session.alias = dataDisc.alias;
-      state.session.codEmpresa = codEmpresa;
       state.session.authHeader = authHeader;
       await DB.putConfig(`alias_${alias}`, dataDisc);
 
-      // 2. Autentica no fcLogin enviando Basic Auth + companyId + payload (compatível com raiz e array)
+      // 2. Autentica no fcLogin usando a empresa parametrizada no Admin
       const resLogin = await pasoeFetch('/fcLogin', {
         method: 'POST',
-        companyId: codEmpresa,
+        companyId: empresaAdmin,
         authHeader,
         body: JSON.stringify({
           usuario,
@@ -935,31 +921,12 @@ const App = (() => {
       const estabLogin = (dataLogin.message || dataLogin.codEstabPad || '').trim();
       const usuarioReal = (dataLogin.codUsuario || dataLogin.usuario?.codUsuario || (usuario.includes('/') ? usuario.split('/')[1] : (usuario.includes('\\') ? usuario.split('\\')[1] : usuario))).trim();
 
-      // 3. Busca tabela global estabelec (fcGetEstabelecimentos) e salva no IndexedDB
-      try {
-        const resEst = await pasoeFetch('/fcGetEstabelecimentos', {
-          method: 'GET',
-          companyId: codEmpresa,
-          authHeader
-        });
-        if (resEst.ok) {
-          const dataEst = await resEst.json();
-          const ests = extrairLista(dataEst, 'estabelecimentos');
-          if (ests.length > 0) {
-            state.estabelecimentosGlobais = ests;
-            await DB.bulkPut('estabelec', ests);
-          }
-        }
-      } catch (eEst) {
-        console.warn('Aviso fcGetEstabelecimentos:', eEst);
-      }
-
-      // 4. Consulta parâmetros do usuário na empresa selecionada (fcGetParamUsuario -> fmsc-usuar-mestre)
+      // 3. Consulta parâmetros do usuário e empresas habilitadas (fcGetParamUsuario -> fmsc-usuar-mestre + segur_empres_usuar)
       let paramUsuario = null;
       try {
         const resParam = await pasoeFetch('/fcGetParamUsuario', {
           method: 'PUT',
-          companyId: codEmpresa,
+          companyId: empresaAdmin,
           authHeader,
           body: JSON.stringify({
             usuario: usuarioReal,
@@ -971,7 +938,6 @@ const App = (() => {
           const listaP = extrairLista(dataParam);
           if (listaP.length > 0) {
             paramUsuario = listaP[0];
-            await DB.bulkPut('fmsc_usuar_mestre', [paramUsuario], codEmpresa);
           }
         }
       } catch (eParam) {
@@ -980,15 +946,56 @@ const App = (() => {
 
       if (paramUsuario) {
         if (Number(paramUsuario.situacao) === 0) {
-          throw new Error(`Usuário '${usuarioReal}' não habilitado no FMSC0101 para a empresa ${codEmpresa}.`);
+          throw new Error(`Usuário '${usuarioReal}' não habilitado no FMSC0101 para a empresa ${empresaAdmin}.`);
         }
         const temEstoque = paramUsuario.permEstoque === true || paramUsuario.permEstoque === 'true' || paramUsuario.permEstoque === 1;
         const temCompras = Boolean(paramUsuario.permCompras);
         const temProducao = Boolean(paramUsuario.permProducao);
         const temCredito = Boolean(paramUsuario.permCredito);
         if (!temEstoque && !temCompras && !temProducao && !temCredito) {
-          throw new Error(`Usuário '${usuarioReal}' sem permissão de acesso a módulos no FMSC0101 para a empresa ${codEmpresa}.`);
+          throw new Error(`Usuário '${usuarioReal}' sem permissão de acesso a módulos no FMSC0101 para a empresa ${empresaAdmin}.`);
         }
+      }
+
+      // Sugere por padrão no app a empresa vinda no campo codEmpresa do fcParamUsuario (fcGetParamUsuario)
+      const empresasPermitidas = extrairEmpresasPermitidas(paramUsuario);
+      const codEmpresa = DB.normalizarEmpresa(
+        paramUsuario?.codEmpresa || empresasPermitidas[0] || empresaAdmin || '001'
+      );
+      state.empresaInput = codEmpresa;
+      state.session.codEmpresa = codEmpresa;
+
+      if (paramUsuario) {
+        await DB.bulkPut('fmsc_usuar_mestre', [paramUsuario], codEmpresa);
+      }
+
+      // 4. Busca tabela global estabelec (fcGetEstabelecimentos) usando a empresa definida para o app
+      try {
+        let resEst = await pasoeFetch('/fcGetEstabelecimentos', {
+          method: 'GET',
+          companyId: codEmpresa,
+          authHeader
+        });
+        if (!resEst.ok && empresaAdmin && !DB.matchEmpresa(empresaAdmin, codEmpresa)) {
+          resEst = await pasoeFetch('/fcGetEstabelecimentos', {
+            method: 'GET',
+            companyId: empresaAdmin,
+            authHeader
+          });
+        }
+        if (resEst.ok) {
+          const dataEst = await resEst.json();
+          const ests = extrairLista(dataEst, 'estabelecimentos');
+          if (ests.length > 0) {
+            const estsTagged = ests.map(e => ({ ...e, _alias: alias }));
+            state.estabelecimentosGlobais = estsTagged;
+            await DB.clear('estabelec');
+            await DB.bulkPut('estabelec', estsTagged);
+            await DB.putConfig('ultimo_alias_estabelec', alias);
+          }
+        }
+      } catch (eEst) {
+        console.warn('Aviso fcGetEstabelecimentos:', eEst);
       }
 
       const estsEmpresa = (state.estabelecimentosGlobais || []).filter(e => DB.matchEmpresa(e.codEmpresa, codEmpresa));
@@ -1009,6 +1016,7 @@ const App = (() => {
         codEstabel: estabObj.codEstabel,
         nomeEstabel: estabObj.nome,
         authHeader,
+        empresasPermitidas,
         paramUsuario
       };
 
@@ -1021,6 +1029,7 @@ const App = (() => {
         authHeader
       });
       localStorage.setItem('datasul_company_id', codEmpresa);
+      localStorage.setItem('coletor_ultima_empresa', codEmpresa);
       atualizarBarraStatus();
 
       // 5. Se for login real (não demo), expurga qualquer resíduo mock anterior de inventário
@@ -1033,8 +1042,8 @@ const App = (() => {
         }
       }
 
-      // Se primeira carga nesta empresa ou carga vencida (>24h), inicia carga offline em chunks
-      if (FastLoader.precisaCargaDiaria(codEmpresa)) {
+      // Se primeira carga nesta empresa/alias ou carga vencida (>24h), inicia carga offline em chunks
+      if (FastLoader.precisaCargaDiaria(codEmpresa, alias)) {
         abrirModalCargaInicial(`Sincronizando cadastros mestres e fichas da Empresa ${codEmpresa} para operação Offline-First...`, true);
       } else {
         navegar('menu');
@@ -1061,8 +1070,12 @@ const App = (() => {
       nomeEstabel: '',
       authHeader: null,
       codMobile: state.session.codMobile,
+      empresasPermitidas: [],
       paramUsuario: null
     };
+    state.estabelecimentosGlobais = [];
+    state.inventariosResumo = [];
+    state.inventarioSelecionado = null;
     state.senhaInput = '';
     state.aliasInput = localStorage.getItem('coletor_ultimo_alias') || state.aliasInput;
     state.usuarioInput = localStorage.getItem('coletor_ultimo_usuario') || state.usuarioInput;
@@ -1280,9 +1293,13 @@ const App = (() => {
   }
 
   // =========================================================================
-  // TELA 3: SELEÇÃO DE EMPRESA / ESTABELECIMENTO (TABELA GLOBAL estabelec)
+  // TELA 3: SELEÇÃO DE EMPRESA / ESTABELECIMENTO (FILTRADA POR segur_empres_usuar)
   // =========================================================================
   async function renderTelaEstabelecimentos() {
+    const empresasPermitidas = (Array.isArray(state.session?.empresasPermitidas) && state.session.empresasPermitidas.length > 0)
+      ? state.session.empresasPermitidas
+      : extrairEmpresasPermitidas(state.session?.paramUsuario);
+
     container.innerHTML = `
       <div style="display: flex; align-items: center; justify-content: space-between;">
         <button class="btn-topbar-action" onclick="App.navegar('menu')">‹ Voltar</button>
@@ -1290,35 +1307,64 @@ const App = (() => {
         <span style="width: 50px;"></span>
       </div>
       <p style="font-size: 11.5px; color: #64748b;">
-        A tabela <code>estabelec</code> é global. Ao selecionar uma filial, o Header <code>companyId</code> é atualizado automaticamente para sua respectiva empresa:
+        ${Array.isArray(state.session?.paramUsuario?.empresas)
+          ? `Exibindo somente empresas vinculadas ao usuário <strong>${escapeHtml(state.session.codUsuario)}</strong> (<code>segur_empres_usuar</code>)${empresasPermitidas.length > 0 ? `: <strong>${empresasPermitidas.map(escapeHtml).join(', ')}</strong>` : ''}.`
+          : `Selecione a empresa/filial para atualizar o Header <code>companyId</code> automaticamente:`}
       </p>
       <div id="lista-estabel-container" style="display: flex; flex-direction: column; gap: 8px;">
         <div style="text-align:center; padding:20px; color:#94a3b8;">Carregando estabelecimentos...</div>
       </div>
     `;
 
-    let lista = await DB.getAll('estabelec');
+    const aliasAtual = state.session?.alias || state.aliasInput || '';
+    const aliasCacheEstab = await DB.getConfig('ultimo_alias_estabelec');
+    let lista = [];
+    if (!aliasCacheEstab || aliasCacheEstab === aliasAtual) {
+      lista = (await DB.getAll('estabelec')).filter(e => !e._alias || e._alias === aliasAtual);
+    }
+
     if (isOnline()) {
       try {
-        const res = await pasoeFetch('/fcGetEstabelecimentos');
+        let res = await pasoeFetch('/fcGetEstabelecimentos');
+        if (!res.ok) {
+          const empFallback = state.empresaAdminAlias || '001';
+          if (!DB.matchEmpresa(empFallback, state.session?.codEmpresa)) {
+            res = await pasoeFetch('/fcGetEstabelecimentos', { companyId: empFallback });
+          }
+        }
         if (res.ok) {
           const data = await res.json();
           const remotos = extrairLista(data, 'estabelecimentos');
           if (remotos.length > 0) {
-            lista = remotos;
-            await DB.bulkPut('estabelec', remotos);
+            const remotosTagged = remotos.map(e => ({ ...e, _alias: aliasAtual }));
+            lista = remotosTagged;
+            await DB.clear('estabelec');
+            await DB.bulkPut('estabelec', remotosTagged);
+            await DB.putConfig('ultimo_alias_estabelec', aliasAtual);
           }
         }
       } catch (e) {}
     }
 
     state.estabelecimentosGlobais = lista;
+
+    // Filtra somente empresas em que o usuário possui direito de uso (segur_empres_usuar)
+    if (Array.isArray(state.session?.paramUsuario?.empresas)) {
+      lista = lista.filter(est =>
+        empresasPermitidas.some(emp => DB.matchEmpresa(est.codEmpresa, emp))
+      );
+    }
+
     const div = document.getElementById('lista-estabel-container');
     if (!div) return;
     div.innerHTML = '';
 
     if (lista.length === 0) {
-      div.innerHTML = '<div class="card-modern" style="text-align:center; color:#64748b;">Nenhum estabelecimento carregado.</div>';
+      div.innerHTML = `<div class="card-modern" style="text-align:center; color:#64748b;">${
+        Array.isArray(state.session?.paramUsuario?.empresas) && empresasPermitidas.length === 0
+          ? `Usuário <strong>${escapeHtml(state.session.codUsuario)}</strong> não possui empresas vinculadas em <code>segur_empres_usuar</code>.`
+          : 'Nenhum estabelecimento disponível para as empresas habilitadas.'
+      }</div>`;
       return;
     }
 
@@ -1350,6 +1396,7 @@ const App = (() => {
         state.session.codEstabel = est.codEstabel;
         state.session.nomeEstabel = est.nome;
         localStorage.setItem('datasul_company_id', empEst);
+        localStorage.setItem('coletor_ultima_empresa', empEst);
 
         if (mudouEmpresa && isOnline()) {
           try {
@@ -1364,10 +1411,18 @@ const App = (() => {
             if (resP.ok) {
               const dP = await resP.json();
               const arr = extrairLista(dP);
-              if (arr.length > 0) {
-                state.session.paramUsuario = arr[0];
-                await DB.bulkPut('fmsc_usuar_mestre', [arr[0]], empEst);
-                if (!arr[0].permEstoque || !arr[0].permEstoqReqInv) {
+              if (arr.length > 0 && Number(arr[0].situacao) !== 0) {
+                const empresasPrev = state.session.paramUsuario?.empresas;
+                const novoParam = {
+                  ...arr[0],
+                  empresas: (Array.isArray(arr[0].empresas) && arr[0].empresas.length > 0)
+                    ? arr[0].empresas
+                    : empresasPrev
+                };
+                state.session.paramUsuario = novoParam;
+                state.session.empresasPermitidas = extrairEmpresasPermitidas(novoParam);
+                await DB.bulkPut('fmsc_usuar_mestre', [novoParam], empEst);
+                if (!novoParam.permEstoque || !novoParam.permEstoqReqInv) {
                   alert(`Atenção: Usuário '${state.session.codUsuario}' não possui permissão de Inventário na empresa ${empEst}.`);
                 }
               }
@@ -8233,6 +8288,7 @@ const App = (() => {
     if (btnFechar) btnFechar.style.display = 'none';
 
     FastLoader.executarCarga({
+      alias: state.session.alias,
       pasoeUrl: state.session.pasoeUrl || '/api/datasul',
       companyId: state.session.codEmpresa || '001',
       codEstabel: state.session.codEstabel || '',
@@ -8434,7 +8490,6 @@ const App = (() => {
     alternarSimulacaoOffline,
     alternarVisibilidadeSenha,
     resolverAliasLogin,
-    onLoginEmpresaChange,
     executarLogin,
     logoff,
     entrarNoInventario,

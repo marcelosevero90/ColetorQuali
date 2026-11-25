@@ -5,19 +5,29 @@
 const FastLoader = (() => {
   let isCarregando = false;
 
-  function precisaCargaDiaria(codEmpresa) {
+  function resolverAliasAtual(aliasParam = null) {
+    const raw = aliasParam ||
+      (typeof DB !== 'undefined' && DB.getAlias ? DB.getAlias() : '') ||
+      localStorage.getItem('coletor_db_alias') ||
+      'default';
+    return String(raw).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'default';
+  }
+
+  function precisaCargaDiaria(codEmpresa, alias = null) {
     const emp = DB.normalizarEmpresa(codEmpresa || localStorage.getItem('datasul_company_id') || '001');
-    const ultima = localStorage.getItem(`datasul_ultima_carga_${emp}`);
+    const al = resolverAliasAtual(alias);
+    const ultima = localStorage.getItem(`datasul_ultima_carga_${al}_${emp}`);
     if (!ultima) return true;
     const diffHoras = (Date.now() - new Date(ultima).getTime()) / (1000 * 60 * 60);
     return diffHoras >= 24;
   }
 
-  function marcarCargaCompleta(codEmpresa) {
+  function marcarCargaCompleta(codEmpresa, alias = null) {
     const emp = DB.normalizarEmpresa(codEmpresa || '001');
+    const al = resolverAliasAtual(alias);
     const now = new Date().toISOString();
-    localStorage.setItem(`datasul_ultima_carga_${emp}`, now);
-    localStorage.setItem(`datasul_last_sync_timestamp_${emp}`, now);
+    localStorage.setItem(`datasul_ultima_carga_${al}_${emp}`, now);
+    localStorage.setItem(`datasul_last_sync_timestamp_${al}_${emp}`, now);
   }
 
   function normalizarDataIso(dt) {
@@ -46,6 +56,7 @@ const FastLoader = (() => {
   }
 
   async function executarCarga({
+    alias,
     pasoeUrl,
     companyId,
     codEstabel,
@@ -60,9 +71,22 @@ const FastLoader = (() => {
     isCarregando = true;
 
     try {
+      const al = resolverAliasAtual(alias);
+      if (typeof DB.setAlias === 'function') {
+        await DB.setAlias(al);
+      }
       const emp = DB.normalizarEmpresa(companyId || localStorage.getItem('datasul_company_id') || '001');
-      const baseUrl = (pasoeUrl || '/api/datasul').replace(/\/+$/, '');
-      const lastSync = forcarCompleta ? null : localStorage.getItem(`datasul_last_sync_timestamp_${emp}`);
+      let baseUrl = (pasoeUrl || '/api/datasul').replace(/\/+$/, '');
+      const hostAtual = (typeof window !== 'undefined' && window.location) ? window.location.hostname : '';
+      const portAtual = (typeof window !== 'undefined' && window.location) ? window.location.port : '';
+      const isLocalNode = (hostAtual === 'localhost' || hostAtual === '127.0.0.1') &&
+        (portAtual === '3000' || portAtual === '3333') &&
+        !(window.ColetorGateway && window.ColetorGateway.isNative());
+      if (!isLocalNode && /^https?:\/\/(localhost|127\.0\.0\.1):3000\/api\/datasul/i.test(baseUrl)) {
+        baseUrl = '/api/datasul';
+      }
+
+      const lastSync = forcarCompleta ? null : localStorage.getItem(`datasul_last_sync_timestamp_${al}_${emp}`);
 
       if (forcarCompleta) {
         await DB.clearEmpresa('item', emp);
@@ -82,10 +106,13 @@ const FastLoader = (() => {
 
         let requestUrl = fullUrl;
         const gatewayBase = window.ColetorGateway ? window.ColetorGateway.getBaseUrl() : '';
+        const isPrivateIp = /^(https?:\/\/)?(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.|localhost)/i.test(fullUrl);
         if ((fullUrl.startsWith('http://') || fullUrl.startsWith('https://')) &&
             (!gatewayBase || !fullUrl.startsWith(gatewayBase)) &&
-            (!window.location.host || !fullUrl.includes(window.location.host))) {
-          requestUrl = `/api/pasoe-proxy?url=${encodeURIComponent(fullUrl)}`;
+            (!window.location.host || isLocalNode || !fullUrl.includes(window.location.host))) {
+          if (!isPrivateIp || isLocalNode) {
+            requestUrl = `/api/pasoe-proxy?url=${encodeURIComponent(fullUrl)}`;
+          }
         }
 
         const headers = {
@@ -132,6 +159,7 @@ const FastLoader = (() => {
         const resEst = await safeFetch('fcGetEstabelecimentos');
         const ests = extrairLista(resEst, 'estabelecimentos');
         if (ests.length > 0) {
+          await DB.clear('estabelec');
           await DB.bulkPut('estabelec', ests);
         }
       } catch (e) {
@@ -339,7 +367,7 @@ const FastLoader = (() => {
         console.warn('Aviso fcGetInventarioParam:', e.message);
       }
 
-      marcarCargaCompleta(emp);
+      marcarCargaCompleta(emp, al);
       progress(100, 'Carga de cadastros mestres concluída com sucesso!', `${totalItensBaixados.toLocaleString('pt-BR')} itens sincronizados para operação offline.`);
 
       if (onComplete) {

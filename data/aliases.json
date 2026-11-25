@@ -4,62 +4,59 @@
     "nomeEmpresa": "AMBIENTE REAL PASOE (PROMOB)",
     "empresaPrincipal": "001",
     "codEstabelPadrao": "101",
-    "pasoeUrl": "https://newly-officer-conclusions-homeland.trycloudflare.com",
+    "pasoeUrl": "https://realtors-broadcasting-badge-granny.trycloudflare.com",
     "usuarioIntegracao": "matheus.st",
     "senhaIntegracao": "qwe8451",
     "descricao": "Base Real Totvs Datasul PASOE",
     "status": "ativo",
-    "atualizadoEm": "2026-11-24T18:45:00.000Z"
+    "atualizadoEm": "2026-11-25T22:18:00.000Z"
   },
   "demo": {
     "alias": "demo",
     "nomeEmpresa": "TOTVS DATASUL 12 - AMBIENTE DEMO OFFLINE-FIRST",
     "empresaPrincipal": "001",
     "codEstabelPadrao": "101",
-    "pasoeUrl": "http://localhost:3000/api/datasul",
+    "pasoeUrl": "/api/datasul",
+    "usuarioIntegracao": "",
+    "senhaIntegracao": "",
+    "descricao": "Ambiente Local/Nuvem de Testes e Homologação (Simulador Fiel collect/*.p)",
     "status": "ativo",
-    "descricao": "Ambiente Local de Testes e Homologação (Simulador Fiel collect/*.p)"
+    "atualizadoEm": "2026-11-25T22:18:00.000Z"
   },
   "blanver": {
     "alias": "blanver",
     "nomeEmpresa": "CYG BIOTECH QUÍMICA & FARMACÊUTICA LTDA",
     "empresaPrincipal": "001",
     "codEstabelPadrao": "11",
-    "pasoeUrl": "http://localhost:3000/api/datasul",
+    "pasoeUrl": "/api/datasul",
+    "usuarioIntegracao": "",
+    "senhaIntegracao": "",
+    "descricao": "Base Blanver / CYG Biotech - Taboão da Serra e Indaiatuba",
     "status": "ativo",
-    "descricao": "Base Blanver / CYG Biotech - Taboão da Serra e Indaiatuba"
+    "atualizadoEm": "2026-11-25T22:18:00.000Z"
   },
   "santacolomba": {
     "alias": "santacolomba",
     "nomeEmpresa": "SANTA COLOMBA AGROPECUARIA S/A",
     "empresaPrincipal": "002",
     "codEstabelPadrao": "2100",
-    "pasoeUrl": "http://localhost:3000/api/datasul",
+    "pasoeUrl": "/api/datasul",
+    "usuarioIntegracao": "",
+    "senhaIntegracao": "",
+    "descricao": "Base Agropecuária Santa Colomba (Empresa 002)",
     "status": "ativo",
-    "descricao": "Base Agropecuária Santa Colomba (Empresa 002)"
+    "atualizadoEm": "2026-11-25T22:18:00.000Z"
   },
   "santacolombat": {
     "alias": "santacolombat",
     "nomeEmpresa": "SANTA COLOMBA AGROPECUARIA S/A (TESTE)",
-    "empresaPrincipal": "001",
+    "empresaPrincipal": "210",
     "codEstabelPadrao": "101",
-    "pasoeUrl": "https://newly-officer-conclusions-homeland.trycloudflare.com",
-    "usuarioIntegracao": "matheus.st",
-    "senhaIntegracao": "qwe8451",
-    "status": "ativo",
+    "pasoeUrl": "https://santacolomba171511.datasul.cloudtotvs.com.br/api/gs/v1",
+    "usuarioIntegracao": "consultoria",
+    "senhaIntegracao": "Santa@1234567890",
     "descricao": "Base Santa Colomba Homologação / Teste PASOE",
-    "atualizadoEm": "2026-11-24T18:45:00.000Z"
-  },
-  "henn": {
-    "alias": "henn",
-    "nomeEmpresa": "INDÚSTRIA E COMÉRCIO DE MÓVEIS HENN LTDA",
-    "empresaPrincipal": "001",
-    "codEstabelPadrao": "101",
-    "pasoeUrl": "https://newly-officer-conclusions-homeland.trycloudflare.com",
-    "usuarioIntegracao": "matheus.st",
-    "senhaIntegracao": "qwe8451",
-    "descricao": "Base Real Totvs Datasul PASOE - Henn (VPN 10.15.1.20)",
     "status": "ativo",
-    "atualizadoEm": "2026-11-24T18:45:00.000Z"
+    "atualizadoEm": "2026-11-25T22:18:00.000Z"
   }
 }

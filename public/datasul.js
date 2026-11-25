@@ -497,24 +497,32 @@ const Datasul = (() => {
         if (a && a.alias) {
           const key = a.alias.toLowerCase();
           if (!deletedList.includes(key)) {
-            aliasMap[key] = { ...(aliasMap[key] || {}), ...a };
+            const atual = aliasMap[key];
+            if (!atual || String(a.atualizadoEm || '') >= String(atual.atualizadoEm || '')) {
+              aliasMap[key] = { ...(atual || {}), ...a };
+            }
           }
         }
       });
       Object.keys(customMap).forEach(k => {
         const key = k.toLowerCase();
         if (!deletedList.includes(key) && customMap[k]) {
-          aliasMap[key] = { ...(aliasMap[key] || {}), ...customMap[k] };
-          // Sincroniza em background com o servidor atual e servidores locais/nuvem
-          const payloadSync = aliasMap[key];
-          if (payloadSync.alias && payloadSync.pasoeUrl) {
-            ['', ...extras].forEach(base => {
-              fetch(`${base}/api/discovery/aliases`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payloadSync)
-              }).catch(() => {});
-            });
+          const serv = aliasMap[key];
+          const tsCustom = String(customMap[k].atualizadoEm || '');
+          const tsServ = String(serv?.atualizadoEm || '');
+          // Só sobrepõe o servidor se não existir no servidor ou se o cache local for mais recente
+          if (!serv || (tsCustom && tsCustom > tsServ)) {
+            aliasMap[key] = { ...(serv || {}), ...customMap[k] };
+            const payloadSync = aliasMap[key];
+            if (payloadSync.alias && payloadSync.pasoeUrl) {
+              ['', ...extras].forEach(base => {
+                fetch(`${base}/api/discovery/aliases`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payloadSync)
+                }).catch(() => {});
+              });
+            }
           }
         }
       });

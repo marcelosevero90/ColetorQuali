@@ -229,6 +229,19 @@ router.all(['/fcGetParamUsuario', '/qdcGetParamUsuario'], exigirBasicAuth, (req,
   const companyId = extrairCompanyId(req);
   const usuario = (p.usuario || p.codUsuario || req.query.usuario || req.totvsUser?.codUsuario || '').trim();
 
+  const empresasSegur = (db.data.segur_empres_usuar && Array.isArray(db.data.segur_empres_usuar))
+    ? db.data.segur_empres_usuar
+        .filter(s => String(s.codUsuario || s.cod_usuario || '').toLowerCase() === usuario.toLowerCase())
+        .map(s => ({
+          codUsuario: s.codUsuario || s.cod_usuario || usuario,
+          codEmpresa: s.codEmpresa || s.cod_empresa
+        }))
+    : [...new Set(
+        (db.data.fmsc_usuar_mestre || [])
+          .filter(u => u.codUsuario.toLowerCase() === usuario.toLowerCase() && Number(u.situacao ?? 9) !== 0)
+          .map(u => u.codEmpresa)
+      )].map(emp => ({ codUsuario: usuario, codEmpresa: emp }));
+
   const reg = (db.data.fmsc_usuar_mestre || []).find(u =>
     db.matchEmpresa(u.codEmpresa, companyId) &&
     u.codUsuario.toLowerCase() === usuario.toLowerCase()
@@ -238,7 +251,7 @@ router.all(['/fcGetParamUsuario', '/qdcGetParamUsuario'], exigirBasicAuth, (req,
     const paramEstoq = (db.data.param_estoq || []).find(pe => db.matchEmpresa(pe.codEmpresa, companyId));
     const estabPad = reg.codEstabPad || paramEstoq?.estabelPad || '';
     const item = {
-      codEmpresa: companyId,
+      codEmpresa: reg.codEmpresa || companyId,
       codUsuario: reg.codUsuario,
       nome: reg.nome,
       situacao: reg.situacao ?? 9,
@@ -256,9 +269,10 @@ router.all(['/fcGetParamUsuario', '/qdcGetParamUsuario'], exigirBasicAuth, (req,
       permEstoqReqInv: Boolean(reg.permEstoqReqInv),
       permEstoqReqRec: Boolean(reg.permEstoqReqRec),
       permComprMLA: Boolean(reg.permComprMLA),
-      permCredAvCli: Boolean(reg.permCredAvCli)
+      permCredAvCli: Boolean(reg.permCredAvCli),
+      empresas: empresasSegur
     };
-    return res.json({ items: [item], hasNext: false, success: true, codEmpresa: companyId });
+    return res.json({ items: [item], hasNext: false, success: true, codEmpresa: item.codEmpresa });
   }
 
   // Retorno padrão do fcGetParamUsuario.p quando não encontrado na empresa
@@ -281,7 +295,8 @@ router.all(['/fcGetParamUsuario', '/qdcGetParamUsuario'], exigirBasicAuth, (req,
       permEstoqReqInv: false,
       permEstoqReqRec: false,
       permComprMLA: false,
-      permCredAvCli: false
+      permCredAvCli: false,
+      empresas: empresasSegur
     }],
     hasNext: false,
     success: true,
