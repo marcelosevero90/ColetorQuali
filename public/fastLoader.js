@@ -153,6 +153,8 @@ const FastLoader = (() => {
         if (onProgress) onProgress(pct, msg, det || `Empresa ${emp} • Filial ${codEstabel || '-'}`);
       };
 
+      const errosCarga = [];
+
       // 1. Estabelecimentos (Global multi-empresa)
       progress(8, 'Sincronizando estabelecimentos (global)...');
       try {
@@ -164,6 +166,7 @@ const FastLoader = (() => {
         }
       } catch (e) {
         console.warn('Aviso fcGetEstabelecimentos:', e.message);
+        errosCarga.push(`fcGetEstabelecimentos: ${e.message}`);
       }
 
       // 2. Parâmetros do Usuário (fmsc-usuar-mestre)
@@ -185,6 +188,7 @@ const FastLoader = (() => {
           }
         } catch (e) {
           console.warn('Aviso fcGetParamUsuario:', e.message);
+          errosCarga.push(`fcGetParamUsuario: ${e.message}`);
         }
       }
 
@@ -196,6 +200,7 @@ const FastLoader = (() => {
         if (deps.length > 0) await DB.bulkPut('deposito', deps, emp);
       } catch (e) {
         console.warn('Aviso fcGetDeposito:', e.message);
+        errosCarga.push(`fcGetDeposito: ${e.message}`);
       }
 
       try {
@@ -365,15 +370,17 @@ const FastLoader = (() => {
         }
       } catch (e) {
         console.warn('Aviso fcGetInventarioParam:', e.message);
+        errosCarga.push(`fcGetInventarioParam: ${e.message}`);
       }
 
       marcarCargaCompleta(emp, al);
-      progress(100, 'Carga de cadastros mestres concluída com sucesso!', `${totalItensBaixados.toLocaleString('pt-BR')} itens sincronizados para operação offline.`);
+      progress(100, errosCarga.length > 0 ? 'Carga concluída com alertas!' : 'Carga de cadastros mestres concluída com sucesso!', `${totalItensBaixados.toLocaleString('pt-BR')} itens sincronizados para operação offline.`);
 
       if (onComplete) {
         onComplete({
           codEmpresa: emp,
-          totalItens: totalItensBaixados
+          totalItens: totalItensBaixados,
+          erros: errosCarga
         });
       }
     } catch (err) {

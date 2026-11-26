@@ -914,8 +914,8 @@ const App = (() => {
       });
 
       const dataLogin = await resLogin.json().catch(() => ({}));
-      if (resLogin.status === 401 || dataLogin.type === 'ERROR' || dataLogin.success === false) {
-        throw new Error(dataLogin.message || dataLogin.detailedMessage || dataLogin.mensagem || 'Usuário ou senha TOTVS inválidos.');
+      if (!resLogin.ok || resLogin.status === 401 || dataLogin.type === 'ERROR' || dataLogin.success === false) {
+        throw new Error(dataLogin.message || dataLogin.detailedMessage || dataLogin.mensagem || `Erro HTTP ${resLogin.status} ao validar login (fcLogin).`);
       }
 
       const estabLogin = (dataLogin.message || dataLogin.codEstabPad || '').trim();
@@ -923,80 +923,75 @@ const App = (() => {
 
       // 3. Consulta parâmetros do usuário e empresas habilitadas (fcGetParamUsuario -> fmsc-usuar-mestre + segur_empres_usuar)
       let paramUsuario = null;
-      try {
-        const resParam = await pasoeFetch('/fcGetParamUsuario', {
-          method: 'PUT',
-          companyId: empresaAdmin,
-          authHeader,
-          body: JSON.stringify({
-            usuario: usuarioReal,
-            payload: [{ usuario: usuarioReal }]
-          })
-        });
-        if (resParam.ok) {
-          const dataParam = await resParam.json();
-          const listaP = extrairLista(dataParam);
-          if (listaP.length > 0) {
-            paramUsuario = listaP[0];
-          }
-        }
-      } catch (eParam) {
-        console.warn('Aviso fcGetParamUsuario:', eParam);
+      const resParam = await pasoeFetch('/fcGetParamUsuario', {
+        method: 'PUT',
+        companyId: empresaAdmin,
+        authHeader,
+        body: JSON.stringify({
+          usuario: usuarioReal,
+          payload: [{ usuario: usuarioReal }]
+        })
+      });
+      const dataParam = await resParam.json().catch(() => ({}));
+      if (!resParam.ok || dataParam.type === 'ERROR' || dataParam.success === false) {
+        throw new Error(dataParam.message || dataParam.detailedMessage || dataParam.mensagem || `Erro HTTP ${resParam.status} ao consultar parâmetros do usuário (fcGetParamUsuario).`);
       }
+      const listaP = extrairLista(dataParam);
+      if (listaP.length === 0) {
+        throw new Error(`O serviço fcGetParamUsuario não retornou parâmetros para o usuário '${usuarioReal}' na empresa ${empresaAdmin}.`);
+      }
+      paramUsuario = listaP[0];
 
-      if (paramUsuario) {
-        if (Number(paramUsuario.situacao) === 0) {
-          throw new Error(`Usuário '${usuarioReal}' não habilitado no FMSC0101 para a empresa ${empresaAdmin}.`);
-        }
-        const temEstoque = paramUsuario.permEstoque === true || paramUsuario.permEstoque === 'true' || paramUsuario.permEstoque === 1;
-        const temCompras = Boolean(paramUsuario.permCompras);
-        const temProducao = Boolean(paramUsuario.permProducao);
-        const temCredito = Boolean(paramUsuario.permCredito);
-        if (!temEstoque && !temCompras && !temProducao && !temCredito) {
-          throw new Error(`Usuário '${usuarioReal}' sem permissão de acesso a módulos no FMSC0101 para a empresa ${empresaAdmin}.`);
-        }
+      if (Number(paramUsuario.situacao) === 0) {
+        throw new Error(`Usuário '${usuarioReal}' não habilitado no FMSC0101 para a empresa ${empresaAdmin}.`);
+      }
+      const temEstoque = paramUsuario.permEstoque === true || paramUsuario.permEstoque === 'true' || paramUsuario.permEstoque === 1;
+      const temCompras = Boolean(paramUsuario.permCompras);
+      const temProducao = Boolean(paramUsuario.permProducao);
+      const temCredito = Boolean(paramUsuario.permCredito);
+      if (!temEstoque && !temCompras && !temProducao && !temCredito) {
+        throw new Error(`Usuário '${usuarioReal}' sem permissão de acesso a módulos no FMSC0101 para a empresa ${empresaAdmin}.`);
       }
 
       // Sugere por padrão no app a empresa vinda no campo codEmpresa do fcParamUsuario (fcGetParamUsuario)
       const empresasPermitidas = extrairEmpresasPermitidas(paramUsuario);
+      if (Array.isArray(paramUsuario.empresas) && empresasPermitidas.length === 0) {
+        throw new Error(`Usuário '${usuarioReal}' não possui empresas vinculadas no cadastro de segurança (segur_empres_usuar).`);
+      }
       const codEmpresa = DB.normalizarEmpresa(
         paramUsuario?.codEmpresa || empresasPermitidas[0] || empresaAdmin || '001'
       );
       state.empresaInput = codEmpresa;
       state.session.codEmpresa = codEmpresa;
 
-      if (paramUsuario) {
-        await DB.bulkPut('fmsc_usuar_mestre', [paramUsuario], codEmpresa);
-      }
+      await DB.bulkPut('fmsc_usuar_mestre', [paramUsuario], codEmpresa);
 
       // 4. Busca tabela global estabelec (fcGetEstabelecimentos) usando a empresa definida para o app
-      try {
-        let resEst = await pasoeFetch('/fcGetEstabelecimentos', {
+      let resEst = await pasoeFetch('/fcGetEstabelecimentos', {
+        method: 'GET',
+        companyId: codEmpresa,
+        authHeader
+      });
+      if (!resEst.ok && empresaAdmin && !DB.matchEmpresa(empresaAdmin, codEmpresa)) {
+        resEst = await pasoeFetch('/fcGetEstabelecimentos', {
           method: 'GET',
-          companyId: codEmpresa,
+          companyId: empresaAdmin,
           authHeader
         });
-        if (!resEst.ok && empresaAdmin && !DB.matchEmpresa(empresaAdmin, codEmpresa)) {
-          resEst = await pasoeFetch('/fcGetEstabelecimentos', {
-            method: 'GET',
-            companyId: empresaAdmin,
-            authHeader
-          });
-        }
-        if (resEst.ok) {
-          const dataEst = await resEst.json();
-          const ests = extrairLista(dataEst, 'estabelecimentos');
-          if (ests.length > 0) {
-            const estsTagged = ests.map(e => ({ ...e, _alias: alias }));
-            state.estabelecimentosGlobais = estsTagged;
-            await DB.clear('estabelec');
-            await DB.bulkPut('estabelec', estsTagged);
-            await DB.putConfig('ultimo_alias_estabelec', alias);
-          }
-        }
-      } catch (eEst) {
-        console.warn('Aviso fcGetEstabelecimentos:', eEst);
       }
+      const dataEst = await resEst.json().catch(() => ({}));
+      if (!resEst.ok || dataEst.type === 'ERROR' || dataEst.success === false) {
+        throw new Error(dataEst.message || dataEst.detailedMessage || dataEst.mensagem || `Erro HTTP ${resEst.status} ao consultar estabelecimentos (fcGetEstabelecimentos).`);
+      }
+      const ests = extrairLista(dataEst, 'estabelecimentos');
+      if (ests.length === 0) {
+        throw new Error('O serviço fcGetEstabelecimentos não retornou nenhum estabelecimento cadastrado no ERP.');
+      }
+      const estsTagged = ests.map(e => ({ ...e, _alias: alias }));
+      state.estabelecimentosGlobais = estsTagged;
+      await DB.clear('estabelec');
+      await DB.bulkPut('estabelec', estsTagged);
+      await DB.putConfig('ultimo_alias_estabelec', alias);
 
       const estsEmpresa = (state.estabelecimentosGlobais || []).filter(e => DB.matchEmpresa(e.codEmpresa, codEmpresa));
       const codEstabPad = (paramUsuario?.codEstabPad || estabLogin || estsEmpresa[0]?.codEstabel || '101').trim();
@@ -8300,8 +8295,17 @@ const App = (() => {
         if (stEl) stEl.textContent = msg;
         if (detEl) detEl.textContent = det || '';
       },
-      onComplete: () => {
+      onComplete: (res) => {
         if (spinner) spinner.style.display = 'none';
+        const erros = Array.isArray(res?.erros) ? res.erros : [];
+        if (erros.length > 0) {
+          if (aviso) aviso.textContent = `⚠️ Carga concluída com ${erros.length} falha(s) no TOTVS`;
+          if (stEl) stEl.textContent = 'Atenção: algumas APIs retornaram erro.';
+          if (detEl) detEl.textContent = erros.join(' | ');
+          if (btnFechar) btnFechar.style.display = 'inline-flex';
+          alert('⚠️ Atenção: Ocorreram erros durante a sincronização com o TOTVS:\n\n' + erros.join('\n'));
+          return;
+        }
         if (aviso) aviso.textContent = '✅ Carga concluída com sucesso no aparelho!';
         if (btnFechar) btnFechar.style.display = 'inline-flex';
         setTimeout(() => {
