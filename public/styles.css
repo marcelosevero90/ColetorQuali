@@ -278,6 +278,32 @@ body {
   border: 1px solid #fecaca;
 }
 
+.btn-simular-offline-browser {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.btn-simular-offline-browser:hover {
+  background: #e2e8f0;
+}
+
+.btn-simular-offline-browser.is-offline-sim {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #f59e0b;
+}
+
 /* Header do Coletor */
 .app-header {
   display: flex;
@@ -1497,6 +1523,11 @@ html.is-native-app body {
 
 .is-native-app #status-rede-badge-header {
   display: inline-flex !important;
+}
+
+.is-native-app #btn-simular-offline,
+.is-native-app .btn-simular-offline-browser {
+  display: none !important;
 }
 
 .is-native-app .main-viewport {

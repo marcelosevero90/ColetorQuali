@@ -21,6 +21,7 @@
         window.cordova ||
         window.location.protocol === 'capacitor:' ||
         window.location.protocol === 'file:' ||
+        (window.location.hostname === 'localhost' && window.location.port !== '3000' && window.location.port !== '3333') ||
         urlParams.get('native') === 'true'
       );
       if (isNative) {
@@ -56,6 +57,10 @@
 
           <div style="display: flex; gap: 6px; align-items: center;">
             <span class="status-badge-network online" id="status-rede-badge-header" style="font-size: 10px; padding: 3px 8px;">● Online</span>
+            <button type="button" id="btn-simular-offline" class="btn-simular-offline-browser" onclick="App.alternarSimulacaoOffline()" title="Alternar simulação Online/Offline para testes locais (somente navegador)">
+              <span>🧪</span>
+              <span id="lbl-simular-offline">Simular Offline</span>
+            </button>
             <button class="header-action-icon-btn" type="button" onclick="App.abrirModalContingencia()" title="Exportar Contingência (CSV/TXT/JSON)">
               💾
             </button>

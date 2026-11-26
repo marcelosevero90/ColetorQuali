@@ -82,25 +82,49 @@ const App = (() => {
     modoVisualizacao: 'app'
   };
 
+  function isNativeApp() {
+    return Boolean(
+      (window.ColetorGateway && window.ColetorGateway.isNative()) ||
+      document.documentElement.classList.contains('is-native-app')
+    );
+  }
+
   function isOnline() {
-    if (state.simularOffline) return false;
+    if (!isNativeApp() && state.simularOffline) return false;
     return navigator.onLine;
   }
 
   function alternarSimulacaoOffline() {
+    if (isNativeApp()) {
+      state.simularOffline = false;
+      return;
+    }
     state.simularOffline = !state.simularOffline;
     const btn = document.getElementById('btn-simular-offline');
     const lbl = document.getElementById('lbl-simular-offline');
-    if (btn && lbl) {
+    if (btn) {
       btn.classList.toggle('is-offline-sim', state.simularOffline);
-      lbl.textContent = state.simularOffline ? 'Simulando Offline' : 'Modo Rede: Auto';
+      btn.title = state.simularOffline
+        ? 'Modo Offline simulado ativo (clique para voltar ao Online)'
+        : 'Modo Online ativo (clique para simular Offline)';
+    }
+    if (lbl) {
+      lbl.textContent = state.simularOffline ? 'Voltar Online' : 'Simular Offline';
     }
     atualizarStatusRede();
+    if (!state.simularOffline && state.session.codUsuario) {
+      executarSincronizacaoRecorrenteBackground(true);
+    }
   }
 
   async function init() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
+    if (isNativeApp()) {
+      state.simularOffline = false;
+      document.getElementById('btn-simular-offline')?.remove();
     }
 
     atualizarRelogio();
