@@ -373,7 +373,9 @@ const FastLoader = (() => {
         errosCarga.push(`fcGetInventarioParam: ${e.message}`);
       }
 
-      marcarCargaCompleta(emp, al);
+      if (errosCarga.length === 0) {
+        marcarCargaCompleta(emp, al);
+      }
       progress(100, errosCarga.length > 0 ? 'Carga concluída com alertas!' : 'Carga de cadastros mestres concluída com sucesso!', `${totalItensBaixados.toLocaleString('pt-BR')} itens sincronizados para operação offline.`);
 
       if (onComplete) {

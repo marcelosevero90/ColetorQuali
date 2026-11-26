@@ -3959,12 +3959,35 @@ const App = (() => {
     renderTelaTransferenciaEntrada(transf);
   }
 
+  async function obterDepositosComFallbackOnline(codEmpresa) {
+    let depositos = await DB.getAllByEmpresa('deposito', codEmpresa);
+    if (depositos.length === 0 && isOnline()) {
+      try {
+        const res = await pasoeFetch('/fcGetDeposito', {
+          method: 'GET',
+          companyId: codEmpresa
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const deps = extrairLista(data, 'depositos');
+          if (deps.length > 0) {
+            await DB.bulkPut('deposito', deps, codEmpresa);
+            depositos = await DB.getAllByEmpresa('deposito', codEmpresa);
+          }
+        }
+      } catch (e) {
+        console.warn('Aviso ao buscar depósitos online (fcGetDeposito):', e);
+      }
+    }
+    return depositos;
+  }
+
   async function renderTelaTransferenciaSaida(transfEdicao = null) {
     const codEmpresa = state.session.codEmpresa || '001';
     const codEstabel = state.session.codEstabel || '101';
     stateTransferencias.transferenciaAtiva = transfEdicao || null;
 
-    const depositos = await DB.getAllByEmpresa('deposito', codEmpresa);
+    const depositos = await obterDepositosComFallbackOnline(codEmpresa);
     const hojeIso = new Date().toISOString().slice(0, 10);
 
     const isEdit = Boolean(transfEdicao && transfEdicao.id_uuid);
@@ -4355,7 +4378,7 @@ const App = (() => {
     const ehRefer = (tipoConEst === 4);
     const isLocUnica = Boolean(item && (item.locUnica === true || item.locUnica === 1 || item.locUnica === 'true'));
 
-    const depositos = await DB.getAllByEmpresa('deposito', codEmpresa);
+    const depositos = await obterDepositosComFallbackOnline(codEmpresa);
     let depEntPadrao = transf.codDeposEnt || '';
     if (!depEntPadrao) {
       const outro = depositos.find(d => d.codDepos !== transf.codDeposSai);
@@ -4405,6 +4428,7 @@ const App = (() => {
           <div class="form-group" style="margin-bottom: 10px;">
             <label class="form-label" for="transf-ent-depos">Depósito Destino / Entrada *</label>
             <select id="transf-ent-depos" class="form-input" required>
+              ${depositos.length === 0 ? '<option value="">Nenhum depósito cadastrado</option>' : ''}
               ${depositos.map(d => `<option value="${escapeHtml(d.codDepos)}" ${d.codDepos === depEntPadrao ? 'selected' : ''}>${escapeHtml(d.codDepos)} - ${escapeHtml(d.nome || d.codDepos)}</option>`).join('')}
             </select>
           </div>
